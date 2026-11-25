@@ -5,11 +5,13 @@
 
 #include <memory>
 
+#include "base/test/scoped_feature_list.h"
 #include "base/test/task_environment.h"
 #include "base/time/time.h"
 #include "brave/components/serp_metrics/pref_names.h"
 #include "brave/components/serp_metrics/serp_metric_type.h"
 #include "brave/components/serp_metrics/serp_metrics.h"
+#include "brave/components/serp_metrics/serp_metrics_feature.h"
 #include "brave/components/serp_metrics/test/fake_serp_metrics_time_period_store.h"
 #include "brave/components/serp_metrics/test/timezone_test_util.h"
 #include "brave/components/serp_metrics/time_period_storage/test/scoped_timezone_for_testing.h"
@@ -57,6 +59,9 @@ class SerpMetricsTimezoneTest
     const base::Time now = base::Time::Now();
     task_environment_.AdvanceClock(now.UTCMidnight() + base::Days(1) - now);
   }
+
+  // `SerpMetrics` CHECKs the feature, which is off in debloated builds.
+  base::test::ScopedFeatureList scoped_feature_list_{kSerpMetricsFeature};
 
   base::test::TaskEnvironment task_environment_;
 
