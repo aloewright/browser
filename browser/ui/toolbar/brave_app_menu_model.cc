@@ -16,6 +16,7 @@
 #include "brave/app/brave_command_ids.h"
 #include "brave/browser/ui/toolbar/app_menu_icons.h"
 #include "brave/components/ai_chat/core/common/buildflags/buildflags.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/commander/common/buildflags/buildflags.h"
 #include "chrome/app/chrome_command_ids.h"
 #include "chrome/browser/profiles/profile.h"
@@ -60,8 +61,11 @@ class BraveHelpMenuModel : public ui::SimpleMenuModel {
   void Build() {
     AddItemWithStringId(IDC_ABOUT, IDS_ABOUT);
     AddItemWithStringId(IDC_HELP_PAGE_VIA_MENU, IDS_HELP_PAGE);
+#if !BUILDFLAG(IS_BRAVE_DEBLOATED)
+    // Debloated builds have no webcompat report endpoint.
     AddItemWithStringId(IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER,
                         IDS_SHOW_BRAVE_WEBCOMPAT_REPORTER);
+#endif
   }
 };
 }  // namespace

@@ -21,6 +21,10 @@ import '../site_settings/site_settings_shields.js'
 import '../site_settings/site_settings_brave_ai.js'
 import { ContentSettingsTypes } from '../site_settings/constants.js';
 
+// Debloated builds compile out P3A, the usage ping and crash upload, so every
+// control in the Data collection section would be inert.
+const showDataCollection = !loadTimeData.getBoolean('isBraveDebloatedBuild')
+
 RegisterPolymerPrototypeModification({
   'settings-privacy-page-index': (prototype) => {
     const oldGetDefaultViews = prototype.getDefaultViews_;
@@ -30,7 +34,9 @@ RegisterPolymerPrototypeModification({
         .filter((v: string) => v !== 'privacyGuidePromo');
 
       // Add dataCollection view.
-      views.splice(1, 0, 'dataCollection');
+      if (showDataCollection) {
+        views.splice(1, 0, 'dataCollection');
+      }
 
       // <if expr="enable_tor">
       // Add tor view if it should be shown.
@@ -72,11 +78,13 @@ RegisterPolymerTemplateModifications({
     </template>`)
     // </if>
 
-    viewManager.appendChild(html`<settings-brave-data-collection-subpage
-      id="dataCollection"
-      slot="view"
-      in-search-mode="[[inSearchMode_]]">
-    </settings-brave-data-collection-subpage>`)
+    if (showDataCollection) {
+      viewManager.appendChild(html`<settings-brave-data-collection-subpage
+        id="dataCollection"
+        slot="view"
+        in-search-mode="[[inSearchMode_]]">
+      </settings-brave-data-collection-subpage>`)
+    }
 
     if (loadTimeData.getBoolean('isGoogleSignInFeatureEnabled')) {
       viewManager.appendChild(html`

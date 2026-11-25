@@ -19,6 +19,7 @@
 #include "brave/browser/ui/webui/settings/brave_import_bulk_data_handler.h"
 #include "brave/browser/ui/webui/settings/brave_search_engines_handler.h"
 #include "brave/browser/ui/webui/welcome_page/welcome_dom_handler.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_welcome/common/features.h"
 #include "brave/components/brave_welcome/resources/grit/brave_welcome_generated_map.h"
 #include "brave/components/constants/pref_names.h"
@@ -179,11 +180,17 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
       // Nothing to opt into; treat as managed so the WDP step is skipped.
       true);
 #endif
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Crash upload and P3A are off; hide both toggles so the step auto-finishes.
+  source->AddBoolean("isMetricsReportingEnabledManaged", true);
+  source->AddBoolean("isP3AEnabledManaged", true);
+#else
   source->AddBoolean("isMetricsReportingEnabledManaged",
                      local_state->IsManagedPreference(
                          metrics::prefs::kMetricsReportingEnabled));
   source->AddBoolean("isP3AEnabledManaged",
                      local_state->IsManagedPreference(p3a::kP3AEnabled));
+#endif
   // settings::DefaultBrowserHandler CHECK-fails if the WebUI asks it to set the
   // default browser while the policy forbids it, so don't offer the action.
   source->AddBoolean(
