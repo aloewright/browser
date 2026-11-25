@@ -27,16 +27,20 @@ TEST(BraveMainDelegateUnitTest, DefaultCommandLineOverrides) {
       kBraveOriginTrialsPublicKey,
       command_line.GetSwitchValueASCII(embedder_support::kOriginTrialPublicKey)
           .c_str());
-  ASSERT_STREQ(
-      BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL),
-      command_line
-          .GetSwitchValueASCII(variations::switches::kVariationsServerURL)
-          .c_str());
-  ASSERT_STREQ(BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL),
-               command_line
-                   .GetSwitchValueASCII(
-                       variations::switches::kVariationsInsecureServerURL)
-                   .c_str());
+  // Empty in debloated builds: no switches, so no seed is fetched.
+  const std::string server_url = BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL);
+  if (server_url.empty()) {
+    EXPECT_FALSE(
+        command_line.HasSwitch(variations::switches::kVariationsServerURL));
+    EXPECT_FALSE(command_line.HasSwitch(
+        variations::switches::kVariationsInsecureServerURL));
+  } else {
+    EXPECT_EQ(server_url, command_line.GetSwitchValueASCII(
+                              variations::switches::kVariationsServerURL));
+    EXPECT_EQ(server_url,
+              command_line.GetSwitchValueASCII(
+                  variations::switches::kVariationsInsecureServerURL));
+  }
 }
 
 TEST(BraveMainDelegateUnitTest, OverrideSwitchFromCommandLine) {

@@ -1,3 +1,9 @@
 include_rules = [
   "+brave/components/brave_debloat/buildflags",
 ]
+
+specific_include_rules = {
+  "variations_browsertest\.cc": [
+    "+brave/components/variations/buildflags.h",
+  ],
+}
