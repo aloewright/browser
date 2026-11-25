@@ -12,6 +12,7 @@
 #include "base/strings/string_util.h"
 #include "base/test/scoped_feature_list.h"
 #include "brave/components/brave_account/features.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "chrome/test/base/testing_profile.h"
 #include "content/public/browser/navigation_throttle.h"
 #include "content/public/browser/web_contents.h"
@@ -67,10 +68,11 @@ TEST_P(BraveAccountNavigationThrottleUnitTest,
       content::MockNavigationThrottleRegistry::RegistrationMode::kHold);
   BraveAccountNavigationThrottle::MaybeCreateAndAdd(registry);
 
-  EXPECT_EQ(registry.throttles().empty(), !test_case.expected_throttle_created);
-  if (!test_case.expected_throttle_created) {
-    EXPECT_FALSE(test_case.expected_action);
-    EXPECT_FALSE(test_case.expected_error_code);
+  // Brave Account is off in debloated builds even with the feature enabled.
+  const bool expected_throttle_created =
+      test_case.expected_throttle_created && !BUILDFLAG(IS_BRAVE_DEBLOATED);
+  EXPECT_EQ(registry.throttles().empty(), !expected_throttle_created);
+  if (!expected_throttle_created) {
     return;
   }
 
