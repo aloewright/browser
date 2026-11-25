@@ -6,7 +6,7 @@
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 
 declare_args() {
-  enable_psst = !is_android && !is_ios && !is_brave_origin_branded
+  enable_psst = !is_android && !is_ios && !is_brave_origin_branded && !is_brave_debloated
   psst_report_api_endpoint =
       "https://webcompat.brave.com/1/privacy-toggle/feedback"
 }
