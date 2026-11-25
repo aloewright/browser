@@ -3,10 +3,18 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/brave_debloat/buildflags/buildflags.gni")
+
 declare_args() {
-  brave_variations_server_url = "https://variations.brave.com/seed"
+  # Empty means no --variations-server-url is passed, so the seed is never
+  # fetched (debloated builds).
+  if (is_brave_debloated) {
+    brave_variations_server_url = ""
+  } else {
+    brave_variations_server_url = "https://variations.brave.com/seed"
+  }
 }
 
-if (is_official_build) {
+if (is_official_build && !is_brave_debloated) {
   assert(brave_variations_server_url != "")
 }

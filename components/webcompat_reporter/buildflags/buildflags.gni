@@ -3,6 +3,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/brave_debloat/buildflags/buildflags.gni")
+
 declare_args() {
-  webcompat_report_api_endpoint = "https://webcompat.brave.com/1/webcompat"
+  # Empty disables report submission.
+  if (is_brave_debloated) {
+    webcompat_report_api_endpoint = ""
+  } else {
+    webcompat_report_api_endpoint = "https://webcompat.brave.com/1/webcompat"
+  }
 }

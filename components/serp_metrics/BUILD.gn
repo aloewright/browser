@@ -45,6 +45,8 @@ static_library("features") {
   sources = [ "serp_metrics_feature.cc" ]
 
   public_deps = [ "//base" ]
+
+  deps = [ "//brave/components/brave_debloat/buildflags" ]
 }
 
 source_set("prefs") {

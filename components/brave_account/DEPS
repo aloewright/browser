@@ -1,5 +1,6 @@
 include_rules = [
   "+absl/functional",
+  "+brave/components/brave_debloat/buildflags",
   "+components/grit/brave_components_resources.h",
   "+components/grit/brave_components_strings.h",
   "+components/grit/brave_components_webui_strings.h",

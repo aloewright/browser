@@ -3,6 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/brave_debloat/buildflags/buildflags.gni")
+
 static_library("brave_account") {
   sources = [
     "brave_account_dialog_mode_holder.cc",
@@ -37,7 +39,10 @@ static_library("brave_account") {
 source_set("unit_tests") {
   testonly = true
 
-  sources = [ "brave_account_navigation_throttle_unittest.cc" ]
+  # Brave Account is always off when debloated; the test enables it.
+  if (!is_brave_debloated) {
+    sources = [ "brave_account_navigation_throttle_unittest.cc" ]
+  }
 
   deps = [
     "//base",

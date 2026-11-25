@@ -12,7 +12,8 @@ import("//chrome/version.gni")
 
 declare_args() {
   base_sparkle_update_url = ""
-  enable_sparkle = !is_component_build && is_mac
+  # A debloated fork must not auto-update itself into stock Brave.
+  enable_sparkle = !is_component_build && is_mac && !is_brave_debloated
   build_sparkle = false
 
   sparkle_dsa_private_key_file = ""

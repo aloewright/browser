@@ -51,9 +51,9 @@ if (is_official_build) {
   }
 
   # These args are currently used by "components/brave_adaptive_captcha" when
-  # rewards is disabled. They are not needed for Brave Origin builds, which
-  # ship with rewards (and adaptive captcha) disabled.
-  if (!is_brave_origin_branded) {
+  # rewards is disabled. They are not needed for Brave Origin or debloated
+  # builds, which ship with rewards (and adaptive captcha) disabled.
+  if (!is_brave_origin_branded && !is_brave_debloated) {
     assert(rewards_grant_dev_endpoint != "")
     assert(rewards_grant_staging_endpoint != "")
     assert(rewards_grant_prod_endpoint != "")

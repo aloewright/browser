@@ -12,6 +12,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/time/time.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/brave_origin_utils.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/brave_search_conversion/constants.h"
@@ -101,7 +102,7 @@ void UpdateDDGConversionType(PrefService* prefs) {
 }
 
 bool ShouldSuppressForBraveOrigin() {
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   return true;
 #else
   return brave_origin::IsBraveOriginPurchased();
@@ -184,13 +185,17 @@ ConversionType GetConversionType(PrefService* prefs,
 }
 
 void RegisterPrefs(PrefRegistrySimple* registry) {
-  registry->RegisterBooleanPref(prefs::kDismissed, false);
+  // Debloated: start dismissed so the NTP suggestions prompt and search
+  // promos never show.
+  registry->RegisterBooleanPref(prefs::kDismissed,
+                                BUILDFLAG(IS_BRAVE_DEBLOATED));
   registry->RegisterBooleanPref(prefs::kShowNTPSearchBox, true);
   registry->RegisterBooleanPref(prefs::kShowNTPChatInput, true);
   registry->RegisterBooleanPref(prefs::kMigratedNTPChatInputFromSearch, false);
   registry->RegisterStringPref(prefs::kLastUsedNTPSearchEngine,
                                "search.brave.com");
-  registry->RegisterBooleanPref(prefs::kPromptEnableSuggestions, true);
+  registry->RegisterBooleanPref(prefs::kPromptEnableSuggestions,
+                                !BUILDFLAG(IS_BRAVE_DEBLOATED));
   registry->RegisterTimePref(prefs::kMaybeLaterClickedTime, base::Time());
   registry->RegisterIntegerPref(prefs::kDDGBannerTypeIndex, 0);
   registry->RegisterTimePref(prefs::kLatestDDGBannerTypeFirstShownTime,
@@ -217,8 +222,12 @@ GURL GetPromoURL(const std::string& search_term) {
 }
 
 bool IsBraveSearchConversionFeatureEnabled() {
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kOmniboxBanner) ||
          base::FeatureList::IsEnabled(features::kOmniboxDDGBanner);
+#endif
 }
 
 }  // namespace brave_search_conversion

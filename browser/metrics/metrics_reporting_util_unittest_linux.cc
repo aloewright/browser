@@ -5,6 +5,7 @@
 
 #include "base/environment.h"
 #include "brave/browser/metrics/metrics_reporting_util.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "chrome/common/channel_info.h"
 #include "components/version_info/channel.h"
@@ -20,7 +21,7 @@ TEST(MetricsUtilTest, DefaultValueTest) {
 
   env->SetVar("CHROME_VERSION_EXTRA", LINUX_CHANNEL_BETA);
   EXPECT_EQ(version_info::Channel::BETA, chrome::GetChannel());
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_FALSE(GetDefaultPrefValueForMetricsReporting());
 #else
   EXPECT_TRUE(GetDefaultPrefValueForMetricsReporting());
@@ -28,7 +29,7 @@ TEST(MetricsUtilTest, DefaultValueTest) {
 
   env->SetVar("CHROME_VERSION_EXTRA", LINUX_CHANNEL_DEV);
   EXPECT_EQ(version_info::Channel::DEV, chrome::GetChannel());
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_FALSE(GetDefaultPrefValueForMetricsReporting());
 #else
   EXPECT_TRUE(GetDefaultPrefValueForMetricsReporting());
@@ -36,7 +37,7 @@ TEST(MetricsUtilTest, DefaultValueTest) {
 
   env->SetVar("CHROME_VERSION_EXTRA", BRAVE_LINUX_CHANNEL_NIGHTLY);
   EXPECT_EQ(version_info::Channel::CANARY, chrome::GetChannel());
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_FALSE(GetDefaultPrefValueForMetricsReporting());
 #else
   EXPECT_TRUE(GetDefaultPrefValueForMetricsReporting());

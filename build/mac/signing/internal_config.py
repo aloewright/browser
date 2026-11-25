@@ -39,6 +39,10 @@ class InternalCodeSignConfig(ChromiumCodeSignConfig):
         ]
 
     @property
+    def has_sparkle(self):
+        return not self.invoker.args.no_sparkle
+
+    @property
     def provisioning_profile_basename(self):
         return self.invoker.args.provisioning_profile_basename
 

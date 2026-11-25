@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>com.brave.Browser</string>
+      <key>PayloadIdentifier</key>
+      <string>com.brave.Browser.debloat.policies</string>
+      <key>PayloadUUID</key>
+      <string>B342D58C-3F33-4A97-867D-1E18377CD02D</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>PayloadDisplayName</key>
+      <string>Brave debloat policies</string>
+      <key>PayloadEnabled</key>
+      <true/>
+
+      <key>BraveRewardsDisabled</key>
+      <true/>
+      <key>BraveWalletDisabled</key>
+      <true/>
+      <key>BraveVPNDisabled</key>
+      <true/>
+      <key>BraveAIChatEnabled</key>
+      <false/>
+      <key>BraveLocalAIEnabled</key>
+      <false/>
+      <key>BraveNewsDisabled</key>
+      <true/>
+      <key>BraveTalkDisabled</key>
+      <true/>
+      <key>TorDisabled</key>
+      <true/>
+      <key>BravePlaylistEnabled</key>
+      <false/>
+      <key>BraveSpeedreaderEnabled</key>
+      <false/>
+      <key>BraveWaybackMachineEnabled</key>
+      <false/>
+      <key>BraveWebDiscoveryEnabled</key>
+      <false/>
+      <key>EmailAliasesEnabled</key>
+      <false/>
+      <key>PsstEnabled</key>
+      <false/>
+      <key>BraveP3AEnabled</key>
+      <false/>
+      <key>BraveStatsPingEnabled</key>
+      <false/>
+
+      <key>MetricsReportingEnabled</key>
+      <false/>
+      <key>UrlKeyedAnonymizedDataCollectionEnabled</key>
+      <false/>
+      <key>PromotionsEnabled</key>
+      <false/>
+      <key>FeedbackSurveysEnabled</key>
+      <false/>
+    </dict>
+  </array>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadIdentifier</key>
+  <string>com.brave.Browser.debloat</string>
+  <key>PayloadUUID</key>
+  <string>7B81F195-4936-403F-BAC5-A8E2CBDB7FDF</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+  <key>PayloadDisplayName</key>
+  <string>Brave (debloated)</string>
+  <key>PayloadDescription</key>
+  <string>Locks off Brave Rewards, Wallet, VPN, Leo AI, News, Talk, Tor, Playlist, Speedreader, Wayback, Web Discovery, Email Aliases, PSST, P3A, the usage ping, Chromium metrics and promotions. Shields and Sync stay under user control.</string>
+  <key>PayloadScope</key>
+  <string>System</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+</dict>
+</plist>

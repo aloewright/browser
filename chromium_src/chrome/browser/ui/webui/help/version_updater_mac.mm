@@ -209,18 +209,28 @@ void SparkleVersionUpdater::UpdateShowPromoteButton() {
   NOTIMPLEMENTED();
 }
 
+namespace {
+
+[[maybe_unused]] bool BraveUseChromiumUpdater() {
 #if BUILDFLAG(ENABLE_OMAHA4)
-#define WrapUnique(X)                         \
-  WrapUnique(brave_updater::ShouldUseOmaha4() \
-                 ? X                          \
-                 : static_cast<VersionUpdater*>(new SparkleVersionUpdater()))
+  return brave_updater::ShouldUseOmaha4();
+#else
+  // No Chromium updater is bundled without Omaha 4, so never talk to one that
+  // another install may have put on the system.
+  return false;
 #endif  // BUILDFLAG(ENABLE_OMAHA4)
+}
+
+}  // namespace
+
+#define WrapUnique(X)                  \
+  WrapUnique(BraveUseChromiumUpdater() \
+                 ? X                   \
+                 : static_cast<VersionUpdater*>(new SparkleVersionUpdater()))
 
 #include <chrome/browser/ui/webui/help/version_updater_mac.mm>
 
-#if BUILDFLAG(ENABLE_OMAHA4)
 #undef WrapUnique
-#endif
 
 #if BUILDFLAG(ENABLE_SPARKLE)
 void SparkleVersionUpdater::GetIsSparkleForTesting(bool& result) const {

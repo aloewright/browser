@@ -13,6 +13,7 @@
 #include "base/strings/string_util.h"
 #include "base/task/sequenced_task_runner.h"
 #include "brave/brave_domains/service_domains.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/brave_origin_policy_manager.h"
 #include "brave/components/brave_origin/brave_origin_utils.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
@@ -180,6 +181,13 @@ std::optional<bool> BraveOriginService::GetPolicyValue(
 
 void BraveOriginService::CheckPurchaseState(
     base::OnceCallback<void(bool)> callback) {
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Origin is off by default here; don't wake the SKU service for it.
+  if (!IsBraveOriginFeatureEnabled()) {
+    std::move(callback).Run(false);
+    return;
+  }
+#endif
   if (!EnsureSkusConnected()) {
     std::move(callback).Run(IsPurchased());
     return;

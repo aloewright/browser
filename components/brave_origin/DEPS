@@ -1,5 +1,6 @@
 include_rules = [
   "+brave/components/api_request_helper",
+  "+brave/components/brave_debloat/buildflags",
   "+brave/components/brave_policy",
   "+components/keyed_service/core",
   "+components/prefs",

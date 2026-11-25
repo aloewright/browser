@@ -43,6 +43,12 @@ void AppendBraveCommandLineOptions(base::CommandLine& command_line) {
         variations::switches::kDisableVariationsSeedFetchThrottling);
   }
 
+  // No server configured: leave the switches unset so that non-Google-branded
+  // Chromium never fetches a seed (falls back to the built-in defaults).
+  if (variations_server_url.empty()) {
+    return;
+  }
+
   if (!command_line.HasSwitch(variations::switches::kVariationsServerURL)) {
     command_line.AppendSwitchASCII(variations::switches::kVariationsServerURL,
                                    variations_server_url);

@@ -176,7 +176,8 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
 #if BUILDFLAG(ENABLE_WEB_DISCOVERY)
       profile->GetPrefs()->IsManagedPreference(kWebDiscoveryEnabled));
 #else
-      false);
+      // Nothing to opt into; treat as managed so the WDP step is skipped.
+      true);
 #endif
   source->AddBoolean("isMetricsReportingEnabledManaged",
                      local_state->IsManagedPreference(
