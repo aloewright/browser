@@ -14,6 +14,7 @@
 #include "base/test/mock_callback.h"
 #include "base/test/scoped_feature_list.h"
 #include "base/test/task_environment.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/brave_search/browser/prefs.h"
 #include "brave/components/brave_search/common/features.h"
@@ -157,8 +158,9 @@ TEST_F(BraveSearchDefaultHostTest, DisallowsAfterMaxTimesAsked) {
   host->GetCanSetDefaultSearchProvider(fourth.Get());
 }
 
-// Brave Search conversion promotions are suppressed in branded builds.
-#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+// Brave Search conversion promotions are suppressed in branded and debloated
+// builds.
+#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
 TEST_F(BraveSearchDefaultHostTest, CanSetDefaultAlwaysTestWithSearchPromotion) {
   base::test::ScopedFeatureList feature_list;
 
@@ -212,7 +214,8 @@ TEST_F(BraveSearchDefaultHostTest, CanSetDefaultAlwaysTestWithSearchPromotion) {
   EXPECT_CALL(seventh, Run(true));
   host->GetCanSetDefaultSearchProvider(seventh.Get());
 }
-#endif  // !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#endif  // !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) &&
+        // !BUILDFLAG(IS_BRAVE_DEBLOATED)
 
 }  // namespace
 }  // namespace brave_search
