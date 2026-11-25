@@ -358,6 +358,9 @@ action("package") {
     deps += [ ":copy_provisionprofile" ]
     args += [ "--provisioning_profile_basename=$provisionprofile_basename" ]
   }
+  if (is_brave_debloated && !enable_sparkle) {
+    args += [ "--no_sparkle" ]
+  }
   if (notarize) {
     args += [ "--notarize" ]
     notary_args = [
@@ -445,7 +448,9 @@ copy("copy_helper_entitlements") {
 
 group("create_dist_mac") {
   deps = [ ":package" ]
-  if (!skip_signing) {
+
+  # Debloated builds ship no Sparkle, so skip its signatures and deltas.
+  if (!skip_signing && (enable_sparkle || !is_brave_debloated)) {
     if (sparkle_dsa_private_key_file != "") {
       deps += [ ":generate_dsa_sig_for_dmg" ]
     }

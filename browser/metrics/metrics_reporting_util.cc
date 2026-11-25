@@ -10,6 +10,7 @@
 #include "base/notreached.h"
 #include "brave/browser/metrics/brave_metrics_service_accessor.h"
 #include "brave/browser/metrics/buildflags/buildflags.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
 #include "chrome/browser/browser_process.h"
@@ -19,7 +20,7 @@
 #include "components/version_info/channel.h"
 
 bool GetDefaultPrefValueForMetricsReporting() {
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   return false;
 #else
   auto channel = chrome::GetChannel();
@@ -35,7 +36,7 @@ bool GetDefaultPrefValueForMetricsReporting() {
   }
   NOTREACHED() << "Unexpected value for channel: "
                << std::to_underlying(channel);
-#endif  // BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#endif  // BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
 }
 
 bool ShouldShowCrashReportPermissionAskDialog() {

@@ -40,6 +40,7 @@ source_set("brave_welcome_page") {
     "//brave/browser/resources/brave_welcome_page:generated_resources",
     "//brave/browser/ui:brave_tab_prefs",
     "//brave/components/ai_chat/core/common/buildflags",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_education",
     "//brave/components/brave_education:buildflags",
     "//brave/components/brave_rewards/core",

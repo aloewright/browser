@@ -18,6 +18,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/version.h"
 #include "brave/browser/ui/whats_new/pref_names.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/l10n/common/locale_util.h"
 #include "chrome/browser/profiles/chrome_version_service.h"
 #include "chrome/browser/profiles/profile_manager.h"
@@ -93,6 +94,10 @@ bool DoesUserGetMajorUpdateSinceInstall() {
 }
 
 std::optional<double> GetTargetMajorVersion() {
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Never auto-open brave.com/whats-new.
+  return std::nullopt;
+#else
   constexpr char kWhatsNewTrial[] = "WhatsNewStudy";
 
   const std::string target_major_version_string = base::GetFieldTrialParamValue(
@@ -109,6 +114,7 @@ std::optional<double> GetTargetMajorVersion() {
   }
 
   return target_major_version;
+#endif  // BUILDFLAG(IS_BRAVE_DEBLOATED)
 }
 
 }  // namespace

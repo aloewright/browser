@@ -20,6 +20,7 @@ class Invoker(standard_invoker.Invoker):
         parser.add_argument("--skip_signing", action="store_true")
         parser.add_argument("--universal", action="store_true")
         parser.add_argument("--provisioning_profile_basename")
+        parser.add_argument("--no_sparkle", action="store_true")
 
     def __init__(self, args, config):
         super().__init__(args, config)

@@ -199,7 +199,8 @@ source_set("ui") {
   allow_circular_includes_from = brave_ui_allow_circular_includes_from
   deps += brave_ui_allow_circular_includes_from
 
-  public_deps = []
+  # Public so tests of //brave/browser/ui code can gate on it.
+  public_deps = [ "//brave/components/brave_debloat/buildflags" ]
 
   if (toolkit_views) {
     public_deps += [

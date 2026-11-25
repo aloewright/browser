@@ -17,6 +17,7 @@
 #include "brave/browser/ui/browser_commands.h"
 #include "brave/components/ai_chat/core/common/buildflags/buildflags.h"
 #include "brave/components/brave_account/features.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_vpn/common/buildflags/buildflags.h"
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
@@ -220,7 +221,9 @@ IN_PROC_BROWSER_TEST_F(BraveAppMenuModelBrowserTest, MenuOrderTest) {
   std::vector<int> help_commands_in_order = {
       IDC_ABOUT,
       IDC_HELP_PAGE_VIA_MENU,
+#if !BUILDFLAG(IS_BRAVE_DEBLOATED)
       IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER,
+#endif
   };
   CheckHelpCommandsAreInOrderInMenuModel(browser(), help_commands_in_order);
 

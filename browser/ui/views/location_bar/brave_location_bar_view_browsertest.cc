@@ -15,6 +15,7 @@
 #include "base/time/time.h"
 #include "brave/browser/ui/views/location_bar/brave_search_conversion/promotion_button_controller.h"
 #include "brave/browser/ui/views/location_bar/brave_search_conversion/promotion_button_view.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_search_conversion/features.h"
 #include "brave/components/brave_search_conversion/pref_names.h"
 #include "brave/components/search_engines/brave_prepopulated_engines.h"
@@ -145,6 +146,12 @@ class BraveLocationBarViewBrowserTest : public InProcessBrowserTest {
 
 IN_PROC_BROWSER_TEST_F(BraveLocationBarViewBrowserTest,
                        SearchConversionButtonTest) {
+  if (BUILDFLAG(IS_BRAVE_DEBLOATED)) {
+    // The promo starts dismissed, so the button is never created.
+    EXPECT_FALSE(promotion_button_view());
+    GTEST_SKIP() << "Search promotion is off in debloated builds";
+  }
+
   search_test_utils::WaitForTemplateURLServiceToLoad(GetTemplateURLService());
 
   auto bing_search_data = TemplateURLDataFromPrepopulatedEngine(

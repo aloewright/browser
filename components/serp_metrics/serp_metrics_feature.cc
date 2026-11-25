@@ -5,8 +5,15 @@
 
 #include "brave/components/serp_metrics/serp_metrics_feature.h"
 
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
+
 namespace serp_metrics {
 
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+// Its only consumers are P3A and the usage ping, both off when debloated.
+BASE_FEATURE(kSerpMetricsFeature, base::FEATURE_DISABLED_BY_DEFAULT);
+#else
 BASE_FEATURE(kSerpMetricsFeature, base::FEATURE_ENABLED_BY_DEFAULT);
+#endif
 
 }  // namespace serp_metrics

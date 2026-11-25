@@ -80,7 +80,10 @@ export function getBuildArgs(config: Config) {
 
   config.forwardEnvConfigVarsToObject(FORWARD_ENV_CONFIG_VARS_TO_GN_ARGS, args)
 
-  if (config.isOfficialBuild()) {
+  args.is_brave_debloated = config.isBraveDebloated
+
+  // Debloated forks ship without an updater; see is_brave_debloated.
+  if (config.isOfficialBuild() && !config.isBraveDebloated) {
     args.enable_updater = true
   }
 

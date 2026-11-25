@@ -1,0 +1,12 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+declare_args() {
+  # Debloated fork: compiles out Brave's optional services (Rewards, Ads,
+  # Wallet, VPN, Leo/AI, News, Talk, Tor, Playlist, Speedreader, Wayback,
+  # Web Discovery, PSST, email aliases, education, stats ping, ...) and
+  # disables telemetry, promos and auto-update. Set false for stock Brave.
+  is_brave_debloated = true
+}

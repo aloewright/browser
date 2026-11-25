@@ -37,6 +37,7 @@ specific_include_rules = {
     "!chrome/test/base/testing_profile.h",
   ],
   "promotion_unittest\.cc": [
+    "+brave/components/brave_debloat/buildflags/buildflags.h",
     "+brave/components/l10n/common/test/scoped_default_locale.h",
   ],
 }

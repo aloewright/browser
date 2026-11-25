@@ -3,7 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#if defined(OFFICIAL_BUILD)
+// Debloated forks never upload crash reports, whatever the consent pref says.
+#if defined(OFFICIAL_BUILD) && !defined(BRAVE_DEBLOATED_BUILD)
 #define BRAVE_CRASH_REPORTER_CLIENT_GET_UPLOAD_URL \
   return "https://cr.brave.com";
 #else

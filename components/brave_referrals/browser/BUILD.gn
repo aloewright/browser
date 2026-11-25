@@ -21,6 +21,7 @@ static_library("browser") {
   deps = [
     "//base",
     "//brave/brave_domains",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_stats/browser",
     "//brave/components/constants",
     "//brave/components/version_info",
@@ -62,6 +63,7 @@ source_set("unit_tests") {
     ":browser",
     "//base",
     "//base/test:test_support",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_referrals/common",
     "//brave/components/constants",
     "//components/prefs:test_support",

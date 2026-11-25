@@ -10,7 +10,9 @@ declare_args() {
   service_key_stt = ""
 }
 
-if (is_official_build) {
+# Forks lack Brave's private service keys; Brave endpoints may reject
+# keyless requests (see debloat/README.md).
+if (is_official_build && !is_brave_debloated) {
   assert(service_key_stt != "")
 }
 

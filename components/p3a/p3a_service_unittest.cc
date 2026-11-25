@@ -9,6 +9,7 @@
 
 #include "base/metrics/histogram_functions.h"
 #include "base/time/time.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/p3a/pref_names.h"
 #include "brave/components/p3a_utils/custom_attributes.h"
 #include "components/component_updater/mock_component_updater_service.h"
@@ -23,6 +24,9 @@ namespace p3a {
 constexpr char kTestExpressHistogramName[] = "Brave.Core.UsageDaily";
 constexpr char kTestSlowHistogramName[] = "Brave.Core.UsageMonthly";
 constexpr char kTestTypicalHistogramName[] = "Brave.Core.IsDefault";
+
+// Debloated builds never upload, whatever the pref says.
+constexpr bool kP3ACanBeEnabled = !BUILDFLAG(IS_BRAVE_DEBLOATED);
 
 class P3AServiceTest : public testing::Test {
  public:
@@ -67,7 +71,7 @@ TEST_F(P3AServiceTest, MessageManagerStartedWhenP3AEnabled) {
   EXPECT_FALSE(p3a_service_->message_manager_->IsActive());
 
   TriggerRemoteConfigLoad();
-  EXPECT_TRUE(p3a_service_->message_manager_->IsActive());
+  EXPECT_EQ(kP3ACanBeEnabled, p3a_service_->message_manager_->IsActive());
 }
 
 TEST_F(P3AServiceTest, MessageManagerNotStartedWhenP3ADisabled) {
@@ -91,11 +95,17 @@ TEST_F(P3AServiceTest, MessageManagerStartsAndStopsOnPrefChange) {
   EXPECT_FALSE(p3a_service_->message_manager_->IsActive());
 
   local_state_.SetBoolean(kP3AEnabled, true);
-  EXPECT_TRUE(p3a_service_->message_manager_->IsActive());
+  EXPECT_EQ(kP3ACanBeEnabled, p3a_service_->message_manager_->IsActive());
 
   local_state_.SetBoolean(kP3AEnabled, false);
   EXPECT_FALSE(p3a_service_->message_manager_->IsActive());
 }
+
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+TEST_F(P3AServiceTest, DisabledByDefault) {
+  EXPECT_FALSE(local_state_.GetBoolean(kP3AEnabled));
+}
+#endif
 
 TEST_F(P3AServiceTest, MetricValueStored) {
   local_state_.SetBoolean(kP3AEnabled, true);

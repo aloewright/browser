@@ -5,8 +5,18 @@
 
 #include "brave/components/brave_origin/features.h"
 
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
+#include "brave/components/brave_origin/buildflags/buildflags.h"
+
 namespace brave_origin::features {
 
-BASE_FEATURE(kBraveOrigin, base::FEATURE_ENABLED_BY_DEFAULT);
+// Debloated non-Origin builds drop the Origin purchase upsell.
+BASE_FEATURE(kBraveOrigin,
+#if BUILDFLAG(IS_BRAVE_DEBLOATED) && !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+             base::FEATURE_DISABLED_BY_DEFAULT
+#else
+             base::FEATURE_ENABLED_BY_DEFAULT
+#endif
+);
 
 }  // namespace brave_origin::features

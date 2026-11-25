@@ -24,6 +24,7 @@
 #include "base/task/thread_pool.h"
 #include "base/values.h"
 #include "brave/brave_domains/service_domains.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_referrals/common/pref_names.h"
 #include "brave/components/constants/network_constants.h"
 #include "brave/components/constants/pref_names.h"
@@ -191,6 +192,15 @@ BraveReferralsService::~BraveReferralsService() = default;
 
 void BraveReferralsService::Start() {
   if (initialized_) {
+    return;
+  }
+
+  // No promo-code read, referral init or finalization pings. A plain `if`
+  // keeps the helpers below referenced.
+  if (BUILDFLAG(IS_BRAVE_DEBLOATED)) {
+    initialized_ = true;
+    DCHECK(delegate_);
+    delegate_->OnInitialized();
     return;
   }
 

@@ -11,6 +11,7 @@
 #include "base/task/sequenced_task_runner.h"
 #include "brave/browser/brave_browser_process.h"
 #include "brave/browser/ui/webui/webcompat_reporter/webcompat_reporter_dialog.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_shields/content/browser/ad_block_service.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_settings_service.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
@@ -220,7 +221,8 @@ void ShieldsPanelDataHandler::SetWebcompatEnabled(
 }
 
 void ShieldsPanelDataHandler::OpenWebCompatWindow() {
-  if (!active_shields_data_controller_) {
+  // Debloated builds have no report endpoint; the panel hides the button.
+  if (BUILDFLAG(IS_BRAVE_DEBLOATED) || !active_shields_data_controller_) {
     return;
   }
 

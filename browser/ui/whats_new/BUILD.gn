@@ -13,6 +13,7 @@ source_set("browser_test") {
 
   deps = [
     "//brave/browser/ui",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/l10n/common:test_support",
     "//chrome/browser",
     "//chrome/browser:browser_process",
@@ -30,6 +31,7 @@ source_set("unit_test") {
   deps = [
     "//base",
     "//brave/browser/ui",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/l10n/common:test_support",
     "//chrome/browser",
     "//chrome/test:test_support",

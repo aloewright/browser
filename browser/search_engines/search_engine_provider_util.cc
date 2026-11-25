@@ -15,6 +15,7 @@
 #include "base/containers/fixed_flat_set.h"
 #include "base/values.h"
 #include "brave/browser/search_engines/pref_names.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/l10n/common/locale_util.h"
 #include "brave/components/search_engines/brave_prepopulated_engines.h"
 #include "chrome/browser/profiles/profile.h"
@@ -138,7 +139,9 @@ void ResetDefaultPrivateSearchProvider(Profile& profile) {
 }
 
 void PrepareSearchSuggestionsConfig(PrefService& local_state, bool first_run) {
-  if (!first_run) {
+  // Debloated builds keep suggestions opt-in: they send every keystroke to the
+  // search engine.
+  if (!first_run || BUILDFLAG(IS_BRAVE_DEBLOATED)) {
     return;
   }
 

@@ -26,6 +26,7 @@
 #include "brave/browser/ui/views/toolbar/brave_toolbar_view.h"
 #include "brave/browser/ui/views/toolbar/screenshot_button.h"
 #include "brave/components/ai_chat/core/common/buildflags/buildflags.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_news/common/buildflags/buildflags.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_talk/buildflags/buildflags.h"
@@ -479,7 +480,9 @@ void BraveBrowserCommandController::UpdateCommandForBraveRewards() {
 #endif
 
 void BraveBrowserCommandController::UpdateCommandForWebcompatReporter() {
-  UpdateCommandEnabled(IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER, true);
+  // Debloated builds have no report endpoint, so reports would be dropped.
+  UpdateCommandEnabled(IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER,
+                       !BUILDFLAG(IS_BRAVE_DEBLOATED));
 }
 
 #if BUILDFLAG(ENABLE_TOR)

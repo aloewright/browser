@@ -15,13 +15,24 @@
 #include "base/test/values_test_util.h"
 #include "base/values.h"
 #include "brave/components/brave_stats/browser/brave_stats_updater_util.h"
+#include "brave/components/webcompat_reporter/buildflags/buildflags.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/weak_wrapper_shared_url_loader_factory.h"
 #include "services/network/test/test_url_loader_factory.h"
 #include "services/network/test/test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "url/gurl.h"
 
 namespace webcompat_reporter {
+
+namespace {
+
+// Empty in debloated builds, which drop reports instead of sending them.
+bool HasReportEndpoint() {
+  return GURL(BUILDFLAG(WEBCOMPAT_REPORT_ENDPOINT)).is_valid();
+}
+
+}  // namespace
 
 class WebcompatReportUploaderUnitTest : public testing::Test {
  public:
@@ -62,6 +73,10 @@ class WebcompatReportUploaderUnitTest : public testing::Test {
 };
 
 TEST_F(WebcompatReportUploaderUnitTest, GenerateReport) {
+  if (!HasReportEndpoint()) {
+    GTEST_SKIP() << "No webcompat report endpoint configured";
+  }
+
   auto report_empty = webcompat_reporter::mojom::ReportInfo::New();
   EXPECT_EQ(TestReportGeneration(std::move(report_empty)),
             base::DictValue().Set("api_key", brave_stats::GetAPIKey()));
@@ -116,6 +131,23 @@ TEST_F(WebcompatReportUploaderUnitTest, GenerateReport) {
           .Set("url", GURL(report_copy->report_url.value()).spec())
           .Set("version", *report_copy->brave_version)
           .Set("webcompatReportErrors", std::move(errors_list)));
+}
+
+TEST_F(WebcompatReportUploaderUnitTest, DropsReportWithoutEndpoint) {
+  if (HasReportEndpoint()) {
+    GTEST_SKIP() << "A webcompat report endpoint is configured";
+  }
+
+  int request_count = 0;
+  url_loader_factory_.SetInterceptor(base::BindLambdaForTesting(
+      [&request_count](const network::ResourceRequest&) { ++request_count; }));
+
+  GetWebcompatUploader()->SubmitReport(
+      webcompat_reporter::mojom::ReportInfo::New());
+  task_environment_.RunUntilIdle();
+
+  EXPECT_EQ(0, request_count);
+  EXPECT_EQ(0, url_loader_factory_.NumPending());
 }
 
 }  // namespace webcompat_reporter

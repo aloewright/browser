@@ -14,6 +14,7 @@
 #include "base/logging.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/statistics_recorder.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/p3a/component_installer.h"
 #include "brave/components/p3a/message_manager.h"
@@ -93,7 +94,8 @@ P3AService::~P3AService() = default;
 void P3AService::RegisterPrefs(PrefRegistrySimple* registry, bool first_run) {
   MessageManager::RegisterPrefs(registry);
   registry->RegisterBooleanPref(kP3AEnabled,
-                                !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED));
+                                !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) &&
+                                    !BUILDFLAG(IS_BRAVE_DEBLOATED));
   // New users are shown the P3A notice via the welcome page.
   registry->RegisterBooleanPref(kP3ANoticeAcknowledged, first_run);
 
@@ -178,7 +180,12 @@ base::CallbackListSubscription P3AService::RegisterMetricCycledCallback(
 }
 
 bool P3AService::IsP3AEnabled() const {
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Never upload, regardless of the pref, so P3A cannot be re-enabled.
+  return false;
+#else
   return local_state_->GetBoolean(kP3AEnabled);
+#endif
 }
 
 void P3AService::Init(

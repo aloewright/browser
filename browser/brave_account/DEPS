@@ -1,0 +1,5 @@
+specific_include_rules = {
+  "brave_account_navigation_throttle_unittest\.cc": [
+    "+brave/components/brave_debloat/buildflags/buildflags.h",
+  ],
+}

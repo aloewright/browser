@@ -15,6 +15,7 @@
 #include "base/test/bind.h"
 #include "base/test/values_test_util.h"
 #include "base/time/time.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_referrals/common/pref_names.h"
 #include "brave/components/constants/network_constants.h"
 #include "brave/components/constants/pref_names.h"
@@ -152,6 +153,20 @@ class BraveReferralsServiceTest : public testing::Test {
       referral_initialized_callback_;
 };
 
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+// Referrals are off: no promo code read and no pings, even with stats on.
+TEST_F(BraveReferralsServiceTest, NoReferralPings) {
+  CreateReferralsService();
+  referrals_service_->Start();
+
+  task_environment_.FastForwardBy(base::Days(35));
+
+  EXPECT_FALSE(init_callback_called_);
+  EXPECT_FALSE(pref_service_.GetBoolean(kReferralInitialization));
+  EXPECT_TRUE(pref_service_.GetString(kReferralDownloadID).empty());
+  EXPECT_EQ(request_count_, 0u);
+}
+#else
 TEST_F(BraveReferralsServiceTest, InitAndActivity) {
   CreateReferralsService();
   referrals_service_->Start();
@@ -308,6 +323,7 @@ TEST_F(BraveReferralsServiceTest, AndroidConversionDroppedOnRequestFailure) {
 }
 
 #endif  // BUILDFLAG(IS_ANDROID)
+#endif  // BUILDFLAG(IS_BRAVE_DEBLOATED)
 
 // The finalization checks timer interval is drawn from a geometric
 // distribution, which can return 0 or a handful of seconds. Such an interval

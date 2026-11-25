@@ -10,12 +10,14 @@
 
 #include "base/check_deref.h"
 #include "base/files/file_path.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/test/task_environment.h"
 #include "base/time/time.h"
 #include "brave/browser/serp_metrics/profile_attributes_time_period_store_factory.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/serp_metrics/pref_names.h"
 #include "brave/components/serp_metrics/serp_metrics.h"
+#include "brave/components/serp_metrics/serp_metrics_feature.h"
 #include "brave/components/serp_metrics/time_period_storage/serp_metrics_pref_time_period_store_factory.h"
 #include "chrome/browser/profiles/profile_attributes_entry.h"
 #include "chrome/browser/profiles/profile_attributes_storage.h"
@@ -90,6 +92,8 @@ class SerpMetricsMigrationTest : public testing::Test {
   }
 
  private:
+  // `SerpMetrics` CHECKs the feature, which is off in debloated builds.
+  base::test::ScopedFeatureList scoped_feature_list_{kSerpMetricsFeature};
   content::BrowserTaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   const base::FilePath profile_path_;

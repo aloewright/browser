@@ -9,4 +9,7 @@ import("buildflags.gni")
 buildflag_header("buildflags") {
   header = "buildflags.h"
   flags = [ "ENABLE_CRASH_DIALOG=$enable_crash_dialog" ]
+
+  # Lets metrics_reporting_util.cc see IS_BRAVE_DEBLOATED through this dep.
+  public_deps = [ "//brave/components/brave_debloat/buildflags" ]
 }

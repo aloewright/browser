@@ -12,6 +12,7 @@ source_set("features") {
   deps = [
     "buildflags",
     "//base",
+    "//brave/components/brave_debloat/buildflags",
   ]
 }
 
@@ -61,6 +62,7 @@ static_library("brave_origin") {
   ]
   deps = [
     "//brave/brave_domains",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_policy:brave_policy_observer",
     "//brave/components/skus/browser",
     "//brave/components/skus/common",

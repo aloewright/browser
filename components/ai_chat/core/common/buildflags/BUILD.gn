@@ -17,7 +17,7 @@ declare_args() {
 if (is_official_build) {
   # Not needed for Brave Origin builds, which ship with AI Chat disabled
   # (enable_ai_chat = !is_brave_origin_branded).
-  if (!is_brave_origin_branded) {
+  if (!is_brave_origin_branded && !is_brave_debloated) {
     assert(service_key_aichat != "")
   }
 }

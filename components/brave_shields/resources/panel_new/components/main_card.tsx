@@ -10,6 +10,7 @@ import Toggle from '@brave/leo/react/toggle'
 import { formatString } from '$web-common/formatString'
 import { useShieldsApi } from '../api/shields_api_context'
 import { getString } from './strings'
+import { isWebcompatReporterEnabled } from '../webcompat_reporter'
 
 import { style } from './main_card.style'
 
@@ -28,6 +29,10 @@ export function MainCard() {
 
   function renderBlockInfo() {
     if (!shieldsEnabled) {
+      // Nothing to offer without a report endpoint (debloated builds).
+      if (!isWebcompatReporterEnabled()) {
+        return null
+      }
       return (
         <div className='report-prompt'>
           {getString('BRAVE_SHIELDS_SITE_NOT_WORKING')}

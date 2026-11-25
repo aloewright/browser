@@ -8,6 +8,7 @@
 #include "base/metrics/field_trial_param_associator.h"
 #include "brave/browser/ui/whats_new/pref_names.h"
 #include "brave/browser/ui/whats_new/whats_new_util.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/l10n/common/test/scoped_default_locale.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/chrome_version_service.h"
@@ -81,11 +82,19 @@ IN_PROC_BROWSER_TEST_F(BraveWhatsNewBrowserTest,
 
 IN_PROC_BROWSER_TEST_F(BraveWhatsNewBrowserTest,
                        WhatsNewPageLaunchTestWithUpdatedUser) {
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Never auto-opened when debloated; only the welcome tab remains.
+  EXPECT_EQ(1, tab_model()->count());
+  EXPECT_NE(GURL("https://brave.com/whats-new/"),
+            tab_model()->GetActiveWebContents()->GetVisibleURL());
+  EXPECT_EQ(0.0, local_state()->GetDouble(prefs::kWhatsNewLastVersion));
+#else
   // Two tabs - first one is whats-new and another one is welcome
   EXPECT_EQ(2, tab_model()->count());
   EXPECT_EQ(GURL("https://brave.com/whats-new/"),
             tab_model()->GetActiveWebContents()->GetVisibleURL());
   EXPECT_EQ(1.52, local_state()->GetDouble(prefs::kWhatsNewLastVersion));
+#endif
 }
 
 IN_PROC_BROWSER_TEST_F(BraveWhatsNewBrowserTest,

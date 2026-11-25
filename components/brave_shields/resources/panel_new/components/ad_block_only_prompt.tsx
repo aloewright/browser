@@ -8,6 +8,7 @@ import Button from '@brave/leo/react/button'
 
 import { useShieldsApi } from '../api/shields_api_context'
 import { getString } from './strings'
+import { isWebcompatReporterEnabled } from '../webcompat_reporter'
 import { OpenTabLink } from './open_tab_link'
 import { formatString } from '$web-common/formatString'
 
@@ -93,6 +94,10 @@ function AdBlockOnlyEnablePrompt() {
 
 function AdBlockOnlyFeedbackPrompt() {
   const api = useShieldsApi()
+  // The prompt only leads to a report; debloated builds have no endpoint.
+  if (!isWebcompatReporterEnabled()) {
+    return null
+  }
   return (
     <div data-css-scope={style.scope}>
       <h4>

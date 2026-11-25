@@ -19,12 +19,21 @@ TEST(VariationsCommandLineUtils, DefaultVariationsServerUrl) {
   base::CommandLine command_line(base::CommandLine::NO_PROGRAM);
   AppendBraveCommandLineOptions(command_line);
 
-  EXPECT_EQ(command_line.GetSwitchValueASCII(
-                variations::switches::kVariationsServerURL),
-            BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL));
-  EXPECT_EQ(command_line.GetSwitchValueASCII(
-                variations::switches::kVariationsInsecureServerURL),
-            BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL));
+  // Empty in debloated builds: no switches, so no seed is fetched.
+  const std::string server_url = BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL);
+  if (server_url.empty()) {
+    EXPECT_FALSE(
+        command_line.HasSwitch(variations::switches::kVariationsServerURL));
+    EXPECT_FALSE(command_line.HasSwitch(
+        variations::switches::kVariationsInsecureServerURL));
+  } else {
+    EXPECT_EQ(command_line.GetSwitchValueASCII(
+                  variations::switches::kVariationsServerURL),
+              server_url);
+    EXPECT_EQ(command_line.GetSwitchValueASCII(
+                  variations::switches::kVariationsInsecureServerURL),
+              server_url);
+  }
   EXPECT_FALSE(command_line.HasSwitch(
       variations::switches::kAcceptEmptySeedSignatureForTesting));
   EXPECT_FALSE(command_line.HasSwitch(

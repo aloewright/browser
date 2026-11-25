@@ -76,6 +76,10 @@ void WebcompatReportUploader::SubmitReport(mojom::ReportInfoPtr report_info) {
   std::string api_key = brave_stats::GetAPIKey();
 
   const GURL upload_url(BUILDFLAG(WEBCOMPAT_REPORT_ENDPOINT));
+  // No endpoint configured (debloated builds): drop the report.
+  if (!upload_url.is_valid()) {
+    return;
+  }
 
   base::DictValue report_details_dict;
 

@@ -19,6 +19,7 @@
 #include "brave/browser/ui/webui/settings/brave_import_bulk_data_handler.h"
 #include "brave/browser/ui/webui/settings/brave_search_engines_handler.h"
 #include "brave/browser/ui/webui/welcome_page/welcome_dom_handler.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_welcome/common/features.h"
 #include "brave/components/brave_welcome/resources/grit/brave_welcome_generated_map.h"
 #include "brave/components/constants/pref_names.h"
@@ -147,7 +148,8 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
   const bool is_jpn = country_id == country_codes::CountryId("JP");
   if (!profile->GetPrefs()->GetBoolean(
           brave_welcome_page::prefs::kHasSeenBraveWelcomePage)) {
-    if (is_jpn) {
+    // Debloated builds don't auto-open the brave.com marketing page.
+    if (is_jpn && !BUILDFLAG(IS_BRAVE_DEBLOATED)) {
       base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
           FROM_HERE, base::BindOnce(&OpenJapanWelcomePage, profile),
           base::Seconds(3));
@@ -176,13 +178,20 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
 #if BUILDFLAG(ENABLE_WEB_DISCOVERY)
       profile->GetPrefs()->IsManagedPreference(kWebDiscoveryEnabled));
 #else
-      false);
+      // Debloated: nothing to opt into, so skip the WDP step.
+      BUILDFLAG(IS_BRAVE_DEBLOATED));
 #endif
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+  // Crash upload and P3A are off; hide both toggles so the step auto-finishes.
+  source->AddBoolean("isMetricsReportingEnabledManaged", true);
+  source->AddBoolean("isP3AEnabledManaged", true);
+#else
   source->AddBoolean("isMetricsReportingEnabledManaged",
                      local_state->IsManagedPreference(
                          metrics::prefs::kMetricsReportingEnabled));
   source->AddBoolean("isP3AEnabledManaged",
                      local_state->IsManagedPreference(p3a::kP3AEnabled));
+#endif
   // settings::DefaultBrowserHandler CHECK-fails if the WebUI asks it to set the
   // default browser while the policy forbids it, so don't offer the action.
   source->AddBoolean(

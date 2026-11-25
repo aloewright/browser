@@ -8,10 +8,10 @@ import("//extensions/buildflags/buildflags.gni")
 
 declare_args() {
   enable_web_discovery_native =
-      (is_win || is_mac || is_linux || is_android) && !is_brave_origin_branded
+      (is_win || is_mac || is_linux || is_android) && !is_brave_origin_branded && !is_brave_debloated
 }
 
 declare_args() {
   enable_web_discovery = (enable_web_discovery_native || enable_extensions) &&
-                         !is_brave_origin_branded
+                         !is_brave_origin_branded && !is_brave_debloated
 }

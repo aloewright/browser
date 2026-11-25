@@ -116,6 +116,7 @@ source_set("features") {
 
   deps = [
     "//base",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/email_aliases/buildflags",
   ]
 
@@ -187,6 +188,7 @@ source_set("unit_tests") {
   if (enable_email_aliases) {
     sources += [ "features_unittest.cc" ]
     deps += [
+      "//brave/components/brave_debloat/buildflags",
       "//brave/components/email_aliases:features",
       "//brave/components/email_aliases/buildflags",
     ]

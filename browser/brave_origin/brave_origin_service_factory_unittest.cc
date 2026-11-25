@@ -8,6 +8,7 @@
 #include "base/containers/map_util.h"
 #include "brave/browser/policy/brave_simple_policy_map.h"
 #include "brave/components/brave_origin/brave_origin_policy_info.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/brave_rewards/core/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
@@ -159,7 +160,7 @@ TEST(BraveOriginServiceFactoryTest,
   // Verify that we have profile-level policies. On Brave Origin builds the
   // features that contribute profile policies (Rewards, Wallet, Wayback, etc.)
   // are all compiled out, so the intersection is legitimately empty there.
-#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_GT(profile_policy_definitions.size(), 0u)
       << "Should have at least some profile policies";
 #endif

@@ -1,4 +1,5 @@
 include_rules = [
+  "+brave/components/brave_debloat/buildflags",
   "+components/regional_capabilities",
   "+components/keyed_service/core",
   "+components/search_engines",
