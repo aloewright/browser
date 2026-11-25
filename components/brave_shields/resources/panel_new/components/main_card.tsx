@@ -29,14 +29,16 @@ export function MainCard() {
 
   function renderBlockInfo() {
     if (!shieldsEnabled) {
+      // Nothing to offer without a report endpoint (debloated builds).
+      if (!isWebcompatReporterEnabled()) {
+        return null
+      }
       return (
         <div className='report-prompt'>
           {getString('BRAVE_SHIELDS_SITE_NOT_WORKING')}
-          {isWebcompatReporterEnabled() && (
-            <Button onClick={api.openWebCompatWindow}>
-              {getString('BRAVE_SHIELDS_REPORT')}
-            </Button>
-          )}
+          <Button onClick={api.openWebCompatWindow}>
+            {getString('BRAVE_SHIELDS_REPORT')}
+          </Button>
         </div>
       )
     }

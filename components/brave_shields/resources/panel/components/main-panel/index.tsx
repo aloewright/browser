@@ -186,7 +186,7 @@ function MainPanel () {
           }
         </S.ReportSiteAction>
       </S.ReportSiteBox>
-    ) : reportSiteOrFootnoteElement
+    ) : null
   }
 
   return (

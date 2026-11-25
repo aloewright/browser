@@ -23,6 +23,7 @@
 #include "base/path_service.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/features.h"
 #include "brave/components/ntp_background_images/browser/ntp_background_images_component_installer.h"
 #include "brave/components/ntp_background_images/browser/ntp_background_images_data.h"
@@ -155,7 +156,11 @@ void NTPBackgroundImagesService::Init() {
         << override_sponsored_images_component_path.LossyDisplayName();
     OnSponsoredComponentReady(override_sponsored_images_component_path);
   } else {
-    RegisterBackgroundImagesComponent();
+    // Debloated builds don't fetch Brave's wallpaper component; the NTP keeps
+    // its built-in background, as before a first download completes.
+    if (!BUILDFLAG(IS_BRAVE_DEBLOATED)) {
+      RegisterBackgroundImagesComponent();
+    }
 
     pref_change_registrar_.Add(
         variations::prefs::kVariationsCountry,

@@ -178,8 +178,8 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
 #if BUILDFLAG(ENABLE_WEB_DISCOVERY)
       profile->GetPrefs()->IsManagedPreference(kWebDiscoveryEnabled));
 #else
-      // Nothing to opt into; treat as managed so the WDP step is skipped.
-      true);
+      // Debloated: nothing to opt into, so skip the WDP step.
+      BUILDFLAG(IS_BRAVE_DEBLOATED));
 #endif
 #if BUILDFLAG(IS_BRAVE_DEBLOATED)
   // Crash upload and P3A are off; hide both toggles so the step auto-finishes.

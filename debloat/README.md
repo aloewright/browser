@@ -45,6 +45,8 @@ Also disabled under the same flag (see `git log v1.100.58..`):
 - **"Report a broken site"** (app menu, macOS Help menu, Shields panel) is
   removed, since there is no report endpoint.
 
+Stock behaviour is unchanged when `is_brave_debloated = false`.
+
 ## What is kept, and why
 
 - **Brave Shields.** Ad and tracker blocking, fingerprinting and cookie
@@ -74,9 +76,9 @@ Also disabled under the same flag (see `git log v1.100.58..`):
   is still applied (never refreshed), and old prefs carry over. Use a fresh
   profile, or install the policy profile below, which sets
   `ChromeVariations = 2` to ignore all variations.
-- **NTP wallpapers.** Brave's own (non-sponsored) New Tab Page wallpapers are
-  still downloaded as a component from Brave's update server. Sponsored images
-  are compiled out with Brave Ads.
+- **NTP wallpapers.** Brave's wallpaper component is not downloaded, so the
+  New Tab Page uses its built-in background (gradient, solid colour or your own
+  image). Sponsored images are compiled out with Brave Ads.
 - **Tests.** Tests that assert stock behaviour were adapted or skipped under
   `BUILDFLAG(IS_BRAVE_DEBLOATED)`; a full `brave_unit_tests` /
   `brave_browser_tests` run has not been done.

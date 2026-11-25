@@ -26,6 +26,7 @@
 #include "base/test/values_test_util.h"
 #include "brave/components/brave_ads/buildflags/buildflags.h"
 #include "brave/components/brave_component_updater/browser/mock_on_demand_updater.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/ntp_background_images_data.h"
 #include "brave/components/ntp_background_images/browser/sponsored_content/new_tab_takeover/ntp_sponsored_content_data.h"
 #include "brave/components/ntp_background_images/browser/sponsored_content/new_tab_takeover/static/sponsored_images_component_data.h"
@@ -619,8 +620,9 @@ TEST_F(NTPBackgroundImagesServiceTest, BasicTest) {
   // The sponsored content component is registered after ads is initialized.
   EXPECT_FALSE(service_->sponsored_images_component_started);
   // If ENABLE_NTP_BACKGROUND_IMAGES then the sponsored backgrounds component
-  // shall be registered.
-  EXPECT_TRUE(service_->background_images_component_started);
+  // shall be registered. Debloated builds never fetch Brave's wallpapers.
+  EXPECT_EQ(!BUILDFLAG(IS_BRAVE_DEBLOATED),
+            service_->background_images_component_started);
 }
 
 TEST_F(NTPBackgroundImagesServiceTest, InternalDataTest) {

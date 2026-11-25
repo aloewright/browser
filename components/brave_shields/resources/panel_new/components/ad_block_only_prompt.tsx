@@ -94,6 +94,10 @@ function AdBlockOnlyEnablePrompt() {
 
 function AdBlockOnlyFeedbackPrompt() {
   const api = useShieldsApi()
+  // The prompt only leads to a report; debloated builds have no endpoint.
+  if (!isWebcompatReporterEnabled()) {
+    return null
+  }
   return (
     <div data-css-scope={style.scope}>
       <h4>
@@ -108,16 +112,14 @@ function AdBlockOnlyFeedbackPrompt() {
             'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_LOOKS_GOOD',
           )}
         </Button>
-        {isWebcompatReporterEnabled() && (
-          <Button
-            kind='plain'
-            onClick={api.openWebCompatWindow}
-          >
-            {getString(
-              'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_REPORT_SITE',
-            )}
-          </Button>
-        )}
+        <Button
+          kind='plain'
+          onClick={api.openWebCompatWindow}
+        >
+          {getString(
+            'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_REPORT_SITE',
+          )}
+        </Button>
       </div>
     </div>
   )

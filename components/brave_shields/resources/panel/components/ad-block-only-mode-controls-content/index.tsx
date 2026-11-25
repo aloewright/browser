@@ -53,32 +53,33 @@ function IsTheSiteWorkingCorrectlyNowAdBlockOnlyModeNotice(
           <Icon name='launch' />
         </Button>
       </HeaderRow>
-      <Alert type='info' hideIcon>
-        <div slot='title'>
-          {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowTitle')}
-        </div>
-        <div>
-          {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowDesc')}
-        </div>
-        <div slot='actions' className={styles.actionsWrapper}>
-          {isBraveShieldsEnabled ? (
-            <div className={styles.buttonsWrapper}>
-              <Button size="medium" onClick={onLooksGoodClick}>
-                {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowLooksGood')}
-              </Button>
-              {isWebcompatReporterEnabled() && (
+      {/* The alert only leads to a report; debloated builds have none. */}
+      {isWebcompatReporterEnabled() && (
+        <Alert type='info' hideIcon>
+          <div slot='title'>
+            {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowTitle')}
+          </div>
+          <div>
+            {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowDesc')}
+          </div>
+          <div slot='actions' className={styles.actionsWrapper}>
+            {isBraveShieldsEnabled ? (
+              <div className={styles.buttonsWrapper}>
+                <Button size="medium" onClick={onLooksGoodClick}>
+                  {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowLooksGood')}
+                </Button>
                 <Button kind="plain" size="medium" onClick={onReportClick}>
                   {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
                 </Button>
-              )}
-            </div>
-          ) : isWebcompatReporterEnabled() && (
-            <Button size="medium" onClick={onReportClick}>
-              {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
-            </Button>
-          )}
-        </div>
-      </Alert>
+              </div>
+            ) : (
+              <Button size="medium" onClick={onReportClick}>
+                {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
+              </Button>
+            )}
+          </div>
+        </Alert>
+      )}
     </Container>
   )
 }
