@@ -11,6 +11,7 @@
 #include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/brave_search_conversion/features.h"
+#include "brave/components/brave_search_conversion/pref_names.h"
 #include "brave/components/brave_search_conversion/types.h"
 #include "brave/components/brave_search_conversion/utils.h"
 #include "brave/components/search_engines/brave_prepopulated_engines.h"
@@ -84,6 +85,26 @@ TEST_F(BraveSearchConversionTest, DefaultValueTest) {
   EXPECT_EQ(GURL("https://search.brave.com/search?q=brave&action=makeDefault"),
             GetPromoURL(u"brave"));
 }
+
+#if BUILDFLAG(IS_BRAVE_DEBLOATED)
+// Promos start dismissed and the NTP never prompts for suggestions.
+TEST_F(BraveSearchConversionTest, DebloatedDefaultPrefsTest) {
+  EXPECT_TRUE(pref_service_.GetBoolean(prefs::kDismissed));
+  EXPECT_FALSE(pref_service_.GetBoolean(prefs::kPromptEnableSuggestions));
+  EXPECT_FALSE(IsBraveSearchConversionFeatureEnabled());
+
+  // Undismissing must not bring the promos back.
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(features::kOmniboxBanner);
+  pref_service_.SetBoolean(prefs::kDismissed, false);
+  ConfigureBingAsDefaultProvider();
+  EXPECT_FALSE(IsBraveSearchConversionFeatureEnabled());
+  EXPECT_EQ(ConversionType::kNone,
+            GetConversionType(
+                &pref_service_,
+                search_engines_test_environment_.template_url_service()));
+}
+#endif  // BUILDFLAG(IS_BRAVE_DEBLOATED)
 
 // In branded/debloated builds, GetConversionType always returns kNone.
 #if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
