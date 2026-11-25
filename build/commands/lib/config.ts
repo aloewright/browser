@@ -247,6 +247,7 @@ export class Config {
         'signature_generator.py',
       ) || ''
     this.extraGnArgs = envConfig.getMergedObject(['gn', 'args'])
+    this.syncBraveDebloatedFromGnArgs()
     this.extraGnGenOpts = envConfig.getString(['brave_extra_gn_gen_opts'], '')
     this.extraNinjaOpts = []
     this.sisoLimits = envConfig.getMergedObject(['siso_limits'])
@@ -371,6 +372,15 @@ export class Config {
     // Chromium supports LeakSanitizer is supported on x86_64 Linux only.
     // See https://www.chromium.org/developers/testing/leaksanitizer/
     return this.isAsan() && this.targetOS === 'linux'
+  }
+
+  // A `--gn is_brave_debloated:false` override must also drive the script-side
+  // decisions (e.g. forcing enable_updater), not just the GN arg.
+  syncBraveDebloatedFromGnArgs() {
+    const value = this.extraGnArgs?.is_brave_debloated
+    if (typeof value === 'boolean') {
+      this.isBraveDebloated = value
+    }
   }
 
   isOfficialBuild() {
@@ -654,6 +664,7 @@ export class Config {
         args[key] = value
       })
     }
+    this.syncBraveDebloatedFromGnArgs()
 
     if (options.ninja) {
       parseExtraInputs(

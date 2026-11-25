@@ -148,7 +148,8 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
   const bool is_jpn = country_id == country_codes::CountryId("JP");
   if (!profile->GetPrefs()->GetBoolean(
           brave_welcome_page::prefs::kHasSeenBraveWelcomePage)) {
-    if (is_jpn) {
+    // Debloated builds don't auto-open the brave.com marketing page.
+    if (is_jpn && !BUILDFLAG(IS_BRAVE_DEBLOATED)) {
       base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
           FROM_HERE, base::BindOnce(&OpenJapanWelcomePage, profile),
           base::Seconds(3));

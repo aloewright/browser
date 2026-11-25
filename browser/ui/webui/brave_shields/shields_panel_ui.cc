@@ -12,6 +12,7 @@
 #include "brave/browser/brave_shields/brave_shields_settings_service_factory.h"
 #include "brave/browser/ui/brave_browser_window.h"
 #include "brave/browser/ui/webui/brave_webui_source.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_settings_service.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/brave_shield_localized_strings.h"
@@ -65,6 +66,10 @@ ShieldsPanelUI::ShieldsPanelUI(content::WebUI* web_ui)
           brave_shields::features::kBraveShowStrictFingerprintingMode));
 
   source->AddBoolean("isTorProfile", profile_->IsTor());
+
+  // Debloated builds have no webcompat report endpoint.
+  source->AddBoolean("isWebcompatReporterEnabled",
+                     !BUILDFLAG(IS_BRAVE_DEBLOATED));
 
   source->AddBoolean("isBraveForgetFirstPartyStorageFeatureEnabled",
                      base::FeatureList::IsEnabled(

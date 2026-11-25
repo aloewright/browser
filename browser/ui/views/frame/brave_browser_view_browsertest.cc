@@ -28,6 +28,7 @@
 #include "brave/browser/ui/views/toolbar/brave_toolbar_view.h"
 #include "brave/browser/ui/views/toolbar/screenshot_button.h"
 #include "brave/common/pref_names.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/infobars/core/brave_confirm_infobar_delegate.h"
@@ -235,7 +236,7 @@ IN_PROC_BROWSER_TEST_F(BraveBrowserViewTest, LayoutWithVerticalTabTest) {
         browser_view()->contents_container()->bounds().origin().y());
   };
 
-#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
   // Infobar is visible at first run (P3A notice).
   // Not shown on Origin builds where P3A is disabled by default.
   // Wait till infobar's positioning is finished.
@@ -291,7 +292,7 @@ IN_PROC_BROWSER_TEST_F(BraveBrowserViewTest, LayoutWithVerticalTabTest) {
   // Activate non-NTP tab and check contents container is positioned below the
   // infobar.
   browser()->tab_strip_model()->ActivateTabAt(0);
-#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_TRUE(infobar_container()->GetVisible());
   EXPECT_EQ(infobar_container()->bounds().bottom_left(),
             contents_area_origin());
@@ -314,7 +315,7 @@ IN_PROC_BROWSER_TEST_F(BraveBrowserViewTest, LayoutWithVerticalTabTest) {
   EXPECT_EQ(vertical_tab_strip_host_view()->bounds().origin(),
             bookmark_bar()->bounds().bottom_left() +
                 gfx::Vector2d(0, top_contents_separator_height));
-#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if !BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) && !BUILDFLAG(IS_BRAVE_DEBLOATED)
   EXPECT_TRUE(infobar_container()->GetVisible());
   EXPECT_EQ(infobar_container()->bounds().bottom_left(),
             contents_area_origin());

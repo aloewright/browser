@@ -8,6 +8,7 @@ import Alert from '@brave/leo/react/alert'
 import Button from '@brave/leo/react/button'
 import Icon from '@brave/leo/react/icon'
 import getPanelBrowserAPI from '../../api/panel_browser_api'
+import { isWebcompatReporterEnabled } from '../../webcompat_reporter'
 import { getLocale } from '$web-common/locale'
 import { GlobalSettings } from "../advanced-controls-content"
 import {
@@ -65,11 +66,13 @@ function IsTheSiteWorkingCorrectlyNowAdBlockOnlyModeNotice(
               <Button size="medium" onClick={onLooksGoodClick}>
                 {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowLooksGood')}
               </Button>
-              <Button kind="plain" size="medium" onClick={onReportClick}>
-                {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
-              </Button>
+              {isWebcompatReporterEnabled() && (
+                <Button kind="plain" size="medium" onClick={onReportClick}>
+                  {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
+                </Button>
+              )}
             </div>
-          ) : (
+          ) : isWebcompatReporterEnabled() && (
             <Button size="medium" onClick={onReportClick}>
               {getLocale('braveShieldsIsThisSiteWorkingCorrectlyNowReportSite')}
             </Button>

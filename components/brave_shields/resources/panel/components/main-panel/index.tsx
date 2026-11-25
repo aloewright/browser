@@ -19,6 +19,7 @@ import {
 import { formatLocale, getLocale } from '$web-common/locale'
 import DataContext from '../../state/context'
 import getPanelBrowserAPI from '../../api/panel_browser_api'
+import { isWebcompatReporterEnabled } from '../../webcompat_reporter'
 import { useIsExpanded } from '../../state/hooks'
 import styled from 'styled-components'
 import { color } from '@brave/leo/tokens/css/variables'
@@ -162,7 +163,7 @@ function MainPanel () {
       </S.GlobalDefaultsButton>
     )
 
-    reportSiteOrFootnoteElement = (
+    reportSiteOrFootnoteElement = isWebcompatReporterEnabled() ? (
       <S.ReportSiteBox>
         <S.ReportSiteAction>
           <span>{getLocale('braveShieldsReportSiteDesc')}</span>
@@ -185,7 +186,7 @@ function MainPanel () {
           }
         </S.ReportSiteAction>
       </S.ReportSiteBox>
-    )
+    ) : reportSiteOrFootnoteElement
   }
 
   return (

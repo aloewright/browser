@@ -10,6 +10,7 @@ import Toggle from '@brave/leo/react/toggle'
 import { formatString } from '$web-common/formatString'
 import { useShieldsApi } from '../api/shields_api_context'
 import { getString } from './strings'
+import { isWebcompatReporterEnabled } from '../webcompat_reporter'
 
 import { style } from './main_card.style'
 
@@ -31,9 +32,11 @@ export function MainCard() {
       return (
         <div className='report-prompt'>
           {getString('BRAVE_SHIELDS_SITE_NOT_WORKING')}
-          <Button onClick={api.openWebCompatWindow}>
-            {getString('BRAVE_SHIELDS_REPORT')}
-          </Button>
+          {isWebcompatReporterEnabled() && (
+            <Button onClick={api.openWebCompatWindow}>
+              {getString('BRAVE_SHIELDS_REPORT')}
+            </Button>
+          )}
         </div>
       )
     }

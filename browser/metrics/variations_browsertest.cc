@@ -3,11 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-#include <string>
-
 #include "base/feature_list.h"
 #include "base/test/metrics/histogram_tester.h"
-#include "brave/components/variations/buildflags.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/test/base/platform_browser_test.h"
 #include "components/variations/seed_reader_writer.h"
@@ -71,13 +68,6 @@ IN_PROC_BROWSER_TEST_F(VariationsBrowserTest, PRE_BraveSeedApplied) {
 }
 
 IN_PROC_BROWSER_TEST_F(VariationsBrowserTest, BraveSeedApplied) {
-  // Debloated builds pass no server URL, so non-Google-branded Chromium creates
-  // no VariationsService and the stored seed is never applied.
-  const std::string server_url = BUILDFLAG(BRAVE_VARIATIONS_SERVER_URL);
-  if (server_url.empty()) {
-    GTEST_SKIP() << "No variations server URL configured";
-  }
-
   histogram_tester_.ExpectUniqueSample("Variations.SeedUsage",
                                        SeedUsage::kRegularSeedUsed, 1);
 

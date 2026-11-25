@@ -8,6 +8,7 @@ import Button from '@brave/leo/react/button'
 
 import { useShieldsApi } from '../api/shields_api_context'
 import { getString } from './strings'
+import { isWebcompatReporterEnabled } from '../webcompat_reporter'
 import { OpenTabLink } from './open_tab_link'
 import { formatString } from '$web-common/formatString'
 
@@ -107,14 +108,16 @@ function AdBlockOnlyFeedbackPrompt() {
             'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_LOOKS_GOOD',
           )}
         </Button>
-        <Button
-          kind='plain'
-          onClick={api.openWebCompatWindow}
-        >
-          {getString(
-            'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_REPORT_SITE',
-          )}
-        </Button>
+        {isWebcompatReporterEnabled() && (
+          <Button
+            kind='plain'
+            onClick={api.openWebCompatWindow}
+          >
+            {getString(
+              'BRAVE_SHIELDS_IS_THIS_SITE_WORKING_CORRECTLY_NOW_REPORT_SITE',
+            )}
+          </Button>
+        )}
       </div>
     </div>
   )

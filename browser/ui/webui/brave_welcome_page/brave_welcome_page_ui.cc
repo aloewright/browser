@@ -21,6 +21,7 @@
 #include "brave/browser/ui/webui/brave_welcome_page/welcome_page_features.h"
 #include "brave/browser/ui/webui/brave_welcome_page/welcome_page_handler.h"
 #include "brave/browser/ui/webui/settings/brave_import_bulk_data_handler.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_education/buildflags.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/constants/webui_url_constants.h"
@@ -132,7 +133,9 @@ BraveWelcomePageUI::BraveWelcomePageUI(content::WebUI* web_ui)
   source->AddBoolean("vpnFeatureEnabled", features.contains(Feature::kVPN));
 
   PrefService* prefs = profile->GetPrefs();
-  if (!prefs->GetBoolean(brave_welcome_page::prefs::kHasSeenBraveWelcomePage) &&
+  // Debloated builds don't auto-open the brave.com marketing page.
+  if (!BUILDFLAG(IS_BRAVE_DEBLOATED) &&
+      !prefs->GetBoolean(brave_welcome_page::prefs::kHasSeenBraveWelcomePage) &&
       IsJapanCountryId(prefs)) {
     base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
         FROM_HERE,

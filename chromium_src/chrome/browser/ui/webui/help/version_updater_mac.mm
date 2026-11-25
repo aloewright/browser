@@ -209,6 +209,7 @@ void SparkleVersionUpdater::UpdateShowPromoteButton() {
   NOTIMPLEMENTED();
 }
 
+#if BUILDFLAG(ENABLE_OMAHA4) || defined(BRAVE_DEBLOATED_BUILD)
 namespace {
 
 [[maybe_unused]] bool BraveUseChromiumUpdater() {
@@ -227,10 +228,13 @@ namespace {
   WrapUnique(BraveUseChromiumUpdater() \
                  ? X                   \
                  : static_cast<VersionUpdater*>(new SparkleVersionUpdater()))
+#endif  // BUILDFLAG(ENABLE_OMAHA4) || defined(BRAVE_DEBLOATED_BUILD)
 
 #include <chrome/browser/ui/webui/help/version_updater_mac.mm>
 
+#if BUILDFLAG(ENABLE_OMAHA4) || defined(BRAVE_DEBLOATED_BUILD)
 #undef WrapUnique
+#endif
 
 #if BUILDFLAG(ENABLE_SPARKLE)
 void SparkleVersionUpdater::GetIsSparkleForTesting(bool& result) const {

@@ -26,10 +26,24 @@ Origin already turns off:
 - Web Discovery, PSST, email aliases, Brave education pages
 - Stats updater (the daily usage ping)
 
-Later commits on this branch work on telemetry (P3A, metrics), variations
-(Griffin), auto-update (Sparkle), crash reporting, referrals, the webcompat
-reporter, What's New, onboarding and search promos, and Brave Account. See
-`git log v1.100.58..` for exactly what landed.
+Also disabled under the same flag (see `git log v1.100.58..`):
+
+- **Telemetry:** P3A (forced off, cannot be re-enabled), SERP metrics, referral
+  and promo-code pings, crash-report uploads (no upload URL at all, so consent
+  cannot turn them back on), webcompat report uploads. UMA was already off in
+  Brave. The settings and onboarding toggles for these are hidden.
+- **Griffin/variations:** no seed is fetched (`brave_variations_server_url`
+  is empty). See the profile caveat below.
+- **Auto-update:** Sparkle and Omaha 4 are not built, so the fork never
+  updates itself into stock Brave. Release signing skips Sparkle.
+- **Promos:** Brave Search conversion banners and the omnibox promo button,
+  auto-opened What's New, the Japan welcome marketing tab, Brave Account
+  sign-in, the Brave Origin purchase upsell, the welcome Web Discovery step.
+- **Search suggestions** are opt-in in every region. Stock Brave turns them on
+  by default in some countries, which sends every omnibox keystroke to the
+  search engine.
+- **"Report a broken site"** (app menu, macOS Help menu, Shields panel) is
+  removed, since there is no report endpoint.
 
 ## What is kept, and why
 
@@ -42,6 +56,30 @@ reporter, What's New, onboarding and search promos, and Brave Account. See
 - **Brave Sync, opt-in.** Nothing connects to the sync server until you create
   or join a sync chain. No policy is needed to keep it off by default. Do not
   set `SyncDisabled`. To self-host, set `BraveSyncUrl`.
+
+## Known limitations
+
+- **Brave service keys.** Official Brave builds embed private keys
+  (`brave_services_key`, `service_key_search`, `service_key_stt`). A fork
+  does not have them; the GN asserts are relaxed so a debloated official
+  build still generates. The services key is sent to `*.brave.com`, including
+  the component updater (`go-updater.brave.com`) that delivers Shields lists,
+  and to Sync. If Brave's servers refuse keyless requests, **adblock and
+  HTTPS-upgrade lists will not update** and Sync will not work. Check this on
+  the first build (watch `brave://components` update the "Brave Ad Block"
+  entries). Without a key the options are to accept stale bundled lists or to
+  self-host a component updater.
+- **Shared profile with stock Brave.** A Release build uses stock Brave's
+  bundle id and profile directory. A Griffin seed saved there by stock Brave
+  is still applied (never refreshed), and old prefs carry over. Use a fresh
+  profile, or install the policy profile below, which sets
+  `ChromeVariations = 2` to ignore all variations.
+- **NTP wallpapers.** Brave's own (non-sponsored) New Tab Page wallpapers are
+  still downloaded as a component from Brave's update server. Sponsored images
+  are compiled out with Brave Ads.
+- **Tests.** Tests that assert stock behaviour were adapted or skipped under
+  `BUILDFLAG(IS_BRAVE_DEBLOATED)`; a full `brave_unit_tests` /
+  `brave_browser_tests` run has not been done.
 
 ## GN args
 
@@ -136,6 +174,8 @@ Policies in the profile:
   `BraveSpeedreaderEnabled`, `BraveWaybackMachineEnabled`,
   `BraveWebDiscoveryEnabled`, `EmailAliasesEnabled`, `PsstEnabled`,
   `BraveP3AEnabled`, `BraveStatsPingEnabled`.
+- **`ChromeVariations = 2`**: disables all field trials, including any stored
+  Griffin seed.
 - **Chromium policies.** These are standard Chromium policies, but there is no
   Chromium checkout here, so they were **not verified** against 158:
   `MetricsReportingEnabled`, `UrlKeyedAnonymizedDataCollectionEnabled`,

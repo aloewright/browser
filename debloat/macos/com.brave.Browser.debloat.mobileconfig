@@ -50,6 +50,9 @@
       <false/>
       <key>BraveStatsPingEnabled</key>
       <false/>
+      <!-- 2 = all variations disabled; ignores any stored Griffin seed. -->
+      <key>ChromeVariations</key>
+      <integer>2</integer>
 
       <key>MetricsReportingEnabled</key>
       <false/>

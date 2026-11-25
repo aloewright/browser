@@ -14,7 +14,6 @@ source_set("browser_tests") {
 
   deps = [
     "//base",
-    "//brave/components/variations:buildflags",
     "//chrome/browser",
     "//chrome/test:test_support",
     "//components/variations",

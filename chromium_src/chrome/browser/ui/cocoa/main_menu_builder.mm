@@ -23,6 +23,11 @@ constexpr int kMediaRouterMenuItemTitleResourceId =
 constexpr int kShowGoogleLensShortcut = IDC_SHOW_GOOGLE_LENS_SHORTCUT;
 constexpr int kShowAIModeOmniboxButton = IDC_SHOW_AI_MODE_OMNIBOX_BUTTON;
 constexpr int kShowSearchTools = IDC_SHOW_SEARCH_TOOLS;
+#if defined(BRAVE_DEBLOATED_BUILD)
+constexpr bool kRemoveWebcompatReporter = true;
+#else
+constexpr bool kRemoveWebcompatReporter = false;
+#endif
 }  // namespace
 
 // Insert "New Private Window with Tor" in "File" menu
@@ -37,7 +42,8 @@ constexpr int kShowSearchTools = IDC_SHOW_SEARCH_TOOLS;
 #undef IDS_HELP_MAC
 #define IDS_HELP_MAC                                     \
   IDS_REPORT_BROKEN_SITE_MAC)                            \
-        .command_id(IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER)); \
+        .command_id(IDC_SHOW_BRAVE_WEBCOMPAT_REPORTER)   \
+        .remove_if(kRemoveWebcompatReporter));           \
   items.push_back(Item(kHelpMacResourceId
 
 #undef IDS_PASTE_MAC
