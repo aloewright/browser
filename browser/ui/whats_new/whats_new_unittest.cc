@@ -8,6 +8,7 @@
 #include "base/metrics/field_trial_param_associator.h"
 #include "brave/browser/ui/whats_new/pref_names.h"
 #include "brave/browser/ui/whats_new/whats_new_util.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/l10n/common/test/scoped_default_locale.h"
 #include "chrome/browser/profiles/chrome_version_service.h"
 #include "chrome/test/base/testing_browser_process.h"
@@ -21,6 +22,9 @@ namespace whats_new {
 namespace {
 
 constexpr char kWhatsNewTrial[] = "WhatsNewStudy";
+
+// Debloated builds never auto-open What's New, even when everything matches.
+constexpr bool kCanShowWhatsNew = !BUILDFLAG(IS_BRAVE_DEBLOATED);
 
 }  // namespace
 
@@ -69,7 +73,7 @@ TEST_F(BraveWhatsNewTest, SupportedLangTest) {
   // South korea is supported.
   {
     const brave_l10n::test::ScopedDefaultLocale scoped_default_locale("ko_KR");
-    EXPECT_TRUE(ShouldShowBraveWhatsNewForState(&local_state_));
+    EXPECT_EQ(kCanShowWhatsNew, ShouldShowBraveWhatsNewForState(&local_state_));
   }
 }
 
@@ -116,8 +120,9 @@ TEST_F(BraveWhatsNewTest, MatchedCurrentVersionTest) {
   base::FieldTrialList::CreateFieldTrial(kWhatsNewTrial, "Enabled");
 
   EXPECT_NE(1.51, local_state_.GetDouble(prefs::kWhatsNewLastVersion));
-  EXPECT_TRUE(ShouldShowBraveWhatsNewForState(&local_state_));
-  EXPECT_EQ(1.51, local_state_.GetDouble(prefs::kWhatsNewLastVersion));
+  EXPECT_EQ(kCanShowWhatsNew, ShouldShowBraveWhatsNewForState(&local_state_));
+  EXPECT_EQ(kCanShowWhatsNew ? 1.51 : 0,
+            local_state_.GetDouble(prefs::kWhatsNewLastVersion));
 }
 
 // Test when current version and target version is not matched.

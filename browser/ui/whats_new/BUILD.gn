@@ -3,21 +3,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import("//brave/components/brave_debloat/buildflags/buildflags.gni")
-
 assert(!is_android)
 
 source_set("browser_test") {
   testonly = true
   defines = [ "HAS_OUT_OF_PROC_TEST_RUNNER" ]
 
-  # What's New never auto-opens when debloated; these tests expect it to.
-  if (!is_brave_debloated) {
-    sources = [ "whats_new_browsertest.cc" ]
-  }
+  sources = [ "whats_new_browsertest.cc" ]
 
   deps = [
     "//brave/browser/ui",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/l10n/common:test_support",
     "//chrome/browser",
     "//chrome/browser:browser_process",
@@ -30,13 +26,12 @@ source_set("browser_test") {
 source_set("unit_test") {
   testonly = true
 
-  if (!is_brave_debloated) {
-    sources = [ "whats_new_unittest.cc" ]
-  }
+  sources = [ "whats_new_unittest.cc" ]
 
   deps = [
     "//base",
     "//brave/browser/ui",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/l10n/common:test_support",
     "//chrome/browser",
     "//chrome/test:test_support",
