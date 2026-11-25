@@ -72,6 +72,11 @@ TEST_P(BraveAccountNavigationThrottleUnitTest,
   const bool expected_throttle_created =
       test_case.expected_throttle_created && !BUILDFLAG(IS_BRAVE_DEBLOATED);
   EXPECT_EQ(registry.throttles().empty(), !expected_throttle_created);
+  if (!test_case.expected_throttle_created) {
+    EXPECT_FALSE(test_case.expected_action);
+    EXPECT_FALSE(test_case.expected_error_code);
+    return;
+  }
   if (!expected_throttle_created) {
     return;
   }

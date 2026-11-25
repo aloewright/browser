@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/test/scoped_feature_list.h"
+#include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/email_aliases/features.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -38,8 +39,10 @@ TEST_P(BraveAccountFeaturesTest, IsBraveAccountEnabled) {
       {email_aliases::features::kEmailAliases, test_case.email_aliases_enabled},
   });
 
+  // Always off in debloated builds.
   EXPECT_EQ(IsBraveAccountEnabled(),
-            test_case.expected_is_brave_account_enabled);
+            test_case.expected_is_brave_account_enabled &&
+                !BUILDFLAG(IS_BRAVE_DEBLOATED));
 }
 
 INSTANTIATE_TEST_SUITE_P(
