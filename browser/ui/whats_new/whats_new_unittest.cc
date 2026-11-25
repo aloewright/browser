@@ -121,7 +121,7 @@ TEST_F(BraveWhatsNewTest, MatchedCurrentVersionTest) {
 
   EXPECT_NE(1.51, local_state_.GetDouble(prefs::kWhatsNewLastVersion));
   EXPECT_EQ(kCanShowWhatsNew, ShouldShowBraveWhatsNewForState(&local_state_));
-  EXPECT_EQ(kCanShowWhatsNew ? 1.51 : 0,
+  EXPECT_EQ(kCanShowWhatsNew ? 1.51 : 0.0,
             local_state_.GetDouble(prefs::kWhatsNewLastVersion));
 }
 
