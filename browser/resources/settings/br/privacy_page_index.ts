@@ -21,7 +21,7 @@ import '../site_settings/site_settings_shields.js'
 import '../site_settings/site_settings_brave_ai.js'
 import { ContentSettingsTypes } from '../site_settings/constants.js';
 
-// Debloated builds compile out P3A, the usage ping and crash upload, so every
+// Debloated builds turn off P3A, the usage ping and crash upload, so every
 // control in the Data collection section would be inert.
 const showDataCollection = !loadTimeData.getBoolean('isBraveDebloatedBuild')
 

@@ -167,7 +167,7 @@ void BravePrivacyHandler::AddLoadTimeData(content::WebUIDataSource* data_source,
   // P3A and usage ping (stats reporting) are disabled for Brave Origin branded
   // builds. Hide their settings unconditionally so they don't briefly appear on
   // first launch before the disabling policy is applied (brave-browser#56166).
-  // Debloated builds compile both out, so the toggles would do nothing.
+  // Debloated builds turn both off, so the toggles would do nothing.
   data_source->AddBoolean("isStatsReportingEnabledManaged", true);
   data_source->AddBoolean("isP3AEnabledManaged", true);
 #else
