@@ -63,6 +63,7 @@ source_set("unit_tests") {
     ":browser",
     "//base",
     "//base/test:test_support",
+    "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_referrals/common",
     "//brave/components/constants",
     "//components/prefs:test_support",
