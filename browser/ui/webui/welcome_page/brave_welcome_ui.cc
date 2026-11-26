@@ -24,6 +24,7 @@
 #include "brave/components/brave_welcome/resources/grit/brave_welcome_generated_map.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/telemetry/crash_buildflags.h"
 #include "brave/components/p3a/pref_names.h"
 #include "brave/components/web_discovery/buildflags/buildflags.h"
 #include "chrome/browser/browser_process.h"
@@ -183,7 +184,11 @@ BraveWelcomeUI::BraveWelcomeUI(content::WebUI* web_ui, std::string_view name)
 #endif
 #if BUILDFLAG(IS_BRAVE_DEBLOATED)
   // Crash upload and P3A are off; hide both toggles so the step auto-finishes.
-  source->AddBoolean("isMetricsReportingEnabledManaged", true);
+  // K-O offers the crash toggle when a self-hosted endpoint is configured.
+  source->AddBoolean("isMetricsReportingEnabledManaged",
+                     !BUILDFLAG(KO_CRASH_REPORTING_CONFIGURED) ||
+                         local_state->IsManagedPreference(
+                             metrics::prefs::kMetricsReportingEnabled));
   source->AddBoolean("isP3AEnabledManaged", true);
 #else
   source->AddBoolean("isMetricsReportingEnabledManaged",

@@ -162,6 +162,8 @@ source_set("extensions") {
       "//brave/components/debounce/core/common",
       "//brave/components/email_aliases/buildflags",
       "//brave/components/extension_malware_blocklist/browser",
+      "//brave/components/ko/buildflags",
+      "//brave/components/ko/telemetry:analytics",
       "//brave/components/local_ai/buildflags",
       "//brave/components/ntp_background_images/common",
       "//brave/components/psst/buildflags",

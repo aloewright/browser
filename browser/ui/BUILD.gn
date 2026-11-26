@@ -125,6 +125,8 @@ source_set("ui") {
     "//brave/browser/ui/webui/brave_account",
     "//brave/components/ai_chat/core/common/buildflags",
     "//brave/components/ko/buildflags",
+    "//brave/components/ko/telemetry:analytics_buildflags",
+    "//brave/components/ko/telemetry:crash_buildflags",
     "//brave/components/local_ai/buildflags",
 
     # Unconditional for gn check as the NTP WebUI always needs the mojom

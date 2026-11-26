@@ -7,16 +7,19 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "base/check.h"
 #include "base/logging.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/version.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_resources.h"
 #include "components/grit/flags_ui_resources.h"
 #include "content/public/common/url_constants.h"
 #include "third_party/widevine/cdm/buildflags.h"
 #include "ui/base/resource/resource_bundle.h"
+#include "url/gurl.h"
 
 #if BUILDFLAG(ENABLE_WIDEVINE) && BUILDFLAG(IS_LINUX)
 #include "base/files/file_path.h"
@@ -100,4 +103,15 @@ void BraveContentClient::AddContentDecryptionModules(
 #endif
 
   ChromeContentClient::AddContentDecryptionModules(cdms, cdm_host_file_paths);
+}
+
+void BraveContentClient::SetActiveURL(const GURL& url,
+                                      std::string top_origin) {
+#if BUILDFLAG(IS_KO)
+  // Chrome puts the active URL and top origin into crash keys, which crash
+  // uploads include. K-O crash reports never carry browsing data.
+  ChromeContentClient::SetActiveURL(GURL(), std::string());
+#else
+  ChromeContentClient::SetActiveURL(url, std::move(top_origin));
+#endif
 }

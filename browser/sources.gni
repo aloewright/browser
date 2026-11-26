@@ -42,6 +42,7 @@ import("//brave/components/commander/common/buildflags/buildflags.gni")
 import("//brave/components/containers/buildflags/buildflags.gni")
 import("//brave/components/email_aliases/buildflags/buildflags.gni")
 import("//brave/components/ipfs/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
@@ -591,6 +592,20 @@ if (enable_sparkle) {
     "//brave/browser/mac/su_updater.h",
   ]
   brave_chrome_framework_contents += [ "Frameworks" ]
+}
+
+# Unconditional for gn check; the code is guarded by BUILDFLAG(IS_KO).
+brave_chrome_browser_deps += [
+  "//brave/components/ko/telemetry:analytics",
+  "//brave/components/ko/telemetry:crash_buildflags",
+]
+
+if (is_ko) {
+  brave_chrome_browser_sources += [
+    "//brave/browser/ko/telemetry/ko_telemetry.h",
+    "//brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.cc",
+    "//brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.h",
+  ]
 }
 
 if (enable_omaha4) {

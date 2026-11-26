@@ -1,0 +1,81 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/telemetry/telemetry.gni")
+import("//build/buildflag_header.gni")
+
+_crash_upload_url = ""
+_posthog_host = ""
+_posthog_project_key = ""
+if (is_ko) {
+  _crash_upload_url = ko_crash_upload_url
+  _posthog_host = ko_posthog_host
+  _posthog_project_key = ko_posthog_project_key
+}
+
+# Only the crash URL. Also a dep of //components/crash/core/app:lib (patched),
+# so the crash library never sees the analytics key.
+buildflag_header("crash_buildflags") {
+  header = "crash_buildflags.h"
+  flags = [
+    "KO_CRASH_UPLOAD_URL=\"$_crash_upload_url\"",
+    "KO_CRASH_REPORTING_CONFIGURED=$ko_crash_reporting_configured",
+  ]
+}
+
+buildflag_header("analytics_buildflags") {
+  header = "analytics_buildflags.h"
+  flags = [
+    "KO_POSTHOG_HOST=\"$_posthog_host\"",
+    "KO_POSTHOG_PROJECT_KEY=\"$_posthog_project_key\"",
+    "KO_ANALYTICS_CONFIGURED=$ko_analytics_configured",
+  ]
+}
+
+static_library("analytics") {
+  sources = [
+    "ko_analytics_event.cc",
+    "ko_analytics_event.h",
+    "ko_analytics_prefs.cc",
+    "ko_analytics_prefs.h",
+    "ko_analytics_service.cc",
+    "ko_analytics_service.h",
+  ]
+
+  public_deps = [
+    ":analytics_buildflags",
+    "//base",
+  ]
+
+  deps = [
+    "//components/prefs",
+    "//net",
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+    "//url",
+  ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [
+    "ko_analytics_event_unittest.cc",
+    "ko_analytics_service_unittest.cc",
+  ]
+
+  deps = [
+    ":analytics",
+    "//base",
+    "//base/test:test_support",
+    "//components/prefs:test_support",
+    "//net",
+    "//services/network:test_support",
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+    "//testing/gtest",
+    "//url",
+  ]
+}

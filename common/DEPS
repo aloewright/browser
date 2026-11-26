@@ -9,6 +9,7 @@ include_rules += [
   "+chrome/common",
   "+components/grit",
   "+brave/components/constants",
+  "+brave/components/ko/buildflags",
 ]
 
 specific_include_rules = {

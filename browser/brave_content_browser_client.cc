@@ -365,6 +365,10 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #include "brave/browser/brave_browser_main_extra_parts_p3a.h"
 #endif
 
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.h"
+#endif
+
 #if BUILDFLAG(ENABLE_EMAIL_ALIASES)
 #include "brave/browser/ui/webui/email_aliases/email_aliases_panel_ui.h"
 #include "brave/browser/ui/webui/email_aliases/email_aliases_promo_ui.h"
@@ -590,6 +594,10 @@ BraveContentBrowserClient::CreateBrowserMainParts(bool is_integration_test) {
 #if BUILDFLAG(ENABLE_OMAHA4)
   chrome_main_parts->AddParts(
       std::make_unique<BraveBrowserMainExtraPartsP3A>());
+#endif
+#if BUILDFLAG(IS_KO)
+  chrome_main_parts->AddParts(
+      std::make_unique<ko::KOTelemetryMainExtraParts>());
 #endif
   return main_parts;
 }

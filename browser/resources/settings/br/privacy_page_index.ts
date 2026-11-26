@@ -22,8 +22,13 @@ import '../site_settings/site_settings_brave_ai.js'
 import { ContentSettingsTypes } from '../site_settings/constants.js';
 
 // Debloated builds turn off P3A, the usage ping and crash upload, so every
-// control in the Data collection section would be inert.
-const showDataCollection = !loadTimeData.getBoolean('isBraveDebloatedBuild')
+// control in the Data collection section would be inert. K-O brings it back
+// when a self-hosted crash or analytics endpoint is configured.
+const isKOTelemetryAvailable = (key: string) =>
+  loadTimeData.valueExists(key) && loadTimeData.getBoolean(key)
+const showDataCollection = !loadTimeData.getBoolean('isBraveDebloatedBuild') ||
+  isKOTelemetryAvailable('koCrashReportingAvailable') ||
+  isKOTelemetryAvailable('koAnalyticsAvailable')
 
 RegisterPolymerPrototypeModification({
   'settings-privacy-page-index': (prototype) => {
