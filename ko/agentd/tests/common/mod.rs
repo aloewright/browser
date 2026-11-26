@@ -238,6 +238,24 @@ impl TestEnv {
         std::fs::read_to_string(self.fakes.join(name)).unwrap_or_default()
     }
 
+    /// Restarts the daemon with an edited agentd.toml (same data dir).
+    pub async fn reconfigure(&mut self, edit: impl FnOnce(String) -> String) {
+        self.stop().await;
+        let cfg = std::fs::read_to_string(self.paths.config()).unwrap();
+        std::fs::write(self.paths.config(), edit(cfg)).unwrap();
+        let server = start(
+            self.paths.clone(),
+            ServeOptions {
+                port: Some(0),
+                unix_socket: Some(true),
+            },
+        )
+        .await
+        .unwrap();
+        self.base = format!("http://127.0.0.1:{}", server.tcp_addr.port());
+        self.server = Some(server);
+    }
+
     pub async fn stop(&mut self) {
         if let Some(s) = self.server.take() {
             s.shutdown();

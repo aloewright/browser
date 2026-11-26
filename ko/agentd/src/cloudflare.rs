@@ -6,11 +6,15 @@
 //! Deploys the per-workspace Cloudflare agent worker
 //! (ko/cloudflare/agent-template) through the Cloudflare API.
 
+use std::path::Path;
+use std::process::Stdio;
+use std::time::Duration;
+
 use reqwest::header::{AUTHORIZATION, HeaderValue};
 use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
-use crate::config::validate_upstream_url;
+use crate::config::{CloudflareConfig, validate_upstream_url};
 use crate::db::{CloudflareAgentInfo, Workspace};
 use crate::error::{ApiError, ApiResult};
 use crate::server::Core;
@@ -19,11 +23,80 @@ use crate::server::Core;
 pub const AGENT_CLASS: &str = "KoAgent";
 pub const MIGRATION_TAG: &str = "v1";
 const MAX_BUNDLE: u64 = 10 * 1024 * 1024;
+const BUILD_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Worker bundle embedded at build time from assets/ (see build.rs).
 pub fn embedded_bundle() -> Option<&'static str> {
     let s: &'static str = include_str!(concat!(env!("OUT_DIR"), "/ko-agent-worker.js"));
     (!s.is_empty()).then_some(s)
+}
+
+async fn read_bundle(p: &Path) -> ApiResult<Zeroizing<String>> {
+    let meta = tokio::fs::metadata(p)
+        .await
+        .map_err(|_| ApiError::unavailable(format!("worker bundle {} not found", p.display())))?;
+    if meta.len() > MAX_BUNDLE {
+        return Err(ApiError::unavailable("worker bundle is too large"));
+    }
+    Ok(Zeroizing::new(tokio::fs::read_to_string(p).await.map_err(
+        |_| ApiError::unavailable("worker bundle is not readable"),
+    )?))
+}
+
+/// Runs the template's build in `template_dir` (minimal env, no secrets).
+async fn build_bundle(dir: &Path, command: &[String]) -> ApiResult<Zeroizing<String>> {
+    let (prog, args) = command
+        .split_first()
+        .ok_or_else(|| ApiError::unavailable("cloudflare.build_command is empty"))?;
+    let program = crate::providers::cli::which(prog)
+        .ok_or_else(|| ApiError::unavailable(format!("{prog} not found on PATH")))?;
+    let mut cmd = tokio::process::Command::new(program);
+    cmd.args(args)
+        .current_dir(dir)
+        .env_clear()
+        .env("WRANGLER_SEND_METRICS", "false")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    for k in crate::providers::cli::BASE_ENV {
+        if let Some(v) = std::env::var_os(k) {
+            cmd.env(k, v);
+        }
+    }
+    let child = cmd
+        .spawn()
+        .map_err(|e| ApiError::unavailable(format!("starting worker build: {e}")))?;
+    let out = tokio::time::timeout(BUILD_TIMEOUT, child.wait_with_output())
+        .await
+        .map_err(|_| ApiError::unavailable("worker build timed out"))?
+        .map_err(|e| ApiError::unavailable(format!("worker build: {e}")))?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        let tail = crate::util::truncate(err.trim(), 1024);
+        return Err(ApiError::unavailable(crate::telemetry::scrub(&format!(
+            "worker build failed: {tail}"
+        ))));
+    }
+    read_bundle(&dir.join("dist").join("index.js")).await
+}
+
+/// bundle_path, else a deploy-time build of template_dir, else the bundle
+/// embedded at compile time.
+async fn load_bundle(cf: &CloudflareConfig) -> ApiResult<Zeroizing<String>> {
+    if let Some(p) = &cf.bundle_path {
+        return read_bundle(p).await;
+    }
+    if let Some(dir) = &cf.template_dir {
+        return build_bundle(dir, &cf.build_command).await;
+    }
+    embedded_bundle()
+        .map(|s| Zeroizing::new(s.to_owned()))
+        .ok_or_else(|| {
+            ApiError::unavailable(
+                "no worker bundle: set cloudflare.template_dir (built at deploy time) or bundle_path",
+            )
+        })
 }
 
 pub fn script_name(prefix: &str, workspace_id: &str) -> String {
@@ -119,30 +192,7 @@ pub async fn deploy(core: &Core, ws: &Workspace) -> ApiResult<CloudflareAgentInf
         .clone()
         .unwrap_or_else(|| "workers-ai/@cf/meta/llama-3.1-8b-instruct".into());
 
-    let bundle: Zeroizing<String> = match &cf.bundle_path {
-        Some(p) => {
-            let meta = tokio::fs::metadata(p).await.map_err(|_| {
-                ApiError::unavailable(format!("worker bundle {} not found", p.display()))
-            })?;
-            if meta.len() > MAX_BUNDLE {
-                return Err(ApiError::unavailable("worker bundle is too large"));
-            }
-            Zeroizing::new(
-                tokio::fs::read_to_string(p)
-                    .await
-                    .map_err(|_| ApiError::unavailable("worker bundle is not readable"))?,
-            )
-        }
-        None => Zeroizing::new(
-            embedded_bundle()
-                .ok_or_else(|| {
-                    ApiError::unavailable(
-                        "no worker bundle: build ko/cloudflare/agent-template and set cloudflare.bundle_path",
-                    )
-                })?
-                .to_owned(),
-        ),
-    };
+    let bundle = load_bundle(cf).await?;
 
     let token = core
         .secrets

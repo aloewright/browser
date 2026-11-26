@@ -342,8 +342,13 @@ pub struct CloudflareConfig {
     pub default_model: Option<String>,
     /// Uploaded as the AI_GATEWAY_TOKEN secret binding when set.
     pub aig_token_secret: Option<String>,
-    /// Built worker module; defaults to the bundle embedded at build time.
+    /// Prebuilt worker module (dist/index.js of the template).
     pub bundle_path: Option<PathBuf>,
+    /// ko/cloudflare/agent-template checkout; built at deploy time when no
+    /// bundle_path is set.
+    pub template_dir: Option<PathBuf>,
+    /// Build command run in template_dir; must write dist/index.js.
+    pub build_command: Vec<String>,
     pub workers_dev: bool,
     /// e.g. "https://{script}.agents.example.com"; overrides workers.dev URL.
     pub url_template: Option<String>,
@@ -356,13 +361,15 @@ impl Default for CloudflareConfig {
             api_base: "https://api.cloudflare.com/client/v4".into(),
             api_token_secret: "cloudflare-api-token".into(),
             script_prefix: "ko-agent-".into(),
-            compatibility_date: "2025-09-01".into(),
+            compatibility_date: "2026-10-01".into(),
             access_team_domain: None,
             access_aud: None,
             ai_gateway_id: None,
             default_model: None,
             aig_token_secret: None,
             bundle_path: None,
+            template_dir: None,
+            build_command: vec!["bun".into(), "run".into(), "build".into()],
             workers_dev: true,
             url_template: None,
         }
@@ -613,6 +620,9 @@ impl Config {
             && !valid_secret_name(s)
         {
             bail!("cloudflare.aig_token_secret is invalid");
+        }
+        if cf.build_command.is_empty() || cf.build_command[0].starts_with('-') {
+            bail!("cloudflare.build_command must name a program");
         }
         if let Some(t) = &cf.url_template {
             validate_upstream_url(&t.replace("{script}", "x"), net)

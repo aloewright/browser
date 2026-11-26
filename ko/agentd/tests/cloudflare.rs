@@ -224,6 +224,102 @@ async fn deploy_errors_are_scrubbed_and_config_required() {
     server.wait().await.unwrap();
 }
 
+fn use_template_dir(cfg: String, dir: &std::path::Path, build: &str) -> String {
+    let line = cfg
+        .lines()
+        .find(|l| l.starts_with("bundle_path"))
+        .unwrap()
+        .to_owned();
+    cfg.replace(
+        &line,
+        &format!(
+            "template_dir = \"{}\"\nbuild_command = {build}",
+            dir.display()
+        ),
+    )
+}
+
+#[tokio::test]
+async fn builds_template_at_deploy_time() {
+    let mock = MockServer::start().await;
+    mount_cf(&mock, None).await;
+    let mut env = TestEnv::start(&mock.uri(), "").await;
+    let tpl = env.dir.path().join("template");
+    std::fs::create_dir_all(&tpl).unwrap();
+    let build = r#"["sh", "-c", 'mkdir -p dist && printf "export class KoAgent {} // built-at-deploy" > dist/index.js']"#;
+    env.reconfigure(|c| use_template_dir(c, &tpl, build)).await;
+    let ws = env.create_workspace("cloud").await;
+    let (s, v) = env
+        .post("/v1/cloudflare/agents", json!({"workspace_id": ws}))
+        .await;
+    assert_eq!(s, 201, "{v}");
+    let reqs = mock.received_requests().await.unwrap();
+    let put = reqs.iter().find(|r| r.method.as_str() == "PUT").unwrap();
+    let (_, module) = multipart_parts(put);
+    assert!(module.contains("built-at-deploy"), "{module}");
+
+    // A failing build fails the deploy before any upload.
+    let failing = r#"["sh", "-c", "echo build broke >&2; exit 2"]"#;
+    env.reconfigure(|c| {
+        let start = c.find("template_dir").unwrap();
+        let end = start + c[start..].find("\n[").unwrap_or(c.len() - start);
+        let mut out = c.clone();
+        out.replace_range(
+            start..end,
+            &format!(
+                "template_dir = \"{}\"\nbuild_command = {failing}\n",
+                tpl.display()
+            ),
+        );
+        out
+    })
+    .await;
+    let before = mock.received_requests().await.unwrap().len();
+    let (s, v) = env
+        .post("/v1/cloudflare/agents", json!({"workspace_id": ws}))
+        .await;
+    assert_eq!(s, 503, "{v}");
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("build broke")
+    );
+    assert_eq!(mock.received_requests().await.unwrap().len(), before);
+    env.stop().await;
+}
+
+/// Builds the real ko/cloudflare/agent-template with bun and uploads it to
+/// the mock API. Needs `bun install` in the template; run with --ignored.
+#[tokio::test]
+#[ignore]
+async fn deploys_real_template_bundle() {
+    let mock = MockServer::start().await;
+    mount_cf(&mock, None).await;
+    let mut env = TestEnv::start(&mock.uri(), "").await;
+    let tpl = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../cloudflare/agent-template");
+    env.reconfigure(|c| {
+        use_template_dir(
+            c,
+            &tpl.canonicalize().unwrap(),
+            r#"["bun", "run", "build"]"#,
+        )
+    })
+    .await;
+    let ws = env.create_workspace("cloud").await;
+    let (s, v) = env
+        .post("/v1/cloudflare/agents", json!({"workspace_id": ws}))
+        .await;
+    assert_eq!(s, 201, "{v}");
+    let reqs = mock.received_requests().await.unwrap();
+    let put = reqs.iter().find(|r| r.method.as_str() == "PUT").unwrap();
+    let (meta, module) = multipart_parts(put);
+    assert!(module.contains("KoAgent = class extends Agent"));
+    assert!(module.contains("cf-access-jwt-assertion"));
+    assert_eq!(meta["main_module"], "index.js");
+    env.stop().await;
+}
+
 #[tokio::test]
 async fn telemetry_sends_scrubbed_events_when_configured() {
     let mock = MockServer::start().await;

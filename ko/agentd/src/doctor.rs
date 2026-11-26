@@ -264,6 +264,35 @@ pub async fn run(paths: &Paths) -> Report {
             },
         ),
     );
+    let cf = &cfg.cloudflare;
+    if let Some(b) = &cf.bundle_path {
+        if b.is_file() {
+            r.line("ok", format!("cloudflare bundle {}", b.display()));
+        } else {
+            r.line(
+                "FAIL",
+                format!("cloudflare.bundle_path {} does not exist", b.display()),
+            );
+        }
+    } else if let Some(d) = &cf.template_dir {
+        if !d.join("node_modules").is_dir() {
+            r.line(
+                "warn",
+                format!(
+                    "{}: run `bun install --frozen-lockfile` before deploying",
+                    d.display()
+                ),
+            );
+        }
+        match cf
+            .build_command
+            .first()
+            .and_then(|p| crate::providers::cli::which(p))
+        {
+            Some(_) => r.line("ok", "cloudflare worker is built at deploy time"),
+            None => r.line("FAIL", "cloudflare.build_command program not found on PATH"),
+        }
+    }
     if cfg.network.allow_loopback_http {
         r.line("warn", "network.allow_loopback_http is on (testing only)");
     }
