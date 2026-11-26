@@ -7,14 +7,21 @@
 
 #include "testing/gtest/include/gtest/gtest.h"
 
+// chrome:// is shown as ko:// in K-O.
+#if defined(KO_BUILD)
+constexpr char16_t kDisplayPrefix[] = u"ko://";
+#else
+constexpr char16_t kDisplayPrefix[] = u"brave://";
+#endif
+
 TEST(BraveSchemeUtilsTest, ReplaceChromeToBraveScheme) {
   std::u16string url_string = u"chrome://settings";
   EXPECT_TRUE(brave_utils::ReplaceChromeToBraveScheme(url_string));
-  EXPECT_EQ(url_string, u"brave://settings");
+  EXPECT_EQ(url_string, std::u16string(kDisplayPrefix) + u"settings");
 
   url_string = u"chrome://flags";
   EXPECT_TRUE(brave_utils::ReplaceChromeToBraveScheme(url_string));
-  EXPECT_EQ(url_string, u"brave://flags");
+  EXPECT_EQ(url_string, std::u16string(kDisplayPrefix) + u"flags");
 
   url_string = u"https://search.brave.com";
   EXPECT_FALSE(brave_utils::ReplaceChromeToBraveScheme(url_string));

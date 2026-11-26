@@ -52,9 +52,15 @@ KeychainPassword::KeychainNameType& GetBraveServiceName() {
     static KeychainNameContainerType kOperaServiceName("Opera Safe Storage");
     return *kOperaServiceName;
   } else {
+#if defined(KO_BUILD)
+    // K-O keeps its own key so it never shares secrets with a Brave install.
+    static KeychainNameContainerType kKoDefaultServiceName("K-O Safe Storage");
+    return *kKoDefaultServiceName;
+#else
     static KeychainNameContainerType kBraveDefaultServiceName(
         "Brave Safe Storage");
     return *kBraveDefaultServiceName;
+#endif
   }
 }
 
@@ -83,8 +89,13 @@ KeychainPassword::KeychainNameType& GetBraveAccountName() {
     static KeychainNameContainerType kOperaAccountName("Opera");
     return *kOperaAccountName;
   } else {
+#if defined(KO_BUILD)
+    static KeychainNameContainerType kKoDefaultAccountName("K-O");
+    return *kKoDefaultAccountName;
+#else
     static KeychainNameContainerType kBraveDefaultAccountName("Brave");
     return *kBraveDefaultAccountName;
+#endif
   }
 }
 

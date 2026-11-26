@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "base/check.h"
 #include "base/logging.h"
@@ -86,10 +87,12 @@ scoped_refptr<base::RefCountedMemory> BraveContentClient::GetDataResourceBytes(
 
 void BraveContentClient::AddAdditionalSchemes(Schemes* schemes) {
   ChromeContentClient::AddAdditionalSchemes(schemes);
-  schemes->standard_schemes.push_back(content::kBraveUIScheme);
-  schemes->secure_schemes.push_back(content::kBraveUIScheme);
-  schemes->cors_enabled_schemes.push_back(content::kBraveUIScheme);
-  schemes->savable_schemes.push_back(content::kBraveUIScheme);
+  for (std::string_view scheme : content::kBraveUIAliasSchemes) {
+    schemes->standard_schemes.emplace_back(scheme);
+    schemes->secure_schemes.emplace_back(scheme);
+    schemes->cors_enabled_schemes.emplace_back(scheme);
+    schemes->savable_schemes.emplace_back(scheme);
+  }
 }
 
 void BraveContentClient::AddContentDecryptionModules(

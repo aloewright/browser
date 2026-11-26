@@ -6,6 +6,7 @@
 #include "base/environment.h"
 #include "base/files/file_path.h"
 #include "base/nix/xdg_util.h"
+#include "base/strings/string_util.h"
 #include "brave/common/brave_channel_info_posix.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "chrome/common/chrome_paths_internal.h"
@@ -23,7 +24,12 @@ bool BraveGetDefaultUserDataDirectory(base::FilePath* result) {
   std::string data_dir_suffix;
   brave::GetChannelImpl(nullptr, &data_dir_suffix);
 
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if defined(KO_BUILD)
+  // $XDG_CONFIG_HOME/k-o/browser, separate from Brave and from the K-O data
+  // dir ($XDG_DATA_HOME/k-o) that ko-agentd uses.
+  *result =
+      config_dir.Append("k-o/browser" + base::ToLowerASCII(data_dir_suffix));
+#elif BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   *result = config_dir.Append("BraveSoftware/Brave-Origin" + data_dir_suffix);
 #else
   *result = config_dir.Append("BraveSoftware/Brave-Browser" + data_dir_suffix);

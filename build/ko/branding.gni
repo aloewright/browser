@@ -1,0 +1,29 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/build/brave_channel.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
+import("//build/config/chrome_build.gni")
+
+declare_args() {
+  # macOS bundle id of the K-O release build; other channels append
+  # ".<channel>". Set a local value (e.g. "com.example.ko") in args.gn or
+  # .env; branding.js writes it into chrome/app/theme/ko/BRANDING.
+  ko_bundle_id = "com.ko.browser"
+}
+
+# The K-O product identity (name, icons, bundle id, profile and Keychain
+# names) is implemented for macOS and Linux. Other platforms keep Brave's.
+is_ko_branded = is_ko && (target_os == "mac" || target_os == "linux")
+
+assert(is_ko_branded == (branding_path_component == "ko"),
+       "is_ko on macOS/Linux and branding_path_component=\"ko\" go " +
+           "together: import //brave/build/args/ko/branding_defaults.gni " +
+           "(pnpm run build does this when is_ko is set)")
+
+ko_mac_bundle_id = ko_bundle_id
+if (brave_channel != "") {
+  ko_mac_bundle_id += ".$brave_channel"
+}

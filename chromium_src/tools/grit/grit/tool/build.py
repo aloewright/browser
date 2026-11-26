@@ -5,6 +5,7 @@
 
 from collections import defaultdict
 import json
+import os
 
 from override_utils import override_function, override_method
 
@@ -219,3 +220,16 @@ def _EncodingForOutputType(_, original_method, output_type):
         return 'utf_8'
 
     return original_method(output_type)
+
+
+@override_method(message.MessageNode, 'Translate')
+def _KoTranslate(self, original_method, lang, gender):
+    """K-O: rewrites the product name in every message when building with the
+    "ko" branding component, which grit_args.gni passes to each run (-E)."""
+    text = original_method(self, lang, gender)
+    if os.environ.get('branding_path_component') != 'ko':
+        return text
+
+    import ko_branding  # pylint: disable=import-outside-toplevel
+    # Messages may carry an offset instead of a name.
+    return ko_branding.rebrand_message(self.attrs.get('name', ''), text)

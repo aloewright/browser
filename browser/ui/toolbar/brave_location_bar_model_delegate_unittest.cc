@@ -15,5 +15,9 @@ TEST_F(BraveLocationBarModelDelegateTest, ResolvesChromeSchemeToBrave) {
   GURL url("chrome://sync/");
   std::u16string formatted_url = base::UTF8ToUTF16(url.spec());
   BraveLocationBarModelDelegate::FormattedStringFromURL(url, &formatted_url);
+#if defined(KO_BUILD)
+  ASSERT_STREQ(base::UTF16ToASCII(formatted_url).c_str(), "ko://sync/");
+#else
   ASSERT_STREQ(base::UTF16ToASCII(formatted_url).c_str(), "brave://sync/");
+#endif
 }

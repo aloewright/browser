@@ -10,14 +10,22 @@
 
 namespace chrome {
 
+// chrome:// is shown as ko:// in K-O.
+#if defined(KO_BUILD)
+constexpr char16_t kDisplayPrefix[] = u"ko://";
+#else
+constexpr char16_t kDisplayPrefix[] = u"brave://";
+#endif
+
 TEST(BraveBookmarkUtilsTest, ChromeUISchemeIsDisplayedAsBrave) {
-  EXPECT_EQ(u"brave://settings",
+  EXPECT_EQ(std::u16string(kDisplayPrefix) + u"settings",
             FormatBookmarkURLForDisplay(GURL("chrome://settings/")));
 
   // Only the scheme changes; path and query are preserved.
-  EXPECT_EQ(u"brave://settings/clearBrowserData?foo=bar",
-            FormatBookmarkURLForDisplay(
-                GURL("chrome://settings/clearBrowserData?foo=bar")));
+  EXPECT_EQ(
+      std::u16string(kDisplayPrefix) + u"settings/clearBrowserData?foo=bar",
+      FormatBookmarkURLForDisplay(
+          GURL("chrome://settings/clearBrowserData?foo=bar")));
 }
 
 TEST(BraveBookmarkUtilsTest, BraveUISchemeIsDisplayedUnchanged) {

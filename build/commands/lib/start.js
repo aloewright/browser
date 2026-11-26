@@ -87,13 +87,15 @@ const start = (
 
   let userDataDir
   if (options.user_data_dir_name) {
+    // Keep K-O test profiles out of Brave's directory.
+    const isKo = config.isKoBranded()
     if (process.platform === 'darwin') {
       assert(process.env.HOME, 'HOME not set')
       userDataDir = path.join(
         process.env.HOME,
         'Library',
         'Application\\ Support',
-        'BraveSoftware',
+        isKo ? 'K-O' : 'BraveSoftware',
         options.user_data_dir_name,
       )
     } else if (process.platform === 'win32') {
@@ -108,7 +110,7 @@ const start = (
       userDataDir = path.join(
         process.env.HOME,
         '.config',
-        'BraveSoftware',
+        isKo ? 'k-o' : 'BraveSoftware',
         options.user_data_dir_name,
       )
     }
