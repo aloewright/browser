@@ -43,6 +43,12 @@ foreach(_url,
 assert((ko_posthog_host == "") == (ko_posthog_project_key == ""),
        "Set both ko_posthog_host and ko_posthog_project_key, or neither")
 
+# Android uploads minidumps from Java to a hardcoded Brave URL
+# (MinidumpUploader.java patch), so a K-O endpoint would turn on uploads to
+# Brave instead.
+assert(!is_android || ko_crash_upload_url == "",
+       "ko_crash_upload_url is not supported on Android")
+
 ko_crash_reporting_configured = is_ko && ko_crash_upload_url != ""
 ko_analytics_configured =
     is_ko && ko_posthog_host != "" && ko_posthog_project_key != ""

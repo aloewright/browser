@@ -10,7 +10,9 @@ channels that report only to servers you run:
 | Anonymous usage events | `ko_posthog_host`, `ko_posthog_project_key` | Either arg is empty | Same page > **Send anonymous usage statistics** | On |
 
 If an arg is empty, that channel sends nothing and its toggle is hidden. Each arg must be an `https://` URL, and both PostHog args are
-set together or not at all (`gn gen` fails otherwise). Builds with
+set together or not at all (`gn gen` fails otherwise). Crash reporting is
+desktop-only: Android uploads minidumps from Java to a fixed Brave URL, so
+`gn gen` rejects `ko_crash_upload_url` there. Builds with
 `is_ko = false` behave like the debloat.
 
 ## Configure (local only)
@@ -40,7 +42,8 @@ in GlitchTip or PostHog if that happens.
 
 ### Minidump URL from a GlitchTip DSN
 
-GlitchTip 6.0.8 and later accept Sentry-compatible minidump uploads. Create a
+GlitchTip's 6.1 release notes announce minidump support; use 6.1 or later.
+The endpoint below is Sentry's minidump format. Create a
 project in GlitchTip, open its settings and copy the DSN:
 
 ```text
@@ -99,7 +102,7 @@ glitchtip-cli debug-files upload out/Release --org <org> --project <project>
 To test, open `brave://inducebrowsercrashforrealz` in a Release build with the
 toggle on. Wait for the upload (it can be rate-limited), then look in
 `brave://crashes` and in GlitchTip. If GlitchTip returns 4xx, check the
-`sentry_key`, the project id and that the server is 6.0.8 or later.
+`sentry_key`, the project id and that the server is 6.1 or later.
 
 ## Anonymous usage events
 

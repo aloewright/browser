@@ -77,6 +77,8 @@ class KOAnalyticsServiceTest : public testing::Test {
     ASSERT_EQ(test_url_loader_factory_.NumPending(), 1);
     test_url_loader_factory_.AddResponse(kEndpoint, "{}", code);
     task_environment_.RunUntilIdle();
+    // AddResponse() also answers later requests; keep the next one pending.
+    test_url_loader_factory_.ClearResponses();
   }
 
  protected:
