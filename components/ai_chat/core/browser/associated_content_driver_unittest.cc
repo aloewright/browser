@@ -22,6 +22,7 @@
 #include "brave/components/ai_chat/core/browser/conversation_handler.h"
 #include "brave/components/ai_chat/core/browser/types.h"
 #include "brave/components/ai_chat/core/common/mojom/page_content_extractor.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "services/network/public/cpp/weak_wrapper_shared_url_loader_factory.h"
@@ -133,6 +134,8 @@ TEST_F(AssociatedContentDriverUnitTest, GetContent) {
   testing::Mock::VerifyAndClearExpectations(associated_content_driver_.get());
 }
 
+// K-O never fetches staged entries: they come from Brave Search's servers.
+#if !BUILDFLAG(IS_KO)
 TEST_F(AssociatedContentDriverUnitTest, GetStagedEntriesFromContent) {
   SetSearchQuerySummaryInterceptor();
   // Give the function a valid URL
@@ -155,6 +158,7 @@ TEST_F(AssociatedContentDriverUnitTest, GetStagedEntriesFromContent) {
   task_environment_.RunUntilIdle();
   testing::Mock::VerifyAndClearExpectations(associated_content_driver_.get());
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(AssociatedContentDriverUnitTest,
        GetStagedEntriesFromContent_NotBraveSearchSERP) {
@@ -173,6 +177,25 @@ TEST_F(AssociatedContentDriverUnitTest,
   testing::Mock::VerifyAndClearExpectations(associated_content_driver_.get());
 }
 
+#if BUILDFLAG(IS_KO)
+// Even on a Brave Search results page, K-O neither asks the page for the
+// summarizer key nor contacts Brave Search.
+TEST_F(AssociatedContentDriverUnitTest, GetStagedEntriesFromContent_KO) {
+  SetSearchQuerySummaryInterceptor();
+  associated_content_driver_->SetUrl(
+      GURL("https://search.brave.com/search?q=test"));
+  EXPECT_CALL(*associated_content_driver_, GetSearchSummarizerKey).Times(0);
+
+  base::MockCallback<GetStagedEntriesCallback> callback;
+  EXPECT_CALL(callback, Run(Eq(std::nullopt))).Times(1);
+
+  associated_content_driver_->GetStagedEntriesFromContent(callback.Get());
+
+  task_environment_.RunUntilIdle();
+  EXPECT_EQ(url_loader_factory_.total_requests(), 0u);
+  testing::Mock::VerifyAndClearExpectations(associated_content_driver_.get());
+}
+#else
 TEST_F(AssociatedContentDriverUnitTest, GetStagedEntriesFromContent_NoKey) {
   associated_content_driver_->SetUrl(
       GURL("https://search.brave.com/search?q=test"));
@@ -203,6 +226,7 @@ TEST_F(AssociatedContentDriverUnitTest, GetStagedEntriesFromContent_NoResult) {
   task_environment_.RunUntilIdle();
   testing::Mock::VerifyAndClearExpectations(associated_content_driver_.get());
 }
+#endif  // BUILDFLAG(IS_KO)
 
 TEST_F(AssociatedContentDriverUnitTest, ParseSearchQuerySummaryResponse) {
   struct {
