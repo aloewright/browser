@@ -124,14 +124,9 @@ const update = () => {
   if (isKoBranded) {
     // "ko" is Brave's assets with K-O's files on top. BRANDING and the macOS
     // icons are written separately below.
-    const koThemeDirs = [
-      [path.join(braveAppDir, 'theme'), path.join(chromeAppDir, 'theme')],
-      ...['default_100_percent', 'default_200_percent'].map((scale) => [
-        path.join(braveAppDir, 'theme', scale),
-        path.join(chromeAppDir, 'theme', scale),
-      ]),
-    ]
-    for (const [braveThemeDir, chromeThemeDir] of koThemeDirs) {
+    for (const scale of ['', 'default_100_percent', 'default_200_percent']) {
+      const braveThemeDir = path.join(braveAppDir, 'theme', scale)
+      const chromeThemeDir = path.join(chromeAppDir, 'theme', scale)
       for (const pair of koBranding.overlayPairs({
         baseDir: path.join(braveThemeDir, 'brave'),
         overlayDir: path.join(braveThemeDir, 'ko'),

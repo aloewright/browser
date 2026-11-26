@@ -225,7 +225,9 @@ def vector_icon(compact):
     ]
 
     def f(v):
-        return _fmt(v) + 'f'
+        # The commands are pasted into C++: "12f" is not a valid literal.
+        s = _fmt(v)
+        return s + 'f' if '.' in s else s
 
     for poly in k_polys:
         lines += ['NEW_PATH,', 'PATH_COLOR_ARGB, 0xFF, 0xF4, 0xF5, 0xF7,']

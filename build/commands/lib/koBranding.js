@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process'
 // Reverse-DNS, at least two labels, no empty labels.
 const BUNDLE_ID_RE = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/
 
+/** @param {string} dir */
 const listFiles = (dir) => {
   if (!fs.existsSync(dir)) {
     return []
@@ -24,7 +25,7 @@ const listFiles = (dir) => {
     .readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) =>
-      path.relative(dir, path.join(entry.parentPath ?? entry.path, entry.name)),
+      path.relative(dir, path.join(entry.parentPath, entry.name)),
     )
 }
 
@@ -43,6 +44,16 @@ const isExcluded = (relPath, excludes) => {
 // from `overlayDir` when present there and from `baseDir` otherwise.
 // Excludes: "dir/" drops a top-level directory, "prefix*" a path prefix and
 // anything else an exact relative path.
+/**
+ * @param {{
+ *   baseDir: string,
+ *   overlayDir: string,
+ *   destDir: string,
+ *   baseExcludes?: string[],
+ *   overlayExcludes?: string[],
+ * }} options
+ * @returns {[string, string][]}
+ */
 export function overlayPairs({
   baseDir,
   overlayDir,
