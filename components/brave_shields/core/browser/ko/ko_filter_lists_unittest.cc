@@ -112,8 +112,7 @@ std::string Sign(std::string_view manifest) {
   EXPECT_TRUE(base::HexStringToSpan(kSeedHex, seed));
   std::array<uint8_t, ED25519_PUBLIC_KEY_LEN> public_key;
   std::array<uint8_t, ED25519_PRIVATE_KEY_LEN> private_key;
-  ED25519_keypair_from_seed(public_key.data(), private_key.data(),
-                            seed.data());
+  ED25519_keypair_from_seed(public_key.data(), private_key.data(), seed.data());
   std::string message(kKoManifestSignaturePrefix);
   message.append(manifest);
   const auto bytes = base::as_byte_span(message);
@@ -129,12 +128,11 @@ void WriteRemoteSet(const base::FilePath& dir,
                     const std::string& signature) {
   ASSERT_TRUE(base::CreateDirectory(dir));
   for (const auto& list : lists) {
-    ASSERT_TRUE(base::WriteFile(dir.AppendASCII(list.id + ".txt"),
-                                list.content));
+    ASSERT_TRUE(
+        base::WriteFile(dir.AppendASCII(list.id + ".txt"), list.content));
   }
   ASSERT_TRUE(base::WriteFile(dir.AppendASCII("manifest.json"), manifest));
-  ASSERT_TRUE(
-      base::WriteFile(dir.AppendASCII("manifest.json.sig"), signature));
+  ASSERT_TRUE(base::WriteFile(dir.AppendASCII("manifest.json.sig"), signature));
 }
 
 KoFilterListSource::EmbeddedLoader LoaderFor(
@@ -169,7 +167,8 @@ std::vector<std::string> Ids(const std::vector<KoFilterListEntry>& entries) {
 
 TEST(KoFilterListManifestTest, ParsesValidManifest) {
   const auto lists = CoreLists("a");
-  auto manifest = KoFilterListManifest::Parse(BuildManifest(lists, 202611260000));
+  auto manifest =
+      KoFilterListManifest::Parse(BuildManifest(lists, 202611260000));
   ASSERT_TRUE(manifest.has_value()) << manifest.error();
   EXPECT_EQ(202611260000, manifest->version);
   ASSERT_EQ(lists.size(), manifest->lists.size());
@@ -202,8 +201,7 @@ TEST(KoFilterListManifestTest, RejectsMalformedManifests) {
 
   EXPECT_FALSE(KoFilterListManifest::Parse("").has_value());
   EXPECT_FALSE(KoFilterListManifest::Parse("[]").has_value());
-  EXPECT_FALSE(KoFilterListManifest::Parse(
-                   BuildManifest(CoreLists("a"), -1))
+  EXPECT_FALSE(KoFilterListManifest::Parse(BuildManifest(CoreLists("a"), -1))
                    .has_value());
 
   std::string json = BuildManifest(CoreLists("a"), v);
@@ -234,8 +232,7 @@ TEST(KoFilterListManifestTest, VerifiesSignatures) {
   EXPECT_FALSE(VerifyKoManifestSignature(manifest, flipped, kPublicKeyHex));
   EXPECT_FALSE(VerifyKoManifestSignature(manifest, "", kPublicKeyHex));
   EXPECT_FALSE(VerifyKoManifestSignature(manifest, kPythonSignatureHex, ""));
-  EXPECT_FALSE(
-      VerifyKoManifestSignature(manifest, kPythonSignatureHex, "zz"));
+  EXPECT_FALSE(VerifyKoManifestSignature(manifest, kPythonSignatureHex, "zz"));
   std::string other_key = kPublicKeyHex;
   other_key[63] = other_key[63] == 'a' ? 'b' : 'a';
   EXPECT_FALSE(
@@ -256,9 +253,8 @@ TEST(KoFilterListManifestTest, ChecksDigests) {
 }
 
 TEST(KoFilterListManifestTest, FlagsUnsafeExceptions) {
-  for (const char* rule :
-       {"@@*", "@@||*^", "@@|https://", "@@^$document", "@@*$ghide",
-        "@@*$domain=~example.com", "@@/.*/"}) {
+  for (const char* rule : {"@@*", "@@||*^", "@@|https://", "@@^$document",
+                           "@@*$ghide", "@@*$domain=~example.com", "@@/.*/"}) {
     EXPECT_TRUE(KoListHasUnsafeException(std::string("||a.example^\n") + rule))
         << rule;
   }
@@ -294,8 +290,9 @@ TEST_F(KoFiltersProviderTest, SelectsBaselineListsPerEngine) {
 
   EXPECT_EQ((std::vector<std::string>{"ko-default", "ko-privacy", "ko-extra"}),
             Ids(default_engine.GetSelectedListsForTesting()));
-  EXPECT_EQ((std::vector<std::string>{"ko-firstparty", "ko-cookie", "ko-extra"}),
-            Ids(additional_engine.GetSelectedListsForTesting()));
+  EXPECT_EQ(
+      (std::vector<std::string>{"ko-firstparty", "ko-cookie", "ko-extra"}),
+      Ids(additional_engine.GetSelectedListsForTesting()));
 
   // Component data supersedes the snapshot of the same catalog entry.
   ready_components.insert(kDefaultAdblockFiltersListUuid);
@@ -317,11 +314,10 @@ TEST_F(KoFiltersProviderTest, LoadsVerifiedListsIntoFilterSet) {
   auto inner = LoaderFor(served);
   KoFilterListSource source(
       BuildManifest(lists, 100),
-      base::BindLambdaForTesting(
-          [&loads, inner](const std::string& id) {
-            ++loads;
-            return inner.Run(id);
-          }),
+      base::BindLambdaForTesting([&loads, inner](const std::string& id) {
+        ++loads;
+        return inner.Run(id);
+      }),
       base::FilePath(), "");
 
   AdBlockFiltersProviderManager manager(false);
@@ -446,8 +442,8 @@ TEST_F(KoFilterListSourceTest, DropsRemoteSetCorruptedAfterLoad) {
   task_environment_.RunUntilIdle();
   ASSERT_TRUE(source.is_remote_active());
 
-  ASSERT_TRUE(base::WriteFile(remote_dir().AppendASCII("ko-default.txt"),
-                              "@@*\n"));
+  ASSERT_TRUE(
+      base::WriteFile(remote_dir().AppendASCII("ko-default.txt"), "@@*\n"));
   std::optional<std::string> data = "unset";
   source.LoadList(*source.manifest().Find("ko-default"),
                   base::BindLambdaForTesting(
@@ -514,8 +510,8 @@ TEST_F(KoFilterListUpdaterTest, InstallsVerifiedSnapshot) {
   EXPECT_EQ(200, source_->manifest().version);
   EXPECT_EQ("200", local_state_.GetString(kKoFilterListsAcceptedVersion));
   // What was installed verifies on the next start.
-  EXPECT_TRUE(LoadVerifiedKoRemoteSet(source_->remote_dir(), kPublicKeyHex,
-                                      100));
+  EXPECT_TRUE(
+      LoadVerifiedKoRemoteSet(source_->remote_dir(), kPublicKeyHex, 100));
 }
 
 TEST_F(KoFilterListUpdaterTest, RejectsBadSignature) {
@@ -566,12 +562,11 @@ TEST(KoFilterListUpdaterStaticTest, AcceptsOnlyNewerVersions) {
 }
 
 TEST(KoFilterListUpdaterStaticTest, RequiresHttpsBaseUrl) {
-  EXPECT_EQ(GURL("https://lists.example.com/k-o/"),
-            KoFilterListUpdater::ValidateBaseUrl(
-                "https://lists.example.com/k-o"));
-  EXPECT_FALSE(
-      KoFilterListUpdater::ValidateBaseUrl("http://lists.example.com/")
-          .is_valid());
+  EXPECT_EQ(
+      GURL("https://lists.example.com/k-o/"),
+      KoFilterListUpdater::ValidateBaseUrl("https://lists.example.com/k-o"));
+  EXPECT_FALSE(KoFilterListUpdater::ValidateBaseUrl("http://lists.example.com/")
+                   .is_valid());
   EXPECT_FALSE(KoFilterListUpdater::ValidateBaseUrl(
                    "https://user:pass@lists.example.com/")
                    .is_valid());

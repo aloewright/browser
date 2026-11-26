@@ -244,9 +244,8 @@ AdBlockService::AdBlockService(
   default_resource_provider_ = default_resource_provider.get();
 #if BUILDFLAG(IS_KO)
   // Scriptlets and redirects keep working without the resources component.
-  default_resource_provider_->SetFallbackLoader(
-      base::BindRepeating(&KoFilterListSource::LoadResources,
-                          ko_filter_list_source_->AsWeakPtr()));
+  default_resource_provider_->SetFallbackLoader(base::BindRepeating(
+      &KoFilterListSource::LoadResources, ko_filter_list_source_->AsWeakPtr()));
 #endif
 
   custom_resource_provider_ = new AdBlockCustomResourceProvider(
@@ -313,9 +312,8 @@ AdBlockService::AdBlockService(
       ko_filter_list_source_.get(), filters_provider_manager_.get(),
       /*is_default_engine=*/false, is_list_enabled, is_component_ready);
   // Catalog loads and list toggles change which baseline lists apply.
-  component_service_manager_->SetCatalogLoadedCallback(
-      base::BindRepeating(&AdBlockService::RefreshKoFiltersProviders,
-                          base::Unretained(this)));
+  component_service_manager_->SetCatalogLoadedCallback(base::BindRepeating(
+      &AdBlockService::RefreshKoFiltersProviders, base::Unretained(this)));
   pref_change_registrar_->Add(
       prefs::kAdBlockRegionalFilters,
       base::BindRepeating(&AdBlockService::RefreshKoFiltersProviders,
@@ -567,8 +565,8 @@ void AdBlockService::StartKoFilterListUpdater(
     return;
   }
   ko_filter_list_updater_ = std::make_unique<KoFilterListUpdater>(
-      ko_filter_list_source_.get(), std::move(url_loader_factory),
-      local_state_, url,
+      ko_filter_list_source_.get(), std::move(url_loader_factory), local_state_,
+      url,
       base::BindRepeating(&AdBlockService::OnKoFilterListsInstalled,
                           weak_factory_.GetWeakPtr()));
   ko_filter_list_updater_->Start();

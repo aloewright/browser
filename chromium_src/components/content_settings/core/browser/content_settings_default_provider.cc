@@ -11,16 +11,16 @@
 #if defined(KO_BUILD)
 // K-O Shields defaults always come from the registry (see
 // brave/ko/docs/shields.md); stored values are ignored and discarded.
-#define KO_DISCARD_LOCKED_SHIELDS_DEFAULTS                         \
-  for (const WebsiteSettingsInfo* info :                           \
-       *WebsiteSettingsRegistry::GetInstance()) {                  \
+#define KO_DISCARD_LOCKED_SHIELDS_DEFAULTS                          \
+  for (const WebsiteSettingsInfo* info :                            \
+       *WebsiteSettingsRegistry::GetInstance()) {                   \
     if (content_settings::IsKoLockedShieldsDefault(info->type())) { \
-      prefs_->ClearPref(info->default_value_pref_name());          \
-    }                                                              \
+      prefs_->ClearPref(info->default_value_pref_name());           \
+    }                                                               \
   }
-#define KO_DEFAULT_PROVIDER_READ_FROM_PREF                      \
+#define KO_DEFAULT_PROVIDER_READ_FROM_PREF                        \
   if (content_settings::IsKoLockedShieldsDefault(content_type)) { \
-    return base::Value();                                       \
+    return base::Value();                                         \
   }
 #else
 #define KO_DISCARD_LOCKED_SHIELDS_DEFAULTS

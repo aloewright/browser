@@ -199,9 +199,9 @@ std::unique_ptr<KoFilterListSource> KoFilterListSource::Create(
             IDR_KO_SHIELDS_MANIFEST);
   }
   return std::make_unique<KoFilterListSource>(
-      manifest_json,
-      base::BindRepeating(
-          [](const std::string& id) { return LoadKoEmbeddedList(id); }),
+      manifest_json, base::BindRepeating([](const std::string& id) {
+        return LoadKoEmbeddedList(id);
+      }),
       remote_dir, BUILDFLAG(KO_FILTER_LISTS_PUBKEY));
 }
 

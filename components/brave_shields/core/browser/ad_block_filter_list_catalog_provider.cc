@@ -38,8 +38,7 @@ AdBlockFilterListCatalogProvider::AdBlockFilterListCatalogProvider(
     // The catalog component may never arrive; start from the embedded copy.
     // Observers get it like a component update.
     base::ThreadPool::PostTaskAndReplyWithResult(
-        FROM_HERE, {base::MayBlock()},
-        base::BindOnce([] {
+        FROM_HERE, {base::MayBlock()}, base::BindOnce([] {
           return LoadKoEmbeddedList("brave-list-catalog").value_or("");
         }),
         base::BindOnce(

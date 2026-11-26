@@ -205,9 +205,9 @@ void RegisterAdBlockFiltersComponent(
   auto installer = base::MakeRefCounted<component_updater::ComponentInstaller>(
       std::make_unique<AdBlockComponentInstallerPolicy>(
           component_public_key_sha256, component_name, callback));
-  installer->Register(cus, base::BindOnce(&OnFiltersComponentRegistered,
-                                          component_id,
-                                          std::move(on_registered)));
+  installer->Register(
+      cus, base::BindOnce(&OnFiltersComponentRegistered, component_id,
+                          std::move(on_registered)));
 }
 
 }  // namespace brave_shields

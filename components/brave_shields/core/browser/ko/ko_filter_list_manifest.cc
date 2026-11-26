@@ -35,8 +35,8 @@ bool IsValidId(std::string_view id) {
   }
   for (size_t i = 0; i < id.size(); ++i) {
     const char c = id[i];
-    const bool ok = base::IsAsciiLower(c) || base::IsAsciiDigit(c) ||
-                    (c == '-' && i > 0);
+    const bool ok =
+        base::IsAsciiLower(c) || base::IsAsciiDigit(c) || (c == '-' && i > 0);
     if (!ok) {
       return false;
     }
@@ -191,10 +191,9 @@ bool IsScoped(std::string_view options) {
     if (name != "domain" && name != "from" && name != "to") {
       continue;
     }
-    for (std::string_view domain :
-         base::SplitStringPiece(option.substr(eq + 1), "|",
-                                base::TRIM_WHITESPACE,
-                                base::SPLIT_WANT_NONEMPTY)) {
+    for (std::string_view domain : base::SplitStringPiece(
+             option.substr(eq + 1), "|", base::TRIM_WHITESPACE,
+             base::SPLIT_WANT_NONEMPTY)) {
       if (domain[0] != '~') {
         return true;
       }

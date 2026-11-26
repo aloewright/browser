@@ -262,9 +262,9 @@ void KoFilterListUpdater::FetchNextList() {
     return;
   }
   const auto& entry = lists[pending_->next];
-  Fetch(entry.file, entry.size,
-        base::BindOnce(&KoFilterListUpdater::OnList,
-                       weak_factory_.GetWeakPtr()));
+  Fetch(
+      entry.file, entry.size,
+      base::BindOnce(&KoFilterListUpdater::OnList, weak_factory_.GetWeakPtr()));
 }
 
 void KoFilterListUpdater::OnList(std::optional<std::string> body) {

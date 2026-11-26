@@ -827,13 +827,12 @@ TEST_F(BravePrefProviderTest, KoLockedShieldsDefaults) {
   };
 
   // Global overrides are ignored.
-  for (auto type : {ContentSettingsType::BRAVE_SHIELDS,
-                    ContentSettingsType::BRAVE_ADS,
-                    ContentSettingsType::BRAVE_HTTPS_UPGRADE,
-                    ContentSettingsType::BRAVE_FINGERPRINTING_V2}) {
-    EXPECT_TRUE(provider.SetWebsiteSetting(wildcard, wildcard, type,
-                                           base::Value(CONTENT_SETTING_ALLOW),
-                                           {}));
+  for (auto type :
+       {ContentSettingsType::BRAVE_SHIELDS, ContentSettingsType::BRAVE_ADS,
+        ContentSettingsType::BRAVE_HTTPS_UPGRADE,
+        ContentSettingsType::BRAVE_FINGERPRINTING_V2}) {
+    EXPECT_TRUE(provider.SetWebsiteSetting(
+        wildcard, wildcard, type, base::Value(CONTENT_SETTING_ALLOW), {}));
     EXPECT_EQ(CONTENT_SETTING_DEFAULT, get(type)) << type;
   }
   EXPECT_TRUE(provider.SetWebsiteSetting(
@@ -899,9 +898,9 @@ TEST(BraveContentSettingsKoTest, ClassifiesWeakeningValues) {
                     base::Value(CONTENT_SETTING_BLOCK)));
   EXPECT_FALSE(weak(ContentSettingsType::BRAVE_FINGERPRINTING_V2,
                     base::Value(CONTENT_SETTING_ASK)));
-  EXPECT_TRUE(weak(ContentSettingsType::BRAVE_COSMETIC_FILTERING,
-                   CosmeticFilteringSetting::ToValue(
-                       ControlType::BLOCK_THIRD_PARTY)));
+  EXPECT_TRUE(
+      weak(ContentSettingsType::BRAVE_COSMETIC_FILTERING,
+           CosmeticFilteringSetting::ToValue(ControlType::BLOCK_THIRD_PARTY)));
   EXPECT_FALSE(weak(ContentSettingsType::BRAVE_COSMETIC_FILTERING,
                     CosmeticFilteringSetting::ToValue(ControlType::BLOCK)));
   EXPECT_FALSE(weak(ContentSettingsType::BRAVE_ADS, base::Value()));
