@@ -226,7 +226,10 @@ source_set("unit_tests") {
   ]
 
   if (is_ko) {
-    sources += [ "ko_agentd_models_unittest.cc" ]
+    sources += [
+      "ko_agentd_models_unittest.cc",
+      "ko_brave_services_unittest.cc",
+    ]
     if (is_mac || is_linux) {
       sources += [ "model_service_ko_unittest.cc" ]
     }

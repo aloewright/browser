@@ -20,6 +20,7 @@
 #include "brave/components/brave_origin/brave_origin_policy_manager.h"
 #include "brave/components/brave_origin/profile_id.h"
 #include "brave/components/constants/brave_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/profiles/profile_attributes_storage.h"
@@ -273,6 +274,8 @@ IN_PROC_BROWSER_TEST_F(AIChatAgentProfileBrowserTest,
   VerifyAIChatSidePanelShowing(third_opened_browser);
 }
 
+// K-O has no Brave Origin purchase, so Origin never manages AI Chat there.
+#if !BUILDFLAG(IS_KO)
 // Regression test for a crash seen on Brave Origin installs. Brave Origin
 // manages AI Chat as a profile-scoped policy that defaults to disabled for
 // newly-created profiles. When the source profile has AI Chat enabled but the
@@ -359,6 +362,7 @@ IN_PROC_BROWSER_TEST_F(AIChatAgentProfileBrowserTest,
   EXPECT_TRUE(IsAIChatEnabled(agent_browser->GetProfile()->GetPrefs()));
   VerifyAIChatSidePanelShowing(agent_browser);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 // The agent profile manager observes every profile, so guard against it
 // accidentally enabling AI Chat for regular (non-agent) profiles: only the
