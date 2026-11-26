@@ -14,10 +14,12 @@
 #include "brave/browser/brave_shields/ad_block_service_browsertest.h"
 #include "brave/components/brave_shields/content/browser/ad_block_service.h"
 #include "brave/components/brave_shields/core/common/features.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/test/base/platform_browser_test.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
+#include "content/public/test/test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -48,6 +50,11 @@ class AdBlockDATCacheBrowserTest : public AdBlockServiceTest,
   void PreRunTestOnMainThread() override {
     PlatformBrowserTest::PreRunTestOnMainThread();
     ASSERT_TRUE(brave_shields::WaitForAdBlockServiceThreads());
+#if BUILDFLAG(IS_KO)
+    // Finish the extra startup builds K-O's catalog and baseline lists cause,
+    // so they can't satisfy the waits below.
+    content::RunAllTasksUntilIdle();
+#endif
   }
 
  private:
@@ -117,12 +124,16 @@ IN_PROC_BROWSER_TEST_P(AdBlockDATCacheBrowserTest, DATCacheLoadedOnRestart) {
 
     ASSERT_TRUE(brave_shields::WaitForAdBlockServiceThreads());
 
+    // K-O refreshes its baseline lists when the test's empty catalog loads,
+    // which rebuilds both engines after the cached DATs.
+#if !BUILDFLAG(IS_KO)
     // Verify no filter set rebuild happened — the cached DATs should have
     // been sufficient.
     EXPECT_FALSE(service->IsFilterListLoadedForTesting(true))
         << "Default engine filter set was rebuilt — suppression failed";
     EXPECT_FALSE(service->IsFilterListLoadedForTesting(false))
         << "Additional engine filter set was rebuilt — suppression failed";
+#endif
   } else {
     // Verify filter set build happened
     ASSERT_TRUE(base::test::RunUntil([service]() {

@@ -9,6 +9,7 @@
 
 #include "base/memory/raw_ptr.h"
 #include "base/path_service.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/values.h"
 #include "brave/browser/brave_browser_process.h"
 #include "brave/browser/brave_shields/ad_block_browser_test_helper.h"
@@ -17,6 +18,7 @@
 #include "brave/components/brave_shields/content/browser/ad_block_service.h"
 #include "brave/components/brave_shields/core/common/brave_shield_constants.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
@@ -32,6 +34,7 @@
 #include "content/public/browser/web_contents.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
+#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
 #include "url/gurl.h"
 
@@ -64,7 +67,13 @@ class TestBraveShieldsWebContentsObserver
 
 class BraveShieldsWebContentsObserverBrowserTest : public InProcessBrowserTest {
  public:
-  BraveShieldsWebContentsObserverBrowserTest() = default;
+  BraveShieldsWebContentsObserverBrowserTest() {
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS upgrade default would put the HTTPS-only interstitial
+    // in front of pages the plain HTTP test server serves for test hosts.
+    feature_list_.InitAndDisableFeature(net::features::kBraveHttpsByDefault);
+#endif
+  }
 
   void SetUpInProcessBrowserTestFixture() override {
     helper_ = std::make_unique<brave_shields::AdBlockBrowserTestHelper>();
@@ -129,6 +138,9 @@ class BraveShieldsWebContentsObserverBrowserTest : public InProcessBrowserTest {
   }
 
  private:
+#if BUILDFLAG(IS_KO)
+  base::test::ScopedFeatureList feature_list_;
+#endif
   std::unique_ptr<brave_shields::AdBlockBrowserTestHelper> helper_;
   raw_ptr<HostContentSettingsMap> content_settings_ = nullptr;
   raw_ptr<TestBraveShieldsWebContentsObserver>
