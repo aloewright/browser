@@ -341,6 +341,19 @@ void BravePrefProvider::EnsureNoWildcardEntries(
   SetWebsiteSetting(ContentSettingsPattern::Wildcard(),
                     ContentSettingsPattern::Wildcard(), content_type,
                     base::Value(), {});
+#if defined(KO_BUILD)
+  // PrefProvider refuses wildcard pairs for non-Shields types (e.g.
+  // BRAVE_HTTPS_UPGRADE), so drop a stored or synced "*,*" rule directly.
+  // No pref write (and no re-trigger) once the rule is gone.
+  if (IsKoLockedShieldsDefault(content_type) &&
+      !IsShieldsContentSettingsType(content_type) &&
+      supports_type(content_type)) {
+    GetPref(content_type)
+        ->SetWebsiteSetting(ContentSettingsPattern::Wildcard(),
+                            ContentSettingsPattern::Wildcard(), base::Value(),
+                            RuleMetaData());
+  }
+#endif
 #if defined(KO_SHIELDS_STRICT_BUILD)
   RemoveKoWeakeningRules(content_type);
 #endif

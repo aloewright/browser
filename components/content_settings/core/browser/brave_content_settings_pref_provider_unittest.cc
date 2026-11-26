@@ -384,6 +384,9 @@ class BravePrefProviderTest : public testing::Test {
   std::unique_ptr<TestingProfile> testing_profile_;
 };
 
+// Strict K-O builds drop the per-site relaxations this test seeds; see
+// KoStrictDropsStoredRelaxations.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
   BravePrefProvider provider(
       testing_profile()->GetPrefs(), false /* incognito */,
@@ -518,6 +521,7 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
 
   provider.ShutdownOnUIThread();
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 TEST_F(BravePrefProviderTest, TestShieldsSettingsMigrationVersion) {
   PrefService* prefs = testing_profile()->GetPrefs();
@@ -869,8 +873,41 @@ TEST_F(BravePrefProviderTest, KoLockedShieldsDefaults) {
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(CONTENT_SETTING_DEFAULT,
             get(ContentSettingsType::BRAVE_HTTPS_UPGRADE));
+  // Also gone from the pref, so sync does not carry it back.
+  update.Refresh();
+  EXPECT_TRUE(update.GetSettingDirectly("*", "*").is_none());
   provider.ShutdownOnUIThread();
 }
+
+#if defined(KO_SHIELDS_STRICT_BUILD)
+TEST_F(BravePrefProviderTest, KoStrictDropsStoredRelaxations) {
+  BravePrefProvider provider(
+      testing_profile()->GetPrefs(), false /* incognito */,
+      true /* store_last_modified */, false /* restore_session */);
+  const auto wildcard = ContentSettingsPattern::Wildcard();
+  const GURL url("https://example.com");
+  const auto pattern = ContentSettingsPattern::FromURL(url);
+  auto get = [&](ContentSettingsType type) {
+    return TestUtils::GetContentSetting(&provider, url, GURL(), type, false);
+  };
+
+  // Per-site rules arriving through prefs (e.g. sync): relaxations are
+  // removed, tightenings are kept.
+  DirectAccessContentSettings ads(testing_profile()->GetPrefs(),
+                                  ContentSettingsType::BRAVE_ADS);
+  ads.AddRule(pattern, wildcard, CONTENT_SETTING_ALLOW);
+  ads.Write();
+  DirectAccessContentSettings fp(testing_profile()->GetPrefs(),
+                                 ContentSettingsType::BRAVE_FINGERPRINTING_V2);
+  fp.AddRule(pattern, wildcard, CONTENT_SETTING_BLOCK);
+  fp.Write();
+  base::RunLoop().RunUntilIdle();
+  EXPECT_EQ(CONTENT_SETTING_DEFAULT, get(ContentSettingsType::BRAVE_ADS));
+  EXPECT_EQ(CONTENT_SETTING_BLOCK,
+            get(ContentSettingsType::BRAVE_FINGERPRINTING_V2));
+  provider.ShutdownOnUIThread();
+}
+#endif  // defined(KO_SHIELDS_STRICT_BUILD)
 
 TEST(BraveContentSettingsKoTest, ClassifiesWeakeningValues) {
   using brave_shields::ControlType;

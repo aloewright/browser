@@ -8,8 +8,17 @@
 #if !BUILDFLAG(IS_IOS)
 #include "brave/components/content_settings/core/browser/brave_content_settings_utils.h"
 
+#if defined(KO_BUILD)
+// K-O also deletes "*,*" rules of its locked non-Shields types; see
+// BravePrefProvider::EnsureNoWildcardEntries.
+#define BRAVE_SET_WEBSITE_SETTING                                  \
+  content_settings::IsShieldsContentSettingsType(content_type_) || \
+      (value.is_none() &&                                          \
+       content_settings::IsKoLockedShieldsDefault(content_type_)) ||
+#else
 #define BRAVE_SET_WEBSITE_SETTING \
   content_settings::IsShieldsContentSettingsType(content_type_) ||
+#endif  // defined(KO_BUILD)
 #else
 #define BRAVE_SET_WEBSITE_SETTING
 #endif

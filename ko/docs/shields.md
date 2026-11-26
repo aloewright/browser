@@ -202,5 +202,5 @@ Declared in `components/ko/shields/buildflags/buildflags.gni`
 * About 11 MB of list text is committed per snapshot (roughly 3 MB in the pak).
 * Snapshot lists are re-read from the pak on every engine rebuild.
 * Existing tests that assert stock defaults are skipped under `IS_KO`; with
-  `ko_shields_strict_enforcement` some content-settings migration tests that
-  write per-site "allow" rules will fail.
+  `ko_shields_strict_enforcement`, tests that write per-site relaxations are
+  skipped or adapted, and `KoStrict*` tests cover the strict behavior.

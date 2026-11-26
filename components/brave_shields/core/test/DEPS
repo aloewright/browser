@@ -1,5 +1,6 @@
 include_rules = [
   "+brave/components/ko/buildflags",
+  "+brave/components/ko/shields/buildflags",
   "+components/content_settings",
   "+components/prefs",
   "+components/sync_preferences/testing_pref_service_syncable.h",
