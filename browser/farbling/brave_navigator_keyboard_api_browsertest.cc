@@ -8,6 +8,7 @@
 #include "base/path_service.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/test/base/in_process_browser_test.h"
@@ -23,6 +24,10 @@ namespace {
 
 constexpr char kGetLayoutMapScript[] =
     R"(navigator.keyboard.getLayoutMap instanceof Function)";
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+constexpr char kNullKeyboardError[] =
+    "Cannot read properties of null (reading 'getLayoutMap')";
+#endif
 
 }  // namespace
 
@@ -97,7 +102,14 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorKeyboardAPIBrowserTest,
   // get real navigator.keyboard.getLayoutMap key
   AllowFingerprinting();
   EXPECT_TRUE(ui_test_utils::NavigateToURL(browser(), test_url()));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off.
+  auto result_off = EvalJs(contents(), kGetLayoutMapScript);
+  EXPECT_THAT(result_off, content::EvalJsResult::ErrorIs(
+                              testing::HasSubstr(kNullKeyboardError)));
+#else
   EXPECT_EQ(true, EvalJs(contents(), kGetLayoutMapScript));
+#endif
 
   // Fingerprinting level: standard (default)
   // navigator.keyboard will be null
@@ -121,5 +133,12 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorKeyboardAPIBrowserTest,
   AllowFingerprinting();
   EnableWebcompatException();
   EXPECT_TRUE(ui_test_utils::NavigateToURL(browser(), test_url()));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Refused again, and that exception is not the keyboard one.
+  auto result_off_again = EvalJs(contents(), kGetLayoutMapScript);
+  EXPECT_THAT(result_off_again, content::EvalJsResult::ErrorIs(
+                                    testing::HasSubstr(kNullKeyboardError)));
+#else
   EXPECT_EQ(true, EvalJs(contents(), kGetLayoutMapScript));
+#endif
 }

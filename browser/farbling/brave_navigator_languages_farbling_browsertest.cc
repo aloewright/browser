@@ -15,6 +15,7 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
 #include "chrome/browser/profiles/profile.h"
@@ -217,12 +218,16 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorLanguagesFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url1));
   std::string testing_languages = "en-US,en,es,la";
   SetAcceptLanguages(testing_languages);
-  EXPECT_EQ(testing_languages,
-            EvalJs(web_contents(), kNavigatorLanguagesScript));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off.
+  const std::string off_languages = "en-US";
+#else
+  const std::string off_languages = testing_languages;
+#endif
+  EXPECT_EQ(off_languages, EvalJs(web_contents(), kNavigatorLanguagesScript));
   AllowFingerprinting(domain2);
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url2));
-  EXPECT_EQ(testing_languages,
-            EvalJs(web_contents(), kNavigatorLanguagesScript));
+  EXPECT_EQ(off_languages, EvalJs(web_contents(), kNavigatorLanguagesScript));
 
   // Farbling level: default
   SetFingerprintingDefault(domain1);
@@ -311,8 +316,14 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorLanguagesFarblingBrowserTest,
   // HTTP Accept-Language header should not be farbled.
   AllowFingerprinting(domain_b);
   AllowFingerprinting(domain_d);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off.
+  SetExpectedHTTPAcceptLanguage(domain_b, "la;q=0.8");
+  SetExpectedHTTPAcceptLanguage(domain_d, "la;q=0.5");
+#else
   SetExpectedHTTPAcceptLanguage(domain_b, "la,es;q=0.9,en;q=0.8");
   SetExpectedHTTPAcceptLanguage(domain_d, "la,es;q=0.9,en;q=0.8");
+#endif
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_b));
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_d));
 
@@ -341,8 +352,14 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorLanguagesFarblingBrowserTest,
   // HTTP Accept-Language header should not be farbled.
   AllowFingerprinting(domain_b);
   AllowFingerprinting(domain_d);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Refused again, so both sites stay at maximum.
+  SetExpectedHTTPAcceptLanguage(domain_b, "en-US,en;q=0.9");
+  SetExpectedHTTPAcceptLanguage(domain_d, "en-US,en;q=0.9");
+#else
   SetExpectedHTTPAcceptLanguage(domain_b, "zh-HK,zh;q=0.9,la;q=0.8");
   SetExpectedHTTPAcceptLanguage(domain_d, "zh-HK,zh;q=0.9,la;q=0.8");
+#endif
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_b));
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_d));
 

@@ -13,6 +13,8 @@
 #include "base/test/scoped_feature_list.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/chrome_test_extension_loader.h"
 #include "chrome/browser/profiles/profile.h"
@@ -27,6 +29,10 @@
 #include "third_party/blink/public/common/features.h"
 #include "ui/views/widget/widget.h"
 #include "ui/views/widget/widget_observer.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -101,6 +107,13 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
 
     ASSERT_TRUE(embedded_test_server()->Start());
 
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
+
     parent_url_ = embedded_test_server()->GetURL("a.com", "/iframe.html");
   }
 
@@ -145,6 +158,16 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
 
   virtual bool IsFlagDisabled() const = 0;
 
+  // Whether pages are farbled after SetFingerprintingSetting(allow).
+  bool ExpectFarbled(bool allow_fingerprinting) const {
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+    // Strict K-O builds refuse turning fingerprinting off.
+    return !IsFlagDisabled();
+#else
+    return !allow_fingerprinting && !IsFlagDisabled();
+#endif
+  }
+
   gfx::Rect SetBounds(const gfx::Rect& bounds) {
     BrowserWindow::FromBrowser(browser())->SetBounds(bounds);
     content::RunAllPendingInMessageLoop();
@@ -171,7 +194,7 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
             continue;
           }
           content::RenderFrameHost* host = test_iframe ? Parent() : IFrame();
-          if (!allow_fingerprinting && !IsFlagDisabled() && content_scheme) {
+          if (ExpectFarbled(allow_fingerprinting) && content_scheme) {
             EXPECT_GE(8, EvalJs(host, "window.outerWidth - parent.innerWidth"));
             EXPECT_GE(8,
                       EvalJs(host, "window.outerHeight - parent.innerHeight"));
@@ -227,7 +250,7 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
         ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), parent_url()));
         for (bool test_iframe : {false, true}) {
           content::RenderFrameHost* host = test_iframe ? Parent() : IFrame();
-          if (!allow_fingerprinting && !IsFlagDisabled()) {
+          if (ExpectFarbled(allow_fingerprinting)) {
             EXPECT_GE(8, EvalJs(host, "window.screenX"));
             EXPECT_GE(8, EvalJs(host, "window.screenY"));
             EXPECT_GE(8, EvalJs(host, "window.screen.availLeft"));
@@ -261,12 +284,12 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
           content::RenderFrameHost* host = test_iframe ? Parent() : IFrame();
           // Allow for a 2px variance due to non-integer devicePixelRatio.
           EXPECT_EQ(
-              !allow_fingerprinting && !IsFlagDisabled(),
+              ExpectFarbled(allow_fingerprinting),
               EvalJs(host,
                      "matchMedia(`(min-device-width: ${outerWidth - 2}px) and "
                      "(max-device-width: ${outerWidth + 2}px)`).matches"));
           EXPECT_EQ(
-              !allow_fingerprinting && !IsFlagDisabled(),
+              ExpectFarbled(allow_fingerprinting),
               EvalJs(
                   host,
                   "matchMedia(`(min-device-height: ${outerHeight - 2}px) and "
@@ -299,7 +322,7 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
         auto* popup_contents = popup->tab_strip_model()->GetActiveWebContents();
         content::WaitForLoadStop(popup_contents);
         gfx::Rect child_bounds = BrowserWindow::FromBrowser(popup)->GetBounds();
-        if (!allow_fingerprinting && !IsFlagDisabled()) {
+        if (ExpectFarbled(allow_fingerprinting)) {
           EXPECT_GE(child_bounds.x(), parent_bounds.x());
           EXPECT_GE(child_bounds.y(), parent_bounds.y());
         } else {
