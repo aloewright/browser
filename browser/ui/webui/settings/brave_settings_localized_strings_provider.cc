@@ -31,6 +31,7 @@
 #include "brave/components/constants/webui_url_constants.h"
 #include "brave/components/containers/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
@@ -164,8 +165,10 @@ constexpr char16_t kSemanticHistorySearchSettingURL[] =
 constexpr char16_t kLeoMemoryLearnMoreURL[] =
     u"https://support.brave.app/hc/en-us/articles/38441287509261";
 
+#if !BUILDFLAG(IS_KO)
 constexpr char16_t kLeoPrivacyPolicyURL[] =
     u"https://brave.com/privacy/browser/#brave-leo";
+#endif
 #endif
 
 #if BUILDFLAG(ENABLE_LOCAL_AI)
@@ -1331,10 +1334,17 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
       l10n_util::GetStringFUTF16(IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_DESC_2,
                                  kLeoCustomModelsLearnMoreURL));
 
+#if BUILDFLAG(IS_KO)
+  // Brave's AI privacy policy doesn't cover K-O's providers.
+  html_source->AddString(
+      "braveLeoAssistantAboutLeoDesc2",
+      l10n_util::GetStringUTF16(IDS_SETTINGS_KO_ASSISTANT_ABOUT_DESC_2));
+#else
   html_source->AddString(
       "braveLeoAssistantAboutLeoDesc2",
       l10n_util::GetStringFUTF16(IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_DESC_2,
                                  kLeoPrivacyPolicyURL));
+#endif
 
   html_source->AddString(
       "braveLeoAssistantCustomizationDescription",

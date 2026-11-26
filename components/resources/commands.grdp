@@ -352,9 +352,16 @@
   <message name="IDS_IDC_LIVE_CAPTION">
     Toggle live captions
   </message>
+  <if expr="not is_ko">
   <message name="IDS_IDC_TOGGLE_AI_CHAT">
     Toggle Leo AI
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_IDC_TOGGLE_AI_CHAT">
+    Toggle K-O Assistant
+  </message>
+  </if>
   <message name="IDS_IDC_SHOW_BRAVE_WALLET_PANEL">
     Show Brave Wallet panel
   </message>

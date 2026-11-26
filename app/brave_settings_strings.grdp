@@ -299,15 +299,29 @@
   <message name="IDS_SETTINGS_APPEARANCE_SETTINGS_USE_AUTOCOMPLETE_COMMANDER" desc="The label for settings checkbox controlling whether or not commander suggestions show up in autocomplete">
     Quick commands
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_APPEARANCE_SETTINGS_USE_AUTOCOMPLETE_LEO" desc="The label for settings checkbox en/disabling autcomplete provider with Leo assistant">
     Leo AI Assistant
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_APPEARANCE_SETTINGS_USE_AUTOCOMPLETE_LEO" desc="The label for settings checkbox en/disabling autcomplete provider with Leo assistant">
+    K-O Assistant
+  </message>
+  </if>
   <message name="IDS_SETTINGS_SHOW_BRAVE_NEWS_BUTTON_LABEL" desc="The label for the settings switch controlling whether the Brave News button is shown in the toolbar">
     Show Brave News button
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_SHOW_LEO_BUTTON_LABEL" desc="The label for the settings switch controlling whether the Leo button is shown in the toolbar">
     Show Leo AI button
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_SHOW_LEO_BUTTON_LABEL" desc="The label for the settings switch controlling whether the Leo button is shown in the toolbar">
+    Show K-O Assistant button
+  </message>
+  </if>
   <message name="IDS_SETTINGS_ALWAYS_SHOW_FULL_URLS" desc="The label for a setting to show full URLs on omnibox">
     Always show full URLs
   </message>
@@ -1097,15 +1111,36 @@
   </message>
 
   <!-- AI chat setting -->
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT" desc="Label for opening Leo AI chat site settings.">
     Leo AI chat
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT" desc="Label for opening Leo AI chat site settings.">
+    K-O Assistant chat
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT_ASK" desc="Label for the enabled option of opening Leo AI chat site settings.">
     Sites can ask to open Leo AI chat
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT_ASK" desc="Label for the enabled option of opening Leo AI chat site settings.">
+    Sites can ask to open K-O Assistant chat
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT_BLOCK" desc="Label for the disabled option of opening Leo AI chat site settings.">
     Don't allow site to open Leo AI chat
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_SITE_SETTINGS_BRAVE_OPEN_AI_CHAT_BLOCK" desc="Label for the disabled option of opening Leo AI chat site settings.">
+    Don't allow site to open K-O Assistant chat
+  </message>
+  </if>
 
   <!-- Settings / Sync -->
   <message name="IDS_SETTINGS_BRAVE_SYNC_TITLE" desc="The title for Brave Sync in settings">
@@ -1311,9 +1346,16 @@
   <message name="IDS_SETTINGS_BRAVE_PASSWORDS_CHECKBOX_LABEL" desc="Label for the checkbox which enables or disables syncing passwords between multiple browser instances.">
     Passwords
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_AI_CHAT_CHECKBOX_LABEL" desc="Label for the checkbox which enables or disables syncing Leo AI Chat conversation history between multiple browser instances.">
     Leo AI Conversations
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_AI_CHAT_CHECKBOX_LABEL" desc="Label for the checkbox which enables or disables syncing Leo AI Chat conversation history between multiple browser instances.">
+    K-O Assistant Conversations
+  </message>
+  </if>
 
   <!-- Settings / Search engine -->
   <message name="IDS_SETTINGS_BRAVE_SEARCH_ENGINES_SEARCH_SUGGEST_LABEL" desc="The label of the option to enable/disable sending omnibox input to the user's default search engine to get additional suggestions.">
@@ -1738,30 +1780,72 @@
   </message>
 
   <!-- Settings / Leo Assistant -->
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT" desc="Title for an item in the 'Leo Assistant' section of Brave Settings">
     Leo
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT" desc="Title for an item in the 'Leo Assistant' section of Brave Settings">
+    K-O Assistant
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_ICON_ON_TOOLBAR_LABEL" desc="The text for settings option">
     Show Leo icon in the sidebar
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_ICON_ON_TOOLBAR_LABEL" desc="The text for settings option">
+    Show K-O Assistant icon in the sidebar
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_IN_CONTEXT_MENU_LABEL" desc="The text for settings option to show Leo in context menu">
     Show Leo in the context menu on websites
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_IN_CONTEXT_MENU_LABEL" desc="The text for settings option to show Leo in context menu">
+    Show K-O Assistant in the context menu on websites
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_IN_CONTEXT_MENU_DESC" desc="The description for settings option to show Leo in context menu">
     Leo will appear in the context menu when you right-click on a website. This will send context from the current web page to Leo.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_SHOW_IN_CONTEXT_MENU_DESC" desc="The description for settings option to show Leo in context menu">
+    K-O Assistant will appear in the context menu when you right-click on a website. This will send context from the current web page to K-O Assistant.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_LABEL" desc="The text for settings option to enable tab focus mode">
     Tab Focus Mode
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_DESC" desc="The description for settings option to enable tab focus mode">
     Enable tab organization in Tab Search page. When opened, this will automatically send the titles and origins of all non-private tabs to Leo to classify them. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_DESC" desc="The description for settings option to enable tab focus mode">
+    Enable tab organization in Tab Search page. When opened, this will automatically send the titles and origins of all non-private tabs to K-O Assistant to classify them. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_SEND_PAGE_CONTENT_LABEL" desc="Label for the toggle, nested under the Tab Focus Mode toggle, that lets tab focus send excerpts of page text to the model that organizes the tabs">
     Send page content for tab focus
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_SEND_PAGE_CONTENT_DESC" desc="Description below the toggle that lets tab focus send excerpts of page text to the model that organizes the tabs. That model is Leo by default, or the user's own model if they picked one in the 'Default model for tab focus' dropdown. The link text is the name of the Semantic history search toggle, and the link opens the privacy settings page where it lives.">
     Also send short excerpts of the text of each tab, so tabs are grouped by what a page is about instead of its title. Excerpts go to Leo, or to your own model if you chose one for tab focus. This needs <ph name="BEGIN_LINK">&lt;a href="$1"&gt;</ph><ph name="SEMANTIC_HISTORY_SEARCH">$2<ex>Semantic history search</ex></ph><ph name="END_LINK">&lt;/a&gt;</ph>, which builds the excerpts on your device.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_SEND_PAGE_CONTENT_DESC" desc="Description below the toggle that lets tab focus send excerpts of page text to the model that organizes the tabs. That model is Leo by default, or the user's own model if they picked one in the 'Default model for tab focus' dropdown. The link text is the name of the Semantic history search toggle, and the link opens the privacy settings page where it lives.">
+    Also send short excerpts of the text of each tab, so tabs are grouped by what a page is about instead of its title. Excerpts go to K-O Assistant, or to your own model if you chose one for tab focus. This needs <ph name="BEGIN_LINK">&lt;a href="$1"&gt;</ph><ph name="SEMANTIC_HISTORY_SEARCH">$2<ex>Semantic history search</ex></ph><ph name="END_LINK">&lt;/a&gt;</ph>, which builds the excerpts on your device.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_TAB_ORGANIZATION_MODEL_LABEL" desc="The label for the tab organization model selection dropdown">
     Default model for tab focus
   </message>
@@ -1777,27 +1861,67 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_HISTORY_PREFERENCE_CONFIRM" desc="The confirmation prompt about disabling the AI Chat history preference">
     Disabling conversation storage will permanently erase all previously stored conversations. This action can't be undone.
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_RESET_AND_CLEAR_DATA_LABEL" desc="The button label for resetting AI Chat data">
     Clear Leo data
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_RESET_AND_CLEAR_DATA_LABEL" desc="The button label for resetting AI Chat data">
+    Clear K-O Assistant data
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_RESET_AND_CLEAR_DATA_CONFIRMATION_LABEL" desc="The confirmation window message for reset option">
     Resetting Leo AI will require you to opt-in to use Brave Leo AI in the future and will also clear your chat history, customizations, and memories. Clearing your chat history will delete all your previous conversations with Brave Leo AI. This action can't be undone.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_RESET_AND_CLEAR_DATA_CONFIRMATION_LABEL" desc="The confirmation window message for reset option">
+    Resetting K-O Assistant will require you to opt-in to use K-O Assistant in the future and will also clear your chat history, customizations, and memories. Clearing your chat history will delete all your previous conversations with K-O Assistant. This action can't be undone.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_AUTOCOMPLETE_LINK" desc="A label for a link to settings page to adjust autocomplete suggestion based on Leo">
     Adjust autocomplete suggestions
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_AI_CHAT_CLEAR_HISTORY_DATA_LABEL" desc="Label for checkbox to select AI assistant conversations for deletion when deleting browser data">
     Leo AI
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_AI_CHAT_CLEAR_HISTORY_DATA_LABEL" desc="Label for checkbox to select AI assistant conversations for deletion when deleting browser data">
+    K-O Assistant
+  </message>
+  </if>
   <message name="IDS_SETTINGS_AI_CHAT_CLEAR_HISTORY_DATA_SUBLABEL" desc="Label description for checkbox to select AI assistant conversations for deletion when deleting browser data">
     Chat history
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_LABEL" desc="Label for the about Leo assistant section">
     About Leo AI
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_LABEL" desc="Label for the about Leo assistant section">
+    About K-O Assistant
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_DESC_1" desc="Description for the about Leo assistant section">
     Brave Leo provides privacy-first AI chat and other AI-powered interfaces in the browser. Leo never learns from your data or uses it for model training. All requests are proxied through an anonymizing server.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_DESC_1" desc="Description for the about Leo assistant section">
+    K-O Assistant chats with models from your local ko-agentd daemon or from servers you add below. Requests never go to Brave.
+  </message>
+  </if>
+  <if expr="is_ko">
+    <message name="IDS_SETTINGS_KO_ASSISTANT_ABOUT_DESC_2" desc="Second paragraph about the K-O Assistant in settings: where requests and keys go.">
+      Provider keys you add here are stored encrypted in your profile and are never shown again. The privacy terms of each provider apply to what you send it.
+    </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_DESC_2" desc="Description for learning more about Leo privacy policy">
     Read more about how Brave protects your use of AI in Leo's privacy policy. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
   </message>
@@ -1807,18 +1931,32 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_PERSONALIZATION_LABEL" desc="Label for the personalization section">
     Personalization
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_LINK_LABEL" desc="Label for a link to Leo customization page">
     Customize Leo's responses and memories
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_LINK_LABEL" desc="Label for a link to Leo customization page">
+    Customize K-O Assistant's responses and memories
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_MANAGE_URL" desc="Label for managing accounts url">
     Manage premium subscription
   </message>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_BYOM_LABEL" desc="A generic title to use for headings">
     Bring your own model
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_DELETE_MODEL_CONFIRMATION" desc="Confirmation message for deleting a model">
     Are you sure you want to delete this model? If this model is being used in any active conversation then that conversation will change to use Leo's default model.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_DELETE_MODEL_CONFIRMATION" desc="Confirmation message for deleting a model">
+    Are you sure you want to delete this model? If this model is being used in any active conversation then that conversation will change to use K-O Assistant's default model.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ADD_MODEL_LABEL" desc="A title for adding a custom model">
     Add model
   </message>
@@ -1922,9 +2060,16 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_PRIVATE_IP_NOT_ALLOWED_BODY" desc="Body text for private IP not allowed dialog">
     The address you entered appears to be from a private network—like your router or a local server. Brave blocks these automatically to keep you safe, but you can enable them if you're confident it's secure.
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_PRIVATE_IP_NOT_ALLOWED_INSTRUCTIONS" desc="Instructions on how to enable private IPs">
     To proceed, visit brave://flags/, search for "brave-ai-chat-allow-private-ips," and enable the feature. Once enabled, you can use private network addresses in Leo settings.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_PRIVATE_IP_NOT_ALLOWED_INSTRUCTIONS" desc="Instructions on how to enable private IPs">
+    To proceed, visit brave://flags/, search for "brave-ai-chat-allow-private-ips," and enable the feature. Once enabled, you can use private network addresses in K-O Assistant settings.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ADD_NEW_BUTTON_LABEL" desc="A label for a button that opens a panel with input forms for a user to add model">
     Add new model
   </message>
@@ -1934,9 +2079,16 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_TITLE" desc="A header title for model list section">
     Your models
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_DESC_1" desc="A description explaning to connect models within the browser">
     Connect your self-hosted or third-party hosted LLM to Leo and use them within the browser.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_DESC_1" desc="A description explaning to connect models within the browser">
+    Connect your self-hosted or third-party hosted LLM to K-O Assistant and use them within the browser.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_DESC_2" desc="A description explaning what protocols are accepted">
     Use any OpenAI Chat Protocol compatible framework such as Ollama. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
   </message>
@@ -1956,45 +2108,115 @@
     ≈<ph name="TOKENS_COUNT">$1<ex>175</ex></ph> tokens
   </message>
    <!-- Leo Customization -->
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_PAGE_TITLE" desc="The title for Leo Assistant customization page">
     Customize Leo
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_PAGE_TITLE" desc="The title for Leo Assistant customization page">
+    Customize K-O Assistant
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_TITLE" desc="The title for Leo Assistant customization section">
     About you
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_DESCRIPTION" desc="The description for Leo Assistant customization section">
     Tell Leo about yourself to get more personalized answers. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_DESCRIPTION" desc="The description for Leo Assistant customization section">
+    Tell K-O Assistant about yourself to get more personalized answers. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_ENABLED_LABEL" desc="The label for enabling Leo Assistant customization">
     Enable Leo Customization
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_ENABLED_LABEL" desc="The label for enabling Leo Assistant customization">
+    Enable K-O Assistant Customization
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_USER_MEMORY_ENABLED_LABEL" desc="The label for enabling user memory in Leo Assistant">
     Enable User Memory
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_NAME_LABEL" desc="Label for the input where the user specifies what Leo should call them">
     What should Leo call you?
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_NAME_LABEL" desc="Label for the input where the user specifies what Leo should call them">
+    What should K-O Assistant call you?
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_NAME_PLACEHOLDER" desc="Placeholder for the input where the user specifies what Leo should call them">
     Enter your preferred name for Leo to call you by
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_NAME_PLACEHOLDER" desc="Placeholder for the input where the user specifies what Leo should call them">
+    Enter your preferred name for K-O Assistant to call you by
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_JOB_LABEL" desc="Label for the input where the user describes what they do">
     What do you do?
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_JOB_PLACEHOLDER" desc="Placeholder for the input where the user describes what they do">
     Tell Leo a little bit about what you do
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_JOB_PLACEHOLDER" desc="Placeholder for the input where the user describes what they do">
+    Tell K-O Assistant a little bit about what you do
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_TONE_LABEL" desc="Label for the input where the user describes how Leo should answer">
     How should Leo answer your questions?
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_TONE_LABEL" desc="Label for the input where the user describes how Leo should answer">
+    How should K-O Assistant answer your questions?
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_TONE_PLACEHOLDER" desc="Placeholder for the input where the user describes how Leo should answer">
     Describe the tone and traits you would like Leo to use when answering
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_TONE_PLACEHOLDER" desc="Placeholder for the input where the user describes how Leo should answer">
+    Describe the tone and traits you would like K-O Assistant to use when answering
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_OTHER_LABEL" desc="Label for the input where the user can add anything else Leo should know">
     Anything else Leo should know about you?
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_OTHER_LABEL" desc="Label for the input where the user can add anything else Leo should know">
+    Anything else K-O Assistant should know about you?
+  </message>
+  </if>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_OTHER_PLACEHOLDER" desc="Placeholder for the input where the user can add anything else Leo should know">
     Let Leo know about any preferences you want it to keep in mind when answering
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_OTHER_PLACEHOLDER" desc="Placeholder for the input where the user can add anything else Leo should know">
+    Let K-O Assistant know about any preferences you want it to keep in mind when answering
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CUSTOMIZATION_SAVE_BUTTON" desc="Label for the save changes button in Leo customization">
     Save changes
   </message>
@@ -2009,15 +2231,29 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MEMORIES_TITLE" desc="The title for Leo Assistant memory section">
     Memories
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MEMORIES_DESC" desc="The description for Leo Assistant memory section">
     All the things that Leo learned about you and won't forget about. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_YOUR_MEMORIES_DESC" desc="The description for Leo Assistant memory section">
+    All the things that K-O Assistant learned about you and won't forget about. <ph name="BEGIN_LINK">&lt;a target="_blank" href="$1"&gt;</ph>Learn more<ph name="END_LINK">&lt;/a&gt;</ph>
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_MEMORY_LIST_EMPTY_TITLE" desc="The title shown when the memory list is empty">
     No memories created yet
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_MEMORY_LIST_EMPTY_DESCRIPTION" desc="The description shown when the memory list is empty">
     Add a memory to help Leo get to know you better.
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_MEMORY_LIST_EMPTY_DESCRIPTION" desc="The description shown when the memory list is empty">
+    Add a memory to help K-O Assistant get to know you better.
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_ADD_NEW_MEMORY_BUTTON_LABEL" desc="The label for the button to add a new memory">
     Add new memory
   </message>
@@ -2027,9 +2263,16 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_CREATE_MEMORY_DIALOG_TITLE" desc="The title for the create new memory dialog">
     Create a new memory
   </message>
+  <if expr="not is_ko">
   <message name="IDS_SETTINGS_LEO_ASSISTANT_MEMORY_INPUT_PLACEHOLDER" desc="The placeholder text for the memory input field">
     What do you want Leo to remember?
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_SETTINGS_LEO_ASSISTANT_MEMORY_INPUT_PLACEHOLDER" desc="The placeholder text for the memory input field">
+    What do you want K-O Assistant to remember?
+  </message>
+  </if>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_DELETE_MEMORY_CONFIRMATION_TITLE" desc="The title for delete memory dialog">
     Delete this memory
   </message>
