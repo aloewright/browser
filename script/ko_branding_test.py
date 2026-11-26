@@ -26,7 +26,8 @@ class RebrandTextTest(unittest.TestCase):
     def test_kept_service_names(self):
         for text in ('Brave Search', 'Brave Sync', 'Turn on Brave sync',
                      'Brave Software Inc', 'Brave Rewards', 'Brave-hosted',
-                     "Brave's updater", 'Brave’s proxy'):
+                     "Brave's updater", 'Brave\u2019s proxy',
+                     'Click the Brave icon'):
             self.assertEqual(rebrand_text(text), text)
         self.assertEqual(rebrand_text('Brave uses Brave Search'),
                          'K-O uses Brave Search')

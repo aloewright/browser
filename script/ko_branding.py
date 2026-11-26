@@ -43,14 +43,15 @@ _KEEP = (
     'Brave Updater',
     'Brave VPN',
     'Brave Wallet',
+    'Brave icon',  # The Shields button still shows Brave's lion.
     'Brave sync',
     'Brave-hosted',
     "Brave's mission",
     "Brave's proxy",
     "Brave's updater",
-    'Brave’s mission',
-    'Brave’s proxy',
-    'Brave’s updater',
+    'Brave\u2019s mission',
+    'Brave\u2019s proxy',
+    'Brave\u2019s updater',
 )
 
 # Applied before the generic Brave -> K-O replacement. Shields keeps its name.
