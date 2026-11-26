@@ -84,6 +84,9 @@ Code: `browser/containers/ko_container_proxy_*`,
   uses the same proxy as in the regular profile.
 - **Live changes.** Adding, editing or removing a proxy applies to open
   contexts immediately, including ones created before the proxy was set.
+  New requests use it at once; connections that are already open (for
+  example a WebSocket) keep their route until they close, so reload the
+  container's tabs after adding a proxy.
 - **Proxy auth.**
   - SOCKS5: brave's username/password SOCKS5 auth carries the credentials
     in the proxy server sent to the network service.
