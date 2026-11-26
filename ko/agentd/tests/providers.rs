@@ -331,3 +331,62 @@ async fn codex_cli_chat() {
     );
     env.stop().await;
 }
+
+#[tokio::test]
+async fn http_stream_cut_short_reports_an_error() {
+    let mock = MockServer::start().await;
+    // Content but no finish_reason and no [DONE]: the upstream hung up early.
+    Mock::given(method("POST"))
+        .and(path("/api/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(
+                    "data: {\"id\":\"c\",\"object\":\"chat.completion.chunk\",\"model\":\"up\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hel\"},\"finish_reason\":null}]}\n\n",
+                ),
+        )
+        .mount(&mock)
+        .await;
+    let mut env = TestEnv::start(&mock.uri(), "").await;
+    let body = json!({"model": "nanogpt/chatgpt-4o-latest", "stream": true,
+        "messages": [{"role": "user", "content": "x"}]});
+    let ev = env.sse("/v1/chat/completions", Some(body)).await;
+    assert_eq!(ev.last().unwrap().1, "[DONE]");
+    let chunks: Vec<Value> = ev
+        .iter()
+        .filter(|(_, d)| d != "[DONE]")
+        .map(|(_, d)| serde_json::from_str(d).unwrap())
+        .collect();
+    assert_eq!(chunks.len(), 2, "{chunks:?}");
+    assert_eq!(chunks[0]["choices"][0]["delta"]["content"], "Hel");
+    assert!(
+        chunks[1]["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("before finishing"),
+        "{chunks:?}"
+    );
+    env.stop().await;
+}
+
+#[tokio::test]
+async fn http_stream_finished_without_done_is_complete() {
+    let mock = MockServer::start().await;
+    // finish_reason arrived; the missing [DONE] alone is not an error.
+    Mock::given(method("POST"))
+        .and(path("/api/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(SSE_BODY.trim_end_matches("data: [DONE]\n\n")),
+        )
+        .mount(&mock)
+        .await;
+    let mut env = TestEnv::start(&mock.uri(), "").await;
+    let body = json!({"model": "nanogpt/chatgpt-4o-latest", "stream": true,
+        "messages": [{"role": "user", "content": "x"}]});
+    let ev = env.sse("/v1/chat/completions", Some(body)).await;
+    assert!(ev.iter().all(|(_, d)| !d.contains("\"error\"")), "{ev:?}");
+    assert_eq!(ev.last().unwrap().1, "[DONE]");
+    env.stop().await;
+}

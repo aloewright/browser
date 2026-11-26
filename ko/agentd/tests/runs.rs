@@ -290,3 +290,57 @@ async fn http_provider_runs_and_restart_marks_interrupted() {
         .unwrap();
     assert_eq!(status, "cancelled");
 }
+
+#[tokio::test]
+async fn http_run_fails_on_early_eof_and_on_deadline() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    let mock = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/api/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string("data: {\"choices\":[{\"delta\":{\"content\":\"par\"},\"finish_reason\":null}]}\n\n"),
+        )
+        .up_to_n_times(1)
+        .mount(&mock)
+        .await;
+    // The second request answers after the 1 s run deadline.
+    Mock::given(method("POST"))
+        .and(path("/api/v1/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_delay(Duration::from_secs(5))
+                .set_body_string("data: [DONE]\n\n"),
+        )
+        .mount(&mock)
+        .await;
+    let mut env = TestEnv::start(&mock.uri(), "[runs]\ntimeout_secs = 1\n").await;
+    let ws = env.create_workspace("http-eof").await;
+
+    let (_, run) = env
+        .post(
+            &format!("/v1/workspaces/{ws}/runs"),
+            json!({"model": "nanogpt/chatgpt-4o-latest", "prompt": "hello"}),
+        )
+        .await;
+    let r = wait_done(&env, run["id"].as_str().unwrap()).await;
+    assert_eq!(r["status"], "failed", "{r}");
+
+    let started = std::time::Instant::now();
+    let (_, run) = env
+        .post(
+            &format!("/v1/workspaces/{ws}/runs"),
+            json!({"model": "nanogpt/chatgpt-4o-latest", "prompt": "hello"}),
+        )
+        .await;
+    let r = wait_done(&env, run["id"].as_str().unwrap()).await;
+    assert_eq!(r["status"], "failed", "{r}");
+    assert!(
+        started.elapsed() < Duration::from_secs(4),
+        "deadline not applied"
+    );
+    env.stop().await;
+}

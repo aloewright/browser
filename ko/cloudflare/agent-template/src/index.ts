@@ -8,6 +8,7 @@
 
 import { Agent, getAgentByName } from 'agents'
 import { gate, json } from './gate'
+import { trimHistory } from './history'
 import {
   chat,
   type ChatMessage,
@@ -94,7 +95,7 @@ export class KoAgent extends Agent<Env, KoState> {
     })
     this.setState({
       ...this.state,
-      messages: result.transcript.slice(-MAX_MESSAGES),
+      messages: trimHistory(result.transcript, MAX_MESSAGES),
       updatedAt: new Date().toISOString(),
     })
     return result.message

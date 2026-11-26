@@ -67,17 +67,31 @@ pub async fn completions(
             let v = http::post_json(&st.core.http, &up, &upstream_body, &model_id).await?;
             return Ok(Json(v).into_response());
         }
-        let items = http::post_stream(&st.core.http, &up, &upstream_body).await?;
+        let items = http::post_stream(&st.core.http, &up, &upstream_body, up.timeout).await?;
         let s = async_stream::stream! {
             futures::pin_mut!(items);
+            let mut finished = false;
             loop {
                 let item = tokio::select! {
                     _ = shutdown.cancelled() => None,
                     i = items.next() => i,
                 };
                 match item {
-                    None | Some(Ok(SseItem::Done)) => break,
+                    Some(Ok(SseItem::Done)) => break,
+                    None => {
+                        // Don't pass a truncated answer off as complete.
+                        if !finished && !shutdown.is_cancelled() {
+                            yield Ok(data_event(&error_chunk(http::EARLY_EOF)));
+                        }
+                        break;
+                    }
                     Some(Ok(SseItem::Data(mut v))) => {
+                        if v["choices"]
+                            .as_array()
+                            .is_some_and(|c| c.iter().any(|c| c["finish_reason"].is_string()))
+                        {
+                            finished = true;
+                        }
                         if let Some(o) = v.as_object_mut()
                             && o.contains_key("model")
                         {

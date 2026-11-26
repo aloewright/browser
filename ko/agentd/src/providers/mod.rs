@@ -224,7 +224,8 @@ pub async fn generate(
             ));
         }
         let up = http::upstream(cfg, &core.secrets, p.model).await?;
-        let events = http::generate(core.http.clone(), up, &p.prompt, p.cancel).await?;
+        let total = p.timeout.unwrap_or(up.timeout);
+        let events = http::generate(core.http.clone(), up, &p.prompt, total, p.cancel).await?;
         return Ok(Generation { events, _tmp: None });
     }
 

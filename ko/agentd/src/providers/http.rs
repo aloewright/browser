@@ -216,6 +216,8 @@ pub async fn post_json(
     Ok(v)
 }
 
+pub const EARLY_EOF: &str = "upstream closed the stream before finishing";
+
 pub enum SseItem {
     Data(Value),
     Done,
@@ -258,12 +260,17 @@ where
     }
 }
 
+/// Streams an upstream completion. `total` bounds the whole exchange,
+/// including reading the body: the client's read timeout only catches silence,
+/// so an upstream sending keepalives could otherwise hold the stream forever.
 pub async fn post_stream(
     client: &reqwest::Client,
     up: &Upstream,
     body: &Value,
+    total: Duration,
 ) -> Result<impl Stream<Item = Result<SseItem, String>> + use<>, ApiError> {
     let resp = request(client, up, body)?
+        .timeout(total)
         .send()
         .await
         .map_err(|e| transport_error(up, e))?;
@@ -274,11 +281,12 @@ pub async fn post_stream(
 }
 
 /// Runs a single-prompt completion and maps it to provider events (agent
-/// runs on HTTP providers).
+/// runs on HTTP providers). `total` bounds the request and the stream.
 pub async fn generate(
     client: reqwest::Client,
     up: Upstream,
     prompt: &str,
+    total: Duration,
     cancel: CancellationToken,
 ) -> Result<mpsc::Receiver<GenEvent>, ApiError> {
     let body = json!({
@@ -287,7 +295,7 @@ pub async fn generate(
         "stream": true,
         "stream_options": {"include_usage": true},
     });
-    let stream = post_stream(&client, &up, &body).await?;
+    let stream = post_stream(&client, &up, &body, total).await?;
     let (tx, rx) = mpsc::channel(64);
     let provider = up.provider;
     tokio::spawn(async move {
@@ -302,12 +310,23 @@ pub async fn generate(
                 i = stream.next() => i,
             };
             let ev = match item {
-                None | Some(Ok(SseItem::Done)) => {
+                Some(Ok(SseItem::Done)) => {
                     let _ = tx
                         .send(GenEvent::Done {
                             finish_reason: finish.unwrap_or_else(|| "stop".into()),
                         })
                         .await;
+                    return;
+                }
+                // A closed stream counts as complete only after a finish_reason.
+                None => {
+                    let ev = match finish {
+                        Some(finish_reason) => GenEvent::Done { finish_reason },
+                        None => GenEvent::Error {
+                            message: format!("{provider}: {EARLY_EOF}"),
+                        },
+                    };
+                    let _ = tx.send(ev).await;
                     return;
                 }
                 Some(Err(e)) => {
