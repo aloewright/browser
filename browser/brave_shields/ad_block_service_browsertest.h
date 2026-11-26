@@ -47,6 +47,7 @@ class AdBlockServiceTest : public PlatformBrowserTest {
   PrefService* local_state();
   HostContentSettingsMap* content_settings();
   brave_shields::AdBlockComponentServiceManager* component_service_manager();
+  bool HasComponentFiltersProvider(const std::string& uuid);
   void AddNewRules(const std::string& rules,
                    uint8_t permission_mask = 0,
                    bool first_party_protections = false);

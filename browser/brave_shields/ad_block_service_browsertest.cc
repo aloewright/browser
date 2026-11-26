@@ -242,6 +242,11 @@ AdBlockServiceTest::component_service_manager() {
       ->component_service_manager();
 }
 
+bool AdBlockServiceTest::HasComponentFiltersProvider(const std::string& uuid) {
+  return component_service_manager()->component_filters_providers().contains(
+      uuid);
+}
+
 void AdBlockServiceTest::AddNewRules(const std::string& rules,
                                      uint8_t permission_mask,
                                      bool first_party_protections) {
@@ -3284,14 +3289,26 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ListEnabled) {
   }
 }
 #else   // !BUILDFLAG(IS_KO)
-// Unchecking a locked list leaves it on. The catalog may also hold K-O's
-// embedded copy, so look the list up by uuid.
+// Unchecking a locked list leaves it on: its provider stays and nothing is
+// stored. The catalog may also hold K-O's embedded copy, so look the list up
+// by uuid.
 IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, KoLockedListStaysEnabled) {
   InstallRegionalAdBlockComponent(brave_shields::kCookieListUuid, false);
+  ASSERT_TRUE(HasComponentFiltersProvider(brave_shields::kCookieListUuid));
+  const base::DictValue regional_filters =
+      local_state()
+          ->GetDict(brave_shields::prefs::kAdBlockRegionalFilters)
+          .Clone();
 
   component_service_manager()->EnableFilterList(brave_shields::kCookieListUuid,
                                                 false);
 
+  // IsFilterListEnabled and GetRegionalLists report locked lists as on
+  // regardless, so check what the lock protects.
+  EXPECT_TRUE(HasComponentFiltersProvider(brave_shields::kCookieListUuid));
+  EXPECT_EQ(
+      regional_filters,
+      local_state()->GetDict(brave_shields::prefs::kAdBlockRegionalFilters));
   EXPECT_TRUE(component_service_manager()->IsFilterListEnabled(
       brave_shields::kCookieListUuid));
   bool listed = false;
@@ -3660,11 +3677,32 @@ IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
   }
 }
 #else   // !BUILDFLAG(IS_KO)
-// Neither unchecking nor ad block only mode turns a locked list off.
+// Unchecking a locked list is ignored, and ad block only mode changes no list.
 IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
                        KoIgnoresAdblockOnlyMode) {
+  // Not locked: on through its embed pref, which ad block only mode overrides.
+  static constexpr char kTwitterEmbedListUuid[] =
+      "84960ADD-1CC1-419F-81FC-9F116F5205CC";
+  ASSERT_TRUE(HasComponentFiltersProvider(
+      brave_shields::kDefaultAdblockFiltersListUuid));
+  ASSERT_TRUE(
+      component_service_manager()->IsFilterListEnabled(kTwitterEmbedListUuid));
+  ASSERT_FALSE(component_service_manager()->IsFilterListEnabled(
+      brave_shields::kAdblockOnlySupplementalListUuid));
+  const base::DictValue regional_filters =
+      local_state()
+          ->GetDict(brave_shields::prefs::kAdBlockRegionalFilters)
+          .Clone();
+
   component_service_manager()->EnableFilterList(
       brave_shields::kDefaultAdblockFiltersListUuid, false);
+
+  EXPECT_TRUE(HasComponentFiltersProvider(
+      brave_shields::kDefaultAdblockFiltersListUuid));
+  EXPECT_EQ(
+      regional_filters,
+      local_state()->GetDict(brave_shields::prefs::kAdBlockRegionalFilters));
+
   local_state()->SetBoolean(brave_shields::prefs::kAdBlockOnlyModeEnabled,
                             true);
 
@@ -3672,6 +3710,11 @@ IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
       brave_shields::kDefaultAdblockFiltersListUuid));
   EXPECT_TRUE(component_service_manager()->IsFilterListEnabled(
       brave_shields::kCookieListUuid));
+  // Ad block only mode would turn these two the other way.
+  EXPECT_TRUE(
+      component_service_manager()->IsFilterListEnabled(kTwitterEmbedListUuid));
+  EXPECT_FALSE(component_service_manager()->IsFilterListEnabled(
+      brave_shields::kAdblockOnlySupplementalListUuid));
 }
 #endif  // !BUILDFLAG(IS_KO)
 
