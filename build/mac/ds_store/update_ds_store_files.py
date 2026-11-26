@@ -27,6 +27,8 @@ def main():
             suffix = f'.{channel.lower()}' if channel else ''
             ds_store = f'DS_Store{brand_suffix}{suffix}'
             create_ds_store(app_name, bg_file, ds_store)
+    # K-O uses one file for every channel.
+    create_ds_store('K-O', '../dmg-background.ko.png', 'DS_Store.ko')
 
 
 def create_ds_store(app_name, bg_file, ds_store_path):

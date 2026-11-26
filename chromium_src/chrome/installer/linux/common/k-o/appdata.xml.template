@@ -1,0 +1,16 @@
+<!-- Copyright 2017 The Chromium Authors -->
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>k-o.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MPL-2.0</project_license>
+  <name>K-O</name>
+  <summary>K-O personal web browser</summary>
+  <description>
+    <p>
+    A personal browser built on Brave's Shields, with local AI workspaces.
+    </p>
+  </description>
+  <translation/>
+  <developer_name>K-O</developer_name>
+</component>

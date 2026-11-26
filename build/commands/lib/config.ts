@@ -83,6 +83,9 @@ export class Config {
   channel: string
   isBraveOriginBranded: boolean | undefined
   isBraveDebloated: boolean
+  isKo: boolean
+  koBundleId: string
+  koMacTeamId: string
   // Parent cache directory for all internal caches (git, siso, vpython).
   readonly cacheDir: string | undefined
   gitCachePath: string | undefined
@@ -225,6 +228,11 @@ export class Config {
     ])
     // Mirrors the GN default in components/brave_debloat/buildflags.
     this.isBraveDebloated = envConfig.getBoolean(['is_brave_debloated'], true)
+    this.#isKoFromEnv = envConfig.getBoolean(['is_ko'])
+    this.isKo = this.#isKoFromEnv ?? this.isBraveDebloated
+    this.koBundleId = envConfig.getString(['ko_bundle_id'], 'com.ko.browser')
+    // Local only: the Apple team id written into K-O's BRANDING for signing.
+    this.koMacTeamId = envConfig.getString(['ko_mac_team_id'], '')
     this.cacheDir = envConfig.getPath(['cache_dir'])
     this.gitCachePath =
       envConfig.getPath(['git_cache_path'])
@@ -248,6 +256,7 @@ export class Config {
       ) || ''
     this.extraGnArgs = envConfig.getMergedObject(['gn', 'args'])
     this.syncBraveDebloatedFromGnArgs()
+    this.syncKoFromGnArgs()
     this.extraGnGenOpts = envConfig.getString(['brave_extra_gn_gen_opts'], '')
     this.extraNinjaOpts = []
     this.sisoLimits = envConfig.getMergedObject(['siso_limits'])
@@ -381,6 +390,26 @@ export class Config {
     if (typeof value === 'boolean') {
       this.isBraveDebloated = value
     }
+  }
+
+  // Mirrors the GN default in components/ko/buildflags: is_ko follows
+  // is_brave_debloated unless set in .env or via `--gn is_ko:<bool>`.
+  syncKoFromGnArgs() {
+    const isKo = this.extraGnArgs?.is_ko
+    this.isKo =
+      typeof isKo === 'boolean'
+        ? isKo
+        : (this.#isKoFromEnv ?? this.isBraveDebloated)
+    const bundleId = this.extraGnArgs?.ko_bundle_id
+    if (typeof bundleId === 'string' && bundleId) {
+      this.koBundleId = bundleId
+    }
+  }
+
+  // K-O's product identity is implemented for macOS and Linux only; see
+  // //brave/build/ko/branding.gni.
+  isKoBranded() {
+    return this.isKo && (this.targetOS === 'mac' || this.targetOS === 'linux')
   }
 
   isOfficialBuild() {
@@ -665,6 +694,7 @@ export class Config {
       })
     }
     this.syncBraveDebloatedFromGnArgs()
+    this.syncKoFromGnArgs()
 
     if (options.ninja) {
       parseExtraInputs(
@@ -947,6 +977,7 @@ export class Config {
   }
 
   #outputDir: string | undefined
+  #isKoFromEnv: boolean | undefined
 
   get outputDir() {
     if (this.use_no_gn_gen && this.#outputDir === undefined) {

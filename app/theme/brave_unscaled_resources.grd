@@ -8,11 +8,17 @@
   </outputs>
   <release seq="1">
     <includes>
-      <if expr="is_linux">
+      <if expr="is_linux and not is_ko_branded">
         <include name="IDR_PRODUCT_LOGO_128_BETA" file="brave/linux/product_logo_128_beta.png" type="BINDATA" />
         <include name="IDR_PRODUCT_LOGO_128_DEV" file="brave/linux/product_logo_128_dev.png" type="BINDATA" />
         <include name="IDR_PRODUCT_LOGO_128_DEVELOPMENT" file="brave/linux/product_logo_128_development.png" type="BINDATA" />
         <include name="IDR_PRODUCT_LOGO_128_NIGHTLY" file="brave/linux/product_logo_128_nightly.png" type="BINDATA" />
+      </if>
+      <if expr="is_linux and is_ko_branded">
+        <include name="IDR_PRODUCT_LOGO_128_BETA" file="ko/linux/product_logo_128_beta.png" type="BINDATA" />
+        <include name="IDR_PRODUCT_LOGO_128_DEV" file="ko/linux/product_logo_128_dev.png" type="BINDATA" />
+        <include name="IDR_PRODUCT_LOGO_128_DEVELOPMENT" file="ko/linux/product_logo_128_development.png" type="BINDATA" />
+        <include name="IDR_PRODUCT_LOGO_128_NIGHTLY" file="ko/linux/product_logo_128_nightly.png" type="BINDATA" />
       </if>
       <include name="IDR_BRAVE_PASSWORD_MANAGER_LOGO" file="brave/password_manager_logo.svg" type="BINDATA" />
       <!-- Logos badged onto the site icon of desktop shortcuts. The 16px logo

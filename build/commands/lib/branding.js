@@ -6,6 +6,7 @@
 import fs from 'fs-extra'
 import path from 'node:path'
 import config from './config.ts'
+import koBranding from './koBranding.js'
 import l10nUtil from './l10nUtil.js'
 import * as Log from './log.ts'
 import util from './util.ts'
@@ -119,12 +120,49 @@ const update = () => {
     }
   }
   fileMap.add([path.join(braveChromiumResources), path.join(config.srcDir)])
+  const isKoBranded = config.isKoBranded()
+  if (isKoBranded) {
+    // "ko" is Brave's assets with K-O's files on top. BRANDING and the macOS
+    // icons are written separately below.
+    const koThemeDirs = [
+      [path.join(braveAppDir, 'theme'), path.join(chromeAppDir, 'theme')],
+      ...['default_100_percent', 'default_200_percent'].map((scale) => [
+        path.join(braveAppDir, 'theme', scale),
+        path.join(chromeAppDir, 'theme', scale),
+      ]),
+    ]
+    for (const [braveThemeDir, chromeThemeDir] of koThemeDirs) {
+      for (const pair of koBranding.overlayPairs({
+        baseDir: path.join(braveThemeDir, 'brave'),
+        overlayDir: path.join(braveThemeDir, 'ko'),
+        destDir: path.join(chromeThemeDir, 'ko'),
+        baseExcludes: ['android/', 'mac/', 'BRANDING*'],
+        overlayExcludes: ['mac/', 'source/', 'BRANDING'],
+      })) {
+        fileMap.add(pair)
+      }
+    }
+    fileMap.add([
+      path.join(braveAppVectorIconsDir, 'vector_icons', 'ko'),
+      path.join(chromeComponentsDir, 'vector_icons', 'ko'),
+    ])
+    fileMap.add([
+      koBranding.macAppIconSource(
+        path.join(braveAppDir, 'theme', 'ko'),
+        config.channel,
+      ),
+      path.join(chromeAppDir, 'theme', 'ko', 'mac', 'app.icns'),
+    ])
+  }
+
   // Copy product_logo for version UI (about:version page).
   // product_logo_name_48.png is renamed to product_logo.png during copy.
   // Use brave_origin logos when is_brave_origin_branded is true.
-  const productLogoSource = config.isBraveOriginBranded
-    ? 'brave_origin'
-    : 'brave'
+  const productLogoSource = isKoBranded
+    ? 'ko'
+    : config.isBraveOriginBranded
+      ? 'brave_origin'
+      : 'brave'
   for (const scale of ['default_100_percent', 'default_200_percent']) {
     fileMap.add([
       path.join(
@@ -208,9 +246,11 @@ const update = () => {
   // `product_chrome_refresh.icon` to `*_old.icon` and added a new rounded
   // `chrome_product.icon` variant, so map our sources onto all three
   // destinations.
-  const omniboxIconsBranding = config.isBraveOriginBranded
-    ? 'brave_origin'
-    : 'brave'
+  const omniboxIconsBranding = isKoBranded
+    ? 'ko'
+    : config.isBraveOriginBranded
+      ? 'brave_origin'
+      : 'brave'
   /** @type {[string, string][]} */
   const omniboxIconMappings = [
     ['product.icon', 'product_old.icon'],
@@ -259,14 +299,16 @@ const update = () => {
   ])
   // Replace chrome dark logo with channel specific brave logo.
   fileMap.add([
-    path.join(
-      config.braveCoreDir,
-      'node_modules',
-      '@brave',
-      'leo',
-      'icons',
-      config.getBraveLogoIconName(),
-    ),
+    isKoBranded
+      ? path.join(braveAppDir, 'theme', 'ko', 'product_logo.svg')
+      : path.join(
+          config.braveCoreDir,
+          'node_modules',
+          '@brave',
+          'leo',
+          'icons',
+          config.getBraveLogoIconName(),
+        ),
     path.join(
       config.srcDir,
       'ui',
@@ -386,6 +428,33 @@ const update = () => {
         fs.copySync(sourceFile, destinationFile)
         Log.detail(sourceFile + ' copied to ' + destinationFile)
       }
+    }
+  }
+
+  if (isKoBranded) {
+    const koThemeDir = path.join(braveAppDir, 'theme', 'ko')
+    const koBrandingFile = path.join(chromeAppDir, 'theme', 'ko', 'BRANDING')
+    if (
+      koBranding.writeIfChanged(
+        koBrandingFile,
+        koBranding.brandingFileContent(
+          fs.readFileSync(path.join(koThemeDir, 'BRANDING'), 'utf8'),
+          {
+            channel: config.channel,
+            bundleId: config.koBundleId,
+            teamId: config.koMacTeamId,
+          },
+        ),
+      )
+    ) {
+      Log.detail('wrote ' + koBrandingFile)
+    }
+    if (config.targetOS === 'mac') {
+      koBranding.ensureMacAssetCatalog({
+        koThemeDir,
+        channel: config.channel,
+        dest: path.join(chromeAppDir, 'theme', 'ko', 'mac', 'Assets.car'),
+      })
     }
   }
 
