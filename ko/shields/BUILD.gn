@@ -11,6 +11,9 @@ assert(is_ko)
 # Embedded filter list snapshot; regenerate with update_lists.py.
 brave_grit("resources") {
   source = "ko_shields_resources.grd"
+
+  # The grd uses compress="brotli"; grit fails without the brotli binary.
+  use_brotli = true
   outputs = [
     "grit/ko_shields_resources.h",
     "ko_shields_resources.pak",

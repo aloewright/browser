@@ -169,7 +169,8 @@ a `kind: "resources"` entry (id `brave-resources`, file
   addresses (LAN, NetBird `100.64.0.0/10`) show the HTTP interstitial once per
   host when opened as a top-level page.
 * `ko-unbreak` exempts Cloudflare Access login pages (`*.cloudflareaccess.com`)
-  and per-app `/cdn-cgi/access/` endpoints from all filtering.
+  from all filtering, and first-party requests to per-app `/cdn-cgi/access/`
+  endpoints from network blocking.
 
 ## GN args
 

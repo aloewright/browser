@@ -7,4 +7,5 @@
 @@||cloudflareaccess.com^$document
 @@||cloudflareaccess.com^
 ! Per-application Access endpoints (/cdn-cgi/access/login, /callback, ...).
-@@/cdn-cgi/access/
+! First-party only, so third parties can't use the path to dodge blocking.
+@@/cdn-cgi/access/$1p

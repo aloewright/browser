@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "channel": "ko-filter-lists",
-  "version": 202611260753,
-  "generated": "2026-11-26T07:53:42Z",
+  "version": 202611261048,
+  "generated": "2026-11-26T10:48:53Z",
   "lists": [
     {
       "id": "brave-list-catalog",
@@ -475,8 +475,8 @@
       "title": "K-O unbreak",
       "kind": "filters",
       "file": "ko-unbreak.txt",
-      "sha256": "ad88dc0b4c0739c32b2aa161e4ce17c734641a4a19097da14e4fcde3fa0a065d",
-      "size": 80,
+      "sha256": "2d67e5ca79aa78e12e1ac2fa6ef23e32a8d8e1960a2266bb83dbdd4a229f9af0",
+      "size": 83,
       "source_url": "local/ko-unbreak.txt",
       "rules": 3,
       "replaces": "",

@@ -87,7 +87,6 @@ static_library("browser") {
       "ko/ko_filters_provider.h",
     ]
     deps += [
-      "//brave/components/ko/shields/buildflags",
       "//brave/ko/shields:embedded_lists",
       "//brave/ko/shields:resources",
       "//net",

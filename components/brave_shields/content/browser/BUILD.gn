@@ -81,10 +81,10 @@ static_library("browser") {
   # ad_block_service.h uses BUILDFLAG(IS_KO).
   public_deps = [ "//brave/components/ko/buildflags" ]
 
-  if (is_ko) {
-    deps += [
-      "//brave/components/ko/shields/buildflags",
-      "//services/network/public/cpp",
-    ]
-  }
+  # Unconditional for gn check: the K-O includes sit behind #if, which gn
+  # check does not evaluate.
+  deps += [
+    "//brave/components/ko/shields/buildflags",
+    "//services/network/public/cpp",
+  ]
 }
