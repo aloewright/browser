@@ -12,6 +12,7 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
@@ -22,6 +23,7 @@
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
+#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
 
 namespace {
@@ -40,11 +42,21 @@ class BraveFarblingBrowserTest : public InProcessBrowserTest,
       scoped_feature_list_.InitWithFeatures(
           {webcompat::features::kBraveWebcompatExceptionsService,
            brave_shields::features::kBraveFarblingTokenReset},
-          {});
+          {
+#if BUILDFLAG(IS_KO)
+              // K-O's strict HTTPS default shows interstitials for HTTP pages.
+              net::features::kBraveHttpsByDefault,
+#endif
+          });
     } else {
       scoped_feature_list_.InitWithFeatures(
           {webcompat::features::kBraveWebcompatExceptionsService},
-          {brave_shields::features::kBraveFarblingTokenReset});
+          {
+              brave_shields::features::kBraveFarblingTokenReset,
+#if BUILDFLAG(IS_KO)
+              net::features::kBraveHttpsByDefault,
+#endif
+          });
     }
   }
 

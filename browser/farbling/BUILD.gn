@@ -39,6 +39,8 @@ if (!is_android) {
       "//brave/components/brave_shields/core/browser:test_support",
       "//brave/components/brave_shields/core/common",
       "//brave/components/constants",
+      "//brave/components/ko/buildflags",
+      "//brave/components/ko/shields/buildflags",
       "//brave/components/webcompat/core/common",
       "//brave/third_party/blink/renderer",
       "//chrome/browser",
@@ -57,6 +59,7 @@ if (!is_android) {
       "//content/public/browser",
       "//content/test:test_support",
       "//gpu/config",
+      "//net",
       "//ui/color:test_support",
       "//ui/native_theme:test_support",
     ]

@@ -13,6 +13,8 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
@@ -24,6 +26,7 @@
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
+#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
 
 using brave_shields::ControlType;
@@ -31,7 +34,9 @@ using brave_shields::ControlType;
 constexpr char kEmbeddedTestServerDirectory[] = "canvas";
 constexpr char kTitleScript[] = "document.title;";
 constexpr char kExpectedImageDataHashFarblingBalanced[] = "184";
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)  // Unreachable in strict K-O.
 constexpr char kExpectedImageDataHashFarblingOff[] = "0";
+#endif
 constexpr char kExpectedImageDataHashFarblingMaximum[] = "184";
 
 class BraveOffscreenCanvasFarblingBrowserTest : public InProcessBrowserTest {
@@ -42,7 +47,12 @@ class BraveOffscreenCanvasFarblingBrowserTest : public InProcessBrowserTest {
             brave_shields::features::kBraveShowStrictFingerprintingMode,
             webcompat::features::kBraveWebcompatExceptionsService,
         },
-        {});
+        {
+#if BUILDFLAG(IS_KO)
+            // K-O's strict HTTPS default shows interstitials for HTTP pages.
+            net::features::kBraveHttpsByDefault,
+#endif
+        });
   }
 
   void SetUpOnMainThread() override {
@@ -130,8 +140,14 @@ IN_PROC_BROWSER_TEST_F(BraveOffscreenCanvasFarblingBrowserTest,
   // wait for worker thread to complete
   while (content::EvalJs(contents(), kTitleScript).ExtractString() == "") {
   }
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting (and below, Shields) off.
+  EXPECT_EQ(content::EvalJs(contents(), kTitleScript),
+            kExpectedImageDataHashFarblingBalanced);
+#else
   EXPECT_EQ(content::EvalJs(contents(), kTitleScript),
             kExpectedImageDataHashFarblingOff);
+#endif
 
   BlockFingerprinting();
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url));
@@ -154,6 +170,11 @@ IN_PROC_BROWSER_TEST_F(BraveOffscreenCanvasFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url));
   while (content::EvalJs(contents(), kTitleScript).ExtractString() == "") {
   }
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  EXPECT_EQ(content::EvalJs(contents(), kTitleScript),
+            kExpectedImageDataHashFarblingBalanced);
+#else
   EXPECT_EQ(content::EvalJs(contents(), kTitleScript),
             kExpectedImageDataHashFarblingOff);
+#endif
 }
