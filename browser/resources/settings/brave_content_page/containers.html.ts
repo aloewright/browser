@@ -172,6 +172,59 @@ export function getHtml(this: SettingsBraveContentContainersElement) {
                           `,
                         )}
                     </section>
+                  ${this.isKoBuild_
+                    ? html`
+                        <section class="proxy-section">
+                          <div class="edit-subsection-label">
+                            $i18n{SETTINGS_CONTAINERS_PROXY_LABEL}
+                          </div>
+                          <div class="proxy-description">
+                            $i18n{SETTINGS_CONTAINERS_PROXY_DESCRIPTION}
+                          </div>
+                          <cr-input
+                            .value="${this.editingProxyUrl_}"
+                            @input="${this.onProxyUrlInput_}"
+                            placeholder="$i18n{SETTINGS_CONTAINERS_PROXY_PLACEHOLDER}"
+                            spellcheck="false"
+                            autocomplete="off"
+                            maxlength="2048"
+                          ></cr-input>
+                          <cr-input
+                            .value="${this.editingProxyUsername_}"
+                            @input="${this.onProxyUsernameInput_}"
+                            label="$i18n{SETTINGS_CONTAINERS_PROXY_USERNAME_LABEL}"
+                            spellcheck="false"
+                            autocomplete="off"
+                            maxlength="255"
+                          ></cr-input>
+                          <cr-input
+                            type="password"
+                            .value="${this.editingProxyPassword_}"
+                            @input="${this.onProxyPasswordInput_}"
+                            label="$i18n{SETTINGS_CONTAINERS_PROXY_PASSWORD_LABEL}"
+                            autocomplete="new-password"
+                            maxlength="255"
+                            ?disabled="${!this.editingProxyUsername_}"
+                          ></cr-input>
+                          ${this.keepProxyCredentials_
+                            && !this.editingProxyUsername_
+                            ? html`
+                                <div class="proxy-credentials-saved">
+                                  <span>
+                                    $i18n{SETTINGS_CONTAINERS_PROXY_CREDENTIALS_SAVED}
+                                  </span>
+                                  <cr-button
+                                    size="small"
+                                    @click="${this.onClearProxyCredentialsClick_}"
+                                  >
+                                    $i18n{SETTINGS_CONTAINERS_PROXY_CLEAR_CREDENTIALS}
+                                  </cr-button>
+                                </div>
+                              `
+                            : nothing}
+                        </section>
+                      `
+                    : nothing}
                   </div>
                 </div>
                 ${this.editDialogError_
