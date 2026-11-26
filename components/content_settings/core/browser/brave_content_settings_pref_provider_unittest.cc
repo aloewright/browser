@@ -384,9 +384,6 @@ class BravePrefProviderTest : public testing::Test {
   std::unique_ptr<TestingProfile> testing_profile_;
 };
 
-// Strict K-O builds drop the per-site relaxations this test seeds; see
-// KoStrictDropsStoredRelaxations.
-#if !defined(KO_SHIELDS_STRICT_BUILD)
 TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
   BravePrefProvider provider(
       testing_profile()->GetPrefs(), false /* incognito */,
@@ -434,6 +431,14 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
   // Check that settings would allow brave.com:8080, but not brave.com:5555.
   fp_settings.CheckSettingsWouldAllow(url);
   fp_settings.CheckSettingsAreDefault(GURL("http://brave.com:5555"));
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // fp_settings has no sources to check, so query the provider directly. The
+  // rule was written past BravePrefProvider (as sync would), so it is stored.
+  EXPECT_EQ(CONTENT_SETTING_ALLOW,
+            TestUtils::GetContentSetting(
+                &provider, url, GURL(),
+                ContentSettingsType::BRAVE_FINGERPRINTING_V2, false));
+#endif
 
   // HTTPSE.
   httpse_settings.SetPreMigrationSettings(pattern, CONTENT_SETTING_BLOCK);
@@ -443,8 +448,13 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
 
   // Ads.
   ads_settings.SetPreMigrationSettings(pattern, CONTENT_SETTING_ALLOW);
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse per-site ad relaxations.
+  ads_settings.CheckSettingsAreDefault(url);
+#else
   // Check that settings would allow brave.com:8080, but not brave.com:5555.
   ads_settings.CheckSettingsWouldAllow(url);
+#endif
   ads_settings.CheckSettingsAreDefault(GURL("http://brave.com:5555"));
 
   // Enabled.
@@ -481,10 +491,21 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
   cookie_settings.CheckSettingsAreDefault(GURL("http://brave2.com"));
 
   // Fingerprinting.
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds drop the stored relaxation during migration.
+  for (const GURL& fp_url :
+       {url, GURL("http://brave.com:5555"), GURL("https://brave.com")}) {
+    EXPECT_EQ(CONTENT_SETTING_DEFAULT,
+              TestUtils::GetContentSetting(
+                  &provider, fp_url, GURL(),
+                  ContentSettingsType::BRAVE_FINGERPRINTING_V2, false));
+  }
+#else
   // Check that settings would allow brave.com with any protocol and port.
   fp_settings.CheckSettingsWouldAllow(url);
   fp_settings.CheckSettingsWouldAllow(GURL("http://brave.com:5555"));
   fp_settings.CheckSettingsWouldAllow(GURL("https://brave.com"));
+#endif
   // Would not allow a different domain.
   fp_settings.CheckSettingsAreDefault(GURL("http://brave2.com"));
 
@@ -496,10 +517,16 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
   httpse_settings.CheckSettingsAreDefault(GURL("http://brave2.com"));
 
   // Ads.
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  ads_settings.CheckSettingsAreDefault(url);
+  ads_settings.CheckSettingsAreDefault(GURL("http://brave.com:5555"));
+  ads_settings.CheckSettingsAreDefault(GURL("https://brave.com"));
+#else
   // Check that settings would allow brave.com with any protocol and port.
   ads_settings.CheckSettingsWouldAllow(url);
   ads_settings.CheckSettingsWouldAllow(GURL("http://brave.com:5555"));
   ads_settings.CheckSettingsWouldAllow(GURL("https://brave.com"));
+#endif
   // Would not allow a different domain.
   ads_settings.CheckSettingsAreDefault(GURL("http://brave2.com"));
 
@@ -521,7 +548,6 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigration) {
 
   provider.ShutdownOnUIThread();
 }
-#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 TEST_F(BravePrefProviderTest, TestShieldsSettingsMigrationVersion) {
   PrefService* prefs = testing_profile()->GetPrefs();
@@ -980,12 +1006,21 @@ TEST_F(BravePrefProviderTest, CosmeticFilteringMigration) {
   BravePrefProvider provider(
       testing_profile()->GetPrefs(), false /* incognito */,
       true /* store_last_modified */, false /* restore_session */);
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse the weaker migrated values; the pref observers
+  // then remove the unconverted rules.
+  base::RunLoop().RunUntilIdle();
+#endif
 
   DirectAccessContentSettings cosmetic_filtering_v2(
       testing_profile()->GetPrefs(),
       brave_shields::CosmeticFilteringSetting::kContentSettingsType);
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  EXPECT_EQ(1u, cosmetic_filtering_v2.GetRulesCount());
+#else
   EXPECT_EQ(3u, cosmetic_filtering_v2.GetRulesCount());
+#endif
 
   const auto block3p = brave_shields::CosmeticFilteringSetting::ToValue(
       brave_shields::ControlType::BLOCK_THIRD_PARTY);
@@ -997,18 +1032,32 @@ TEST_F(BravePrefProviderTest, CosmeticFilteringMigration) {
   // Check there is no first-party rule anymore.
   EXPECT_EQ(base::Value(),
             cosmetic_filtering_v2.GetSettingDirectly("brave.b3p", kFirstParty));
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  EXPECT_EQ(base::Value(),
+            cosmetic_filtering_v2.GetSettingDirectly("brave.b3p", "*"));
+  EXPECT_EQ(base::Value(), cosmetic_filtering_v2.GetContentSetting(
+                               &provider, GURL("https://brave.b3p")));
+#else
   EXPECT_EQ(block3p,
             cosmetic_filtering_v2.GetSettingDirectly("brave.b3p", "*"));
   EXPECT_EQ(block3p, cosmetic_filtering_v2.GetContentSetting(
                          &provider, GURL("https://brave.b3p")));
+#endif
 
   // Check there is no first-party rule anymore.
   EXPECT_EQ(base::Value(), cosmetic_filtering_v2.GetSettingDirectly(
                                "brave.allow", kFirstParty));
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  EXPECT_EQ(base::Value(),
+            cosmetic_filtering_v2.GetSettingDirectly("brave.allow", "*"));
+  EXPECT_EQ(base::Value(), cosmetic_filtering_v2.GetContentSetting(
+                               &provider, GURL("https://brave.allow")));
+#else
   EXPECT_EQ(allow,
             cosmetic_filtering_v2.GetSettingDirectly("brave.allow", "*"));
   EXPECT_EQ(allow, cosmetic_filtering_v2.GetContentSetting(
                        &provider, GURL("https://brave.allow")));
+#endif
 
   // Check there is no first-party rule anymore.
   EXPECT_EQ(base::Value(), cosmetic_filtering_v2.GetSettingDirectly(

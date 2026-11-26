@@ -85,7 +85,8 @@ class BraveShieldsSettingsServiceTest : public testing::Test {
 };
 
 // Strict K-O builds drop per-site relaxations; see KoStrictIgnoresRelaxations.
-#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+// BravePrefProvider does the dropping, and iOS does not use it.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 TEST_F(BraveShieldsSettingsServiceTest, BraveShieldsEnabled) {
   // verify the initial values
   EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsEnabled(kTestUrl));
@@ -123,7 +124,7 @@ TEST_F(BraveShieldsSettingsServiceTest, KoStrictIgnoresRelaxations) {
   EXPECT_TRUE(brave_shields_settings()->MakePseudoRandomGeneratorForURL(url, {},
                                                                         &prng));
 }
-#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 
 // Strict K-O builds report Shields as managed.
 #if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
@@ -246,7 +247,7 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintMode) {
 
   brave_shields_settings()->SetFingerprintMode(FingerprintMode::ALLOW_MODE,
                                                kTestUrl);
-#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) && !BUILDFLAG(IS_IOS)
   // Strict K-O builds drop per-site relaxations.
   EXPECT_EQ(brave_shields_settings()->GetFingerprintMode(kTestUrl),
             FingerprintMode::STANDARD_MODE);
@@ -529,9 +530,9 @@ TEST_F(BraveShieldsSettingsServiceTest,
           GURL("https://test.com")));
 }
 
-// Strict K-O builds drop per-site Shields-down rules; see
+// Strict K-O builds drop per-site Shields-down rules (not on iOS); see
 // KoStrictIgnoresRelaxations.
-#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_ExactDomainMatch) {
   // Tests exact domain matching
@@ -576,7 +577,7 @@ TEST_F(BraveShieldsSettingsServiceTest,
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://test.com")));
 }
-#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_AllowSettingIgnored) {
@@ -598,8 +599,9 @@ TEST_F(BraveShieldsSettingsServiceTest,
       ContentSettingsPattern::Wildcard(), ContentSettingsPattern::Wildcard(),
       ContentSettingsType::BRAVE_SHIELDS, CONTENT_SETTING_BLOCK);
 
-#if BUILDFLAG(IS_KO)
-  // K-O ignores global Shields overrides.
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_IOS)
+  // K-O's BravePrefProvider ignores global Shields overrides; iOS uses the
+  // upstream PrefProvider.
   EXPECT_FALSE(
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://example.com")));
@@ -610,8 +612,8 @@ TEST_F(BraveShieldsSettingsServiceTest,
 #endif
 }
 
-// Strict K-O builds drop per-site Shields-down rules.
-#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+// Strict K-O builds drop per-site Shields-down rules (not on iOS).
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_MultipleSettings) {
   // Set multiple settings - some matching, some not
@@ -713,7 +715,7 @@ TEST_F(BraveShieldsSettingsServiceTest,
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://other.com")));
 }
-#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 
 TEST_F(BraveShieldsSettingsServiceTest, PRNGKnownValues) {
   const std::array<std::tuple<GURL, uint64_t>, 2> test_cases = {
@@ -760,8 +762,9 @@ TEST_F(BraveShieldsSettingsServiceTest, InvalidDomains) {
   }
 }
 
-// Strict K-O builds keep farbling on; see KoStrictIgnoresRelaxations.
-#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+// Strict K-O builds keep farbling on (not on iOS); see
+// KoStrictIgnoresRelaxations.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 TEST_F(BraveShieldsSettingsServiceTest, ShieldsDown) {
   const GURL url("http://a.com");
   brave_shields::SetBraveShieldsEnabled(GetHostContentSettingsMap(), false,
@@ -779,7 +782,7 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintingAllowed) {
   EXPECT_FALSE(brave_shields_settings()->MakePseudoRandomGeneratorForURL(
       url, {}, &prng));
 }
-#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) || BUILDFLAG(IS_IOS)
 
 // Farbling token related tests.
 

@@ -172,22 +172,26 @@ TEST_F(BraveShieldsUtilTest, ControlTypeFromString) {
 }
 
 /* BRAVE_SHIELDS CONTROL */
-// Strict K-O builds drop per-site relaxations; see
-// KoStrictIgnoresRelaxations_ForOrigin.
-#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds drop per-site Shields-down rules; see
+  // KoStrictIgnoresRelaxations_ForOrigin. Policy still applies.
+  constexpr ContentSetting kShieldsDown = CONTENT_SETTING_ALLOW;
+#else
+  constexpr ContentSetting kShieldsDown = CONTENT_SETTING_BLOCK;
+#endif
 
   brave_shields::SetBraveShieldsEnabled(map, false, GURL("http://brave.com"));
   // setting should apply to origin
   auto setting = map->GetContentSetting(GURL("http://brave.com"), GURL(),
                                         ContentSettingsType::BRAVE_SHIELDS);
-  EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
+  EXPECT_EQ(kShieldsDown, setting);
 
   // setting should apply to different scheme
   setting = map->GetContentSetting(GURL("https://brave.com"), GURL(),
                                    ContentSettingsType::BRAVE_SHIELDS);
-  EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
+  EXPECT_EQ(kShieldsDown, setting);
 
   // setting should not apply to default
   setting = map->GetContentSetting(GURL(), GURL(),
@@ -233,7 +237,8 @@ TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_ForOrigin) {
   // setting should not apply to default
   EXPECT_TRUE(brave_shields::IsBraveShieldsEnabled(map, GURL()));
 }
-#else
+
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsUtilTest, KoStrictIgnoresRelaxations_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
   const GURL url("http://brave.com");
@@ -252,7 +257,7 @@ TEST_F(BraveShieldsUtilTest, KoStrictIgnoresRelaxations_ForOrigin) {
   ExpectDomainBlockingType(GURL("https://brave.com"),
                            DomainBlockingType::kAggressive);
 }
-#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+#endif  // BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_IsNotHttpHttps) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());

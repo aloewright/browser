@@ -155,6 +155,10 @@ a `kind: "resources"` entry (id `brave-resources`, file
   and webcompat exceptions are not affected.
 * **UI.** `brave://settings/shields` disables the default selectors and shows
   a notice; the filter list page disables core lists.
+* **iOS.** iOS uses the upstream `PrefProvider`, not `BravePrefProvider`, so
+  only the registry defaults and the `DefaultProvider` startup cleanup apply.
+  Global and per-site changes made during a session take effect, and strict
+  mode only makes `BraveShieldsSettingsService` report Shields as managed.
 * **Not covered.** User-written custom filters (an explicit action), changing
   features in `brave://flags`, and anyone who can edit the app bundle.
 
@@ -201,6 +205,12 @@ Declared in `components/ko/shields/buildflags/buildflags.gni`
 
 * About 11 MB of list text is committed per snapshot (roughly 3 MB in the pak).
 * Snapshot lists are re-read from the pak on every engine rebuild.
-* Existing tests that assert stock defaults are skipped under `IS_KO`; with
-  `ko_shields_strict_enforcement`, tests that write per-site relaxations are
-  skipped or adapted, and `KoStrict*` tests cover the strict behavior.
+* Only three unit test suites are adapted to K-O:
+  `brave_content_settings_pref_provider_unittest`,
+  `brave_shields_settings_service_unittest` and `brave_shields_utils_unittest`.
+  They skip or adapt cases that assert stock defaults (`IS_KO`) or keep
+  per-site relaxations (`ko_shields_strict_enforcement`), and
+  `KoLockedShieldsDefaults` and the `KoStrict*` tests cover the K-O behavior.
+  Other suites are not adapted yet. For example,
+  `brave_shields_data_controller_unittest` expects the stock cosmetic default
+  and per-site relaxations, so it is expected to fail in K-O builds.
