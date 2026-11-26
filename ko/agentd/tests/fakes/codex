@@ -1,0 +1,24 @@
+#!/bin/sh
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Fake `codex` CLI for ko-agentd tests: records argv/stdin/env next to
+# itself and replays a recorded `exec --json` fixture.
+dir=$(dirname "$0")
+if [ "$1" = "--version" ]; then echo "codex-cli 9.9.9"; exit 0; fi
+printf '%s\n' "$@" > "$dir/codex.args"
+env > "$dir/codex.env"
+cat > "$dir/codex.stdin"
+pwd > "$dir/codex.cwd"
+case "$(cat "$dir/codex.stdin")" in
+  *FAIL*)
+    echo '{"type":"thread.started","thread_id":"t"}'
+    echo '{"type":"turn.failed","error":{"message":"usage limit reached"}}'
+    exit 1
+    ;;
+  *)
+    cat "$dir/codex_stream.jsonl"
+    ;;
+esac

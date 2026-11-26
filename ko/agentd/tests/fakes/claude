@@ -1,0 +1,43 @@
+#!/bin/sh
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Fake `claude` CLI for ko-agentd tests: records argv/stdin/env next to
+# itself and replays a recorded stream-json fixture.
+dir=$(dirname "$0")
+if [ "$1" = "--version" ]; then echo "9.9.9 (Claude Code fake)"; exit 0; fi
+printf '%s\n' "$@" > "$dir/claude.args"
+env > "$dir/claude.env"
+echo $$ > "$dir/claude.pid"
+prev=""
+for a in "$@"; do
+  if [ "$prev" = "--mcp-config" ]; then
+    stat -c %a "$a" > "$dir/claude.mcp_mode"
+    stat -c %a "$(dirname "$a")" > "$dir/claude.mcp_dir_mode"
+    cp "$a" "$dir/claude.mcp.json"
+    echo "$a" > "$dir/claude.mcp_path"
+  fi
+  prev="$a"
+done
+cat > "$dir/claude.stdin"
+pwd > "$dir/claude.cwd"
+case "$(cat "$dir/claude.stdin")" in
+  *SLEEP*)
+    echo '{"type":"system","subtype":"init"}'
+    sleep 30
+    ;;
+  *FAIL*)
+    echo '{"type":"system","subtype":"init"}'
+    echo '{"type":"result","subtype":"error_during_execution","is_error":true,"result":"model refused"}'
+    exit 1
+    ;;
+  *CRASH*)
+    echo "fatal: token sk-ant-shouldbescrubbed12345 rejected" >&2
+    exit 3
+    ;;
+  *)
+    cat "$dir/claude_stream.jsonl"
+    ;;
+esac
