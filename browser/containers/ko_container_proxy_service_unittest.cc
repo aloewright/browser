@@ -312,12 +312,17 @@ TEST_F(KoContainerProxyServiceTest, PendingWithoutEncryptor) {
   EXPECT_TRUE(params->proxy_config_client_receiver.is_valid());
 
   // New credentials are not stored in plain text meanwhile.
-  bool called = false;
+  base::test::TestFuture<bool> future;
   auto parsed = ParseContainerProxyUrl("socks5h://u:q@100.64.0.10:1080");
-  service_->SetProxy(
-      kContainerId, std::move(*parsed), false,
-      base::BindOnce([](bool* called, bool) { *called = true; }, &called));
-  EXPECT_FALSE(called);
+  service_->SetProxy(kContainerId, std::move(*parsed), false,
+                     future.GetCallback());
+  EXPECT_FALSE(future.IsReady());
+
+  // Dropping the queued request reports failure. Reset here so the callback
+  // runs while this frame is alive, not in TearDown().
+  service_.reset();
+  ASSERT_TRUE(future.IsReady());
+  EXPECT_FALSE(future.Get());
 }
 
 TEST_F(KoContainerProxyServiceTest, PruneRemovesUnknownContainers) {
