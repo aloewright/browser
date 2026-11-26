@@ -7,6 +7,7 @@ import("//brave/components/ai_chat/core/common/buildflags/buildflags.gni")
 import("//brave/components/brave_education/buildflags.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//brave/components/brave_rewards/core/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
 import("//brave/components/tor/buildflags/buildflags.gni")
 import("//build/config/locales.gni")
@@ -127,6 +128,12 @@ template("brave_extra_paks") {
     if (enable_psst) {
       sources += [ "$root_gen_dir/brave/components/psst/resources/brave_psst_resources.pak" ]
       deps += [ "//brave/components/psst/resources" ]
+    }
+
+    if (is_ko) {
+      sources +=
+          [ "$root_gen_dir/brave/ko/shields/ko_shields_resources.pak" ]
+      deps += [ "//brave/ko/shields:resources" ]
     }
 
     if (enable_extensions) {

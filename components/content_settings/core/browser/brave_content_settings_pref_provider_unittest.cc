@@ -779,6 +779,8 @@ TEST_F(BravePrefProviderTest, TestShieldsSettingsMigrationV2toV4) {
   provider.ShutdownOnUIThread();
 }
 
+// K-O ignores global Shields overrides outright; see KoLockedShieldsDefaults.
+#if !defined(KO_BUILD)
 TEST_F(BravePrefProviderTest, EnsureNoWildcardEntries) {
   BravePrefProvider provider(
       testing_profile()->GetPrefs(), false /* incognito */,
@@ -811,6 +813,99 @@ TEST_F(BravePrefProviderTest, EnsureNoWildcardEntries) {
   shields_enabled_settings.CheckSettingsAreDefault(example_url);
   provider.ShutdownOnUIThread();
 }
+#endif  // !defined(KO_BUILD)
+
+#if defined(KO_BUILD)
+TEST_F(BravePrefProviderTest, KoLockedShieldsDefaults) {
+  BravePrefProvider provider(
+      testing_profile()->GetPrefs(), false /* incognito */,
+      true /* store_last_modified */, false /* restore_session */);
+  const auto wildcard = ContentSettingsPattern::Wildcard();
+  const GURL url("https://example.com");
+  auto get = [&](ContentSettingsType type) {
+    return TestUtils::GetContentSetting(&provider, url, GURL(), type, false);
+  };
+
+  // Global overrides are ignored.
+  for (auto type :
+       {ContentSettingsType::BRAVE_SHIELDS, ContentSettingsType::BRAVE_ADS,
+        ContentSettingsType::BRAVE_HTTPS_UPGRADE,
+        ContentSettingsType::BRAVE_FINGERPRINTING_V2}) {
+    EXPECT_TRUE(provider.SetWebsiteSetting(
+        wildcard, wildcard, type, base::Value(CONTENT_SETTING_ALLOW), {}));
+    EXPECT_EQ(CONTENT_SETTING_DEFAULT, get(type)) << type;
+  }
+  EXPECT_TRUE(provider.SetWebsiteSetting(
+      wildcard, wildcard, ContentSettingsType::BRAVE_COSMETIC_FILTERING,
+      brave_shields::CosmeticFilteringSetting::ToValue(
+          brave_shields::ControlType::ALLOW),
+      {}));
+  EXPECT_TRUE(TestUtils::GetContentSettingValue(
+                  &provider, url, GURL(),
+                  ContentSettingsType::BRAVE_COSMETIC_FILTERING, false)
+                  .is_none());
+
+  // Per-site exceptions remain possible unless the build is strict.
+  provider.SetWebsiteSetting(ContentSettingsPattern::FromURL(url), wildcard,
+                             ContentSettingsType::BRAVE_ADS,
+                             base::Value(CONTENT_SETTING_ALLOW), {});
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  EXPECT_EQ(CONTENT_SETTING_DEFAULT, get(ContentSettingsType::BRAVE_ADS));
+#else
+  EXPECT_EQ(CONTENT_SETTING_ALLOW, get(ContentSettingsType::BRAVE_ADS));
+#endif
+  // Tightening is always allowed.
+  provider.SetWebsiteSetting(ContentSettingsPattern::FromURL(url), wildcard,
+                             ContentSettingsType::BRAVE_FINGERPRINTING_V2,
+                             base::Value(CONTENT_SETTING_BLOCK), {});
+  EXPECT_EQ(CONTENT_SETTING_BLOCK,
+            get(ContentSettingsType::BRAVE_FINGERPRINTING_V2));
+
+  // Global overrides arriving through prefs (e.g. sync) are removed.
+  DirectAccessContentSettings update(testing_profile()->GetPrefs(),
+                                     ContentSettingsType::BRAVE_HTTPS_UPGRADE);
+  update.AddRule(wildcard, wildcard, CONTENT_SETTING_ALLOW);
+  update.Write();
+  base::RunLoop().RunUntilIdle();
+  EXPECT_EQ(CONTENT_SETTING_DEFAULT,
+            get(ContentSettingsType::BRAVE_HTTPS_UPGRADE));
+  provider.ShutdownOnUIThread();
+}
+
+TEST(BraveContentSettingsKoTest, ClassifiesWeakeningValues) {
+  using brave_shields::ControlType;
+  using brave_shields::CosmeticFilteringSetting;
+  EXPECT_TRUE(IsKoLockedShieldsDefault(ContentSettingsType::BRAVE_SHIELDS));
+  EXPECT_TRUE(
+      IsKoLockedShieldsDefault(ContentSettingsType::BRAVE_COSMETIC_FILTERING));
+  EXPECT_FALSE(IsKoLockedShieldsDefault(ContentSettingsType::BRAVE_COOKIES));
+  EXPECT_FALSE(IsKoLockedShieldsDefault(ContentSettingsType::JAVASCRIPT));
+
+  auto weak = [](ContentSettingsType type, base::Value value) {
+    return IsKoWeakeningShieldsValue(type, value);
+  };
+  EXPECT_TRUE(weak(ContentSettingsType::BRAVE_SHIELDS,
+                   base::Value(CONTENT_SETTING_BLOCK)));
+  EXPECT_FALSE(weak(ContentSettingsType::BRAVE_SHIELDS,
+                    base::Value(CONTENT_SETTING_ALLOW)));
+  EXPECT_TRUE(
+      weak(ContentSettingsType::BRAVE_ADS, base::Value(CONTENT_SETTING_ALLOW)));
+  EXPECT_FALSE(
+      weak(ContentSettingsType::BRAVE_ADS, base::Value(CONTENT_SETTING_BLOCK)));
+  EXPECT_TRUE(weak(ContentSettingsType::BRAVE_HTTPS_UPGRADE,
+                   base::Value(CONTENT_SETTING_ASK)));
+  EXPECT_FALSE(weak(ContentSettingsType::BRAVE_HTTPS_UPGRADE,
+                    base::Value(CONTENT_SETTING_BLOCK)));
+  EXPECT_FALSE(weak(ContentSettingsType::BRAVE_FINGERPRINTING_V2,
+                    base::Value(CONTENT_SETTING_ASK)));
+  EXPECT_TRUE(
+      weak(ContentSettingsType::BRAVE_COSMETIC_FILTERING,
+           CosmeticFilteringSetting::ToValue(ControlType::BLOCK_THIRD_PARTY)));
+  EXPECT_FALSE(weak(ContentSettingsType::BRAVE_COSMETIC_FILTERING,
+                    CosmeticFilteringSetting::ToValue(ControlType::BLOCK)));
+  EXPECT_FALSE(weak(ContentSettingsType::BRAVE_ADS, base::Value()));
+}
+#endif  // defined(KO_BUILD)
 
 TEST_F(BravePrefProviderTest, CosmeticFilteringMigration) {
   constexpr char kFirstParty[] = "https://firstparty";

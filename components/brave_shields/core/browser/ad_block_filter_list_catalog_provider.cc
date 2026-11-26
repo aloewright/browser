@@ -9,9 +9,16 @@
 #include <utility>
 
 #include "base/files/file_path.h"
+#include "base/functional/bind.h"
+#include "base/memory/weak_ptr.h"
 #include "base/task/thread_pool.h"
 #include "base/trace_event/trace_event.h"
 #include "brave/components/brave_shields/core/browser/ad_block_component_installer.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/brave_shields/core/browser/ko/ko_filter_list_source.h"
+#endif
 
 constexpr char kListCatalogFile[] = "list_catalog.json";
 
@@ -27,6 +34,25 @@ AdBlockFilterListCatalogProvider::AdBlockFilterListCatalogProvider(
         cus,
         base::BindRepeating(&AdBlockFilterListCatalogProvider::OnComponentReady,
                             weak_factory_.GetWeakPtr()));
+#if BUILDFLAG(IS_KO)
+    // The catalog component may never arrive; start from the embedded copy.
+    // Observers get it like a component update.
+    base::ThreadPool::PostTaskAndReplyWithResult(
+        FROM_HERE, {base::MayBlock()}, base::BindOnce([] {
+          return LoadKoEmbeddedList("brave-list-catalog").value_or("");
+        }),
+        base::BindOnce(
+            [](base::WeakPtr<AdBlockFilterListCatalogProvider> provider,
+               const std::string& catalog_json) {
+              // The component wins if it showed up meanwhile.
+              if (!provider || !provider->component_path_.empty() ||
+                  catalog_json.empty()) {
+                return;
+              }
+              provider->OnFilterListCatalogLoaded(catalog_json);
+            },
+            weak_factory_.GetWeakPtr()));
+#endif
   }
 }
 

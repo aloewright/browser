@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "base/files/file_path.h"
+#include "base/functional/bind.h"
 #include "base/task/thread_pool.h"
 #include "brave/components/brave_component_updater/browser/dat_file_util.h"
 #include "brave/components/brave_shields/core/browser/ad_block_component_installer.h"
@@ -72,9 +73,30 @@ void AdBlockDefaultResourceProvider::OnComponentReady(
           weak_factory_.GetWeakPtr()));
 }
 
+void AdBlockDefaultResourceProvider::SetFallbackLoader(FallbackLoader loader) {
+  fallback_loader_ = std::move(loader);
+}
+
 void AdBlockDefaultResourceProvider::LoadResources(
     base::OnceCallback<void(AdblockResourceStorageBox)> cb) {
   base::FilePath resources_path = GetResourcesPath();
+  if (resources_path.empty() && fallback_loader_) {
+    fallback_loader_.Run(base::BindOnce(
+        [](base::WeakPtr<AdBlockDefaultResourceProvider> provider,
+           base::OnceCallback<void(AdblockResourceStorageBox)> cb,
+           std::optional<std::string> resources_json) {
+          if (provider && !provider->component_path_.empty()) {
+            // The component arrived meanwhile and takes precedence.
+            provider->LoadResources(std::move(cb));
+            return;
+          }
+          std::move(cb).Run(resources_json
+                                ? adblock::new_resource_storage(*resources_json)
+                                : adblock::new_empty_resource_storage());
+        },
+        weak_factory_.GetWeakPtr(), std::move(cb)));
+    return;
+  }
   if (resources_path.empty()) {
     // If the path is not ready yet, run the callback with empty resources to
     // avoid blocking filter data loads.

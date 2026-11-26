@@ -31,6 +31,7 @@
 #include "brave/components/constants/webui_url_constants.h"
 #include "brave/components/containers/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
@@ -431,6 +432,8 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
        IDS_SETTINGS_BRAVE_SHIELDS_DEFAULTS_DESCRIPTION_1},
       {"braveShieldsDefaultsSectionDescription2",
        IDS_SETTINGS_BRAVE_SHIELDS_DEFAULTS_DESCRIPTION_2},
+      {"koShieldsDefaultsLocked", IDS_SETTINGS_KO_SHIELDS_DEFAULTS_LOCKED},
+      {"koFilterListLocked", IDS_SETTINGS_KO_FILTER_LIST_LOCKED},
       {"adBlockOnlyModeAlertDesc", IDS_SETTINGS_AD_BLOCK_ONLY_MODE_ALERT_DESC},
       {"adBlockOnlyModeAlertTitle",
        IDS_SETTINGS_AD_BLOCK_ONLY_MODE_ALERT_TITLE},
@@ -1413,6 +1416,9 @@ void BraveAddLocalizedStrings(content::WebUIDataSource* html_source,
       "showStrictFingerprintingMode",
       base::FeatureList::IsEnabled(
           brave_shields::features::kBraveShowStrictFingerprintingMode));
+
+  // K-O fixes the Shields defaults; per-site exceptions stay in the panel.
+  html_source->AddBoolean("isKoShieldsDefaultsLocked", BUILDFLAG(IS_KO));
 
 #if BUILDFLAG(ENABLE_BRAVE_WAYBACK_MACHINE)
   html_source->AddBoolean(

@@ -17,6 +17,7 @@
 #include "brave/components/brave_shields/core/browser/ad_block_filters_provider.h"
 #include "brave/components/brave_shields/core/browser/ad_block_filters_provider_manager.h"
 #include "brave/components/brave_shields/core/browser/filter_list_catalog_entry.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/component_updater/component_updater_service.h"
 #include "components/crx_file/id_util.h"
 
@@ -69,10 +70,17 @@ AdBlockComponentFiltersProvider::AdBlockComponentFiltersProvider(
     TRACE_EVENT("brave.adblock", "AdBlockComponentFiltersProvider::Register",
                 perfetto::Flow::FromPointer(this), "component_id",
                 component_id_);
+    base::OnceClosure on_registered;
+#if BUILDFLAG(IS_KO)
+    on_registered =
+        base::BindOnce(&AdBlockComponentFiltersProvider::OnComponentRegistered,
+                       weak_factory_.GetWeakPtr());
+#endif
     RegisterAdBlockFiltersComponent(
         cus, public_key_sha256, title,
         base::BindRepeating(&AdBlockComponentFiltersProvider::OnComponentReady,
-                            weak_factory_.GetWeakPtr()));
+                            weak_factory_.GetWeakPtr()),
+        std::move(on_registered));
   }
 }
 
@@ -118,8 +126,23 @@ void AdBlockComponentFiltersProvider::OnComponentReady(
   }
 }
 
+void AdBlockComponentFiltersProvider::OnComponentRegistered() {
+  registered_ = true;
+  if (component_path_.empty()) {
+    // Not installed. K-O's embedded snapshot covers this list until the
+    // component arrives, so stop blocking the engine build.
+    NotifyObservers(engine_is_default_);
+  }
+}
+
 bool AdBlockComponentFiltersProvider::IsInitialized() const {
+#if BUILDFLAG(IS_KO)
+  // Components may never arrive (no Brave services key); don't wait past
+  // registration.
+  return registered_ || !component_path_.empty();
+#else
   return !component_path_.empty();
+#endif
 }
 
 base::FilePath AdBlockComponentFiltersProvider::GetFilterSetPath() {

@@ -34,12 +34,17 @@
 #include "brave/components/brave_shields/core/common/brave_shield_constants.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_shields/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/component_updater/component_updater_service.h"
 #include "components/crx_file/id_util.h"
 #include "components/prefs/pref_change_registrar.h"
 #include "components/prefs/pref_service.h"
 #include "components/prefs/scoped_user_pref_update.h"
 #include "third_party/abseil-cpp/absl/cleanup/cleanup.h"
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/brave_shields/core/browser/ko/ko_filter_list_source.h"
+#endif
 
 using brave_shields::features::kBraveAdblockCookieListDefault;
 using brave_shields::features::kBraveAdblockExperimentalListDefault;
@@ -96,9 +101,14 @@ bool IsAdBlockOnlyModeFilterList(const std::string& uuid) {
 }
 
 bool IsAdBlockOnlyModeSupportedAndFeatureEnabled(const std::string& locale) {
+#if BUILDFLAG(IS_KO)
+  // Ad block only mode drops tracker and annoyance lists; not offered.
+  return false;
+#else
   return base::FeatureList::IsEnabled(
              brave_shields::features::kAdblockOnlyMode) &&
          brave_shields::IsAdblockOnlyModeSupportedForLocale(locale);
+#endif
 }
 
 }  // namespace
@@ -341,6 +351,12 @@ bool AdBlockComponentServiceManager::IsFilterListEnabled(
   DCHECK(!uuid.empty());
   DCHECK(local_state_);
 
+#if BUILDFLAG(IS_KO)
+  if (IsKoLockedFilterList(uuid)) {
+    return true;
+  }
+#endif
+
   if (IsAdBlockOnlyModeSupportedAndFeatureEnabled(locale_) &&
       local_state_->GetBoolean(prefs::kAdBlockOnlyModeEnabled)) {
     return IsAdBlockOnlyModeFilterList(uuid);
@@ -405,6 +421,12 @@ void AdBlockComponentServiceManager::EnableFilterList(const std::string& uuid,
       !catalog_entry->public_key_sha256) {
     return;
   }
+
+#if BUILDFLAG(IS_KO)
+  if (!enabled && IsKoLockedFilterList(uuid)) {
+    return;
+  }
+#endif
 
   if (IsAdBlockOnlyModeSupportedAndFeatureEnabled(locale_) &&
       local_state_->GetBoolean(prefs::kAdBlockOnlyModeEnabled)) {
@@ -475,6 +497,15 @@ void AdBlockComponentServiceManager::SetFilterListCatalog(
   LoadComponentFiltersProviders();
 
   list_p3a_->OnFilterListCatalogLoaded(filter_list_catalog_, locale_);
+  if (catalog_loaded_callback_) {
+    catalog_loaded_callback_.Run();
+  }
+}
+
+void AdBlockComponentServiceManager::SetCatalogLoadedCallback(
+    base::RepeatingClosure callback) {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  catalog_loaded_callback_ = std::move(callback);
 }
 
 const std::vector<FilterListCatalogEntry>&
@@ -509,6 +540,9 @@ base::ListValue AdBlockComponentServiceManager::GetRegionalLists() {
     // However, the enabled/disabled flag is maintained in our
     // local_state preferences so retrieve it from there
     dict.Set("enabled", IsFilterListEnabled(region_list.uuid));
+#if BUILDFLAG(IS_KO)
+    dict.Set("locked", IsKoLockedFilterList(region_list.uuid));
+#endif
     list.Append(std::move(dict));
   }
 

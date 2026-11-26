@@ -16,6 +16,7 @@
 #include "brave/components/brave_shields/core/common/brave_shield_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/content_settings/cookie_settings_factory.h"
@@ -287,6 +288,7 @@ TEST_F(BraveShieldsUtilTest, IsBraveShieldsEnabled_IsNotHttpHttps) {
 }
 
 /* AD CONTROL */
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, SetAdControlType_Default) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
   // settings should be default
@@ -319,6 +321,7 @@ TEST_F(BraveShieldsUtilTest, SetAdControlType_Default) {
                                    ContentSettingsType::BRAVE_ADS);
   EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsUtilTest, SetAdControlType_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
@@ -341,6 +344,7 @@ TEST_F(BraveShieldsUtilTest, SetAdControlType_ForOrigin) {
   EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
 }
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, GetAdControlType_Default) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -361,7 +365,9 @@ TEST_F(BraveShieldsUtilTest, GetAdControlType_Default) {
   setting = brave_shields::GetAdControlType(map, GURL());
   EXPECT_EQ(ControlType::BLOCK, setting);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, GetAdControlType_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -413,6 +419,7 @@ TEST_F(BraveShieldsUtilTest, GetAdControlType_ForOrigin) {
   setting = brave_shields::GetAdControlType(map, GURL());
   EXPECT_EQ(ControlType::ALLOW, setting);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsUtilTest, GetAdControlType_ManagedPref) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
@@ -713,6 +720,7 @@ TEST_F(BraveShieldsUtilTest,
 }
 
 /* FINGERPRINTING CONTROL */
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_Default) {
   base::test::ScopedFeatureList scoped_feature_list;
   scoped_feature_list.InitAndEnableFeature(
@@ -773,6 +781,7 @@ TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_Default) {
                                                      GURL("http://brave.com"));
   EXPECT_EQ(ControlType::DEFAULT, type);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_ForOrigin) {
   base::test::ScopedFeatureList scoped_feature_list;
@@ -1044,7 +1053,9 @@ TEST_F(BraveShieldsUtilTest, GetDomainBlockingType_ControlTypes) {
 }
 
 // Should do 1PES domain blocking if domain blocking feature is enabled.
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, GetDomainBlockingType) {
   ExpectDomainBlockingType(GURL("https://brave.com"),
                            DomainBlockingType::k1PES);
 }
+#endif  // !BUILDFLAG(IS_KO)

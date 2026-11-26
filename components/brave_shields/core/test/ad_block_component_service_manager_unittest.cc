@@ -29,6 +29,7 @@
 #include "brave/components/brave_shields/core/common/brave_shield_constants.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_shields/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/prefs/pref_registry_simple.h"
 #include "components/prefs/testing_pref_service.h"
 #include "crypto/sha2.h"
@@ -280,6 +281,8 @@ TEST_F(AdBlockComponentServiceManagerAdblockOnlyModeTest,
   EXPECT_TRUE(manager_->IsFilterListEnabled(kCookieListUuid));
 }
 
+// K-O has no ad block only mode and locks the cookie list on.
+#if !BUILDFLAG(IS_KO)
 TEST_F(AdBlockComponentServiceManagerAdblockOnlyModeTest,
        FilterListsMatchExpectedStateAtInitWhenABOMPrefEnabled) {
   feature_list_.InitAndEnableFeature(features::kAdblockOnlyMode);
@@ -306,6 +309,7 @@ TEST_F(AdBlockComponentServiceManagerAdblockOnlyModeTest,
 
   EXPECT_FALSE(manager_->IsFilterListEnabled(kCookieListUuid));
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(AdBlockComponentServiceManagerAdblockOnlyModeTest,
        ABOMFilterListsAtCatalogDefaultsWhenABOMFeatureDisabled) {

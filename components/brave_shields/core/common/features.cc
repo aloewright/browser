@@ -5,6 +5,8 @@
 
 #include "brave/components/brave_shields/core/common/features.h"
 
+#include "brave/components/ko/buildflags/buildflags.h"
+
 namespace brave_shields::features {
 
 BASE_FEATURE(kAdBlockDefaultResourceUpdateInterval,
@@ -103,11 +105,11 @@ BASE_FEATURE(kBlockAllCookiesToggle,
 BASE_FEATURE(kBraveShieldsElementPicker, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kAdblockOnlyMode,
-#if BUILDFLAG(IS_IOS) || BUILDFLAG(IS_ANDROID)
+#if BUILDFLAG(IS_IOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_KO)
              base::FEATURE_DISABLED_BY_DEFAULT);
 #else
              base::FEATURE_ENABLED_BY_DEFAULT);
-#endif  // BUILDFLAG(IS_IOS) || BUILDFLAG(IS_ANDROID)
+#endif  // BUILDFLAG(IS_IOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_KO)
 
 // Enables extra TRACE_EVENTs in content filter js. The feature is
 // primary designed for local debugging.

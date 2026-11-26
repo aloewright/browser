@@ -27,6 +27,7 @@ static_library("common") {
     "//base",
     "//brave/components/brave_shields/core/common:mojom",
     "//brave/components/brave_shields/core/common:mojom_shared__generator",
+    "//brave/components/ko/buildflags",
     "//brave/components/webcompat/core/common",
     "//components/content_settings/core/common",
     "//crypto",

@@ -16,6 +16,7 @@
 
 namespace base {
 class DictValue;
+class Value;
 }  // namespace base
 
 namespace content_settings {
@@ -37,6 +38,17 @@ std::string GetShieldsSettingUserPrefsPath(const std::string& name);
 content_settings::mojom::SessionModel GetSessionModelFromDictionary(
     const base::DictValue& dict,
     const char* key);
+
+#if defined(KO_BUILD)
+// Shields types whose global default K-O fixes (see brave/ko/docs/shields.md);
+// only per-site rules may differ from the registered default.
+bool IsKoLockedShieldsDefault(ContentSettingsType content_type);
+
+// A per-site value weaker than the K-O default, e.g. shields down or ads
+// allowed. Rejected when built with ko_shields_strict_enforcement.
+bool IsKoWeakeningShieldsValue(ContentSettingsType content_type,
+                               const base::Value& value);
+#endif  // defined(KO_BUILD)
 
 }  // namespace content_settings
 

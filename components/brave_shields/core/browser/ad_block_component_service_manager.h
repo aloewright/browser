@@ -58,6 +58,8 @@ class AdBlockComponentServiceManager
 
   void SetFilterListCatalog(std::vector<FilterListCatalogEntry> catalog);
   const std::vector<FilterListCatalogEntry>& GetFilterListCatalog();
+  // Runs after every catalog (re)load.
+  void SetCatalogLoadedCallback(base::RepeatingClosure callback);
 
   // Get the filter set path for a given filter list.
   // If the filter list is not available, an empty path is returned.
@@ -115,6 +117,8 @@ class AdBlockComponentServiceManager
   raw_ptr<AdBlockListP3A> list_p3a_;
 
   base::RepeatingTimer update_check_timer_;
+
+  base::RepeatingClosure catalog_loaded_callback_;
 
   SEQUENCE_CHECKER(sequence_checker_);
 

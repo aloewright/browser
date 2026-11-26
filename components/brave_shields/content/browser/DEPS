@@ -1,5 +1,7 @@
 include_rules = [
   "+brave/components/constants",
+  "+brave/components/ko/buildflags",
+  "+brave/components/ko/shields/buildflags",
   "+brave/content/public/browser/devtools",
   "+components/component_updater",
   "+components/content_settings/core",
