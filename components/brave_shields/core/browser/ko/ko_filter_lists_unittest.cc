@@ -354,11 +354,34 @@ TEST_F(KoFiltersProviderTest, NotifiesWhenRefreshed) {
   } observer;
 
   AdBlockFiltersProviderManager manager(false);
-  auto all = base::BindRepeating([](const std::string&) { return true; });
-  KoFiltersProvider provider(&source, &manager, true, all, all);
+  bool cookie_enabled = true;
+  auto enabled = base::BindLambdaForTesting([&](const std::string& uuid) {
+    return uuid != kCookieListUuid || cookie_enabled;
+  });
+  auto none = base::BindRepeating([](const std::string&) { return false; });
+  KoFiltersProvider provider(&source, &manager, false, enabled, none);
   provider.AddObserver(&observer);
   provider.Refresh();
   EXPECT_EQ(1, observer.changes);
+
+  // Same selection: no rebuild.
+  provider.Refresh();
+  EXPECT_EQ(1, observer.changes);
+
+  // A catalog toggle that changes the selection rebuilds.
+  cookie_enabled = false;
+  provider.Refresh();
+  EXPECT_EQ(2, observer.changes);
+  provider.Refresh();
+  EXPECT_EQ(2, observer.changes);
+
+  // After a load, a refresh with that selection is a no-op too.
+  cookie_enabled = true;
+  provider.LoadFilterSet(base::BindLambdaForTesting(
+      [](base::OnceCallback<void(rust::Box<adblock::FilterSet>*)>) {}));
+  task_environment_.RunUntilIdle();
+  provider.Refresh();
+  EXPECT_EQ(2, observer.changes);
   provider.RemoveObserver(&observer);
 }
 

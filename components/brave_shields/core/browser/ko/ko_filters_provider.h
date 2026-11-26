@@ -6,6 +6,7 @@
 #ifndef BRAVE_COMPONENTS_BRAVE_SHIELDS_CORE_BROWSER_KO_KO_FILTERS_PROVIDER_H_
 #define BRAVE_COMPONENTS_BRAVE_SHIELDS_CORE_BROWSER_KO_KO_FILTERS_PROVIDER_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,13 +45,15 @@ class KoFiltersProvider : public AdBlockFiltersProvider,
   std::string GetNameForDebugging() override;
   bool IsInitialized() const override;
 
-  // Re-evaluates which lists apply, e.g. after a catalog toggle.
+  // Re-evaluates which lists apply, e.g. after a catalog load or list toggle.
+  // Notifies (and so rebuilds the engine) only if the selection changed.
   void Refresh();
 
   std::vector<KoFilterListEntry> GetSelectedListsForTesting() const;
 
  private:
   std::vector<KoFilterListEntry> SelectLists() const;
+  std::vector<std::string> SelectedIds() const;
 
   // KoFilterListSource::Observer:
   void OnKoFilterListsChanged() override;
@@ -58,6 +61,8 @@ class KoFiltersProvider : public AdBlockFiltersProvider,
   raw_ptr<KoFilterListSource> source_;
   CatalogQuery is_list_enabled_;
   CatalogQuery is_component_ready_;
+  // Ids of the lists the engine was last built from or told to rebuild with.
+  std::optional<std::vector<std::string>> last_selection_;
   base::ScopedObservation<KoFilterListSource, KoFilterListSource::Observer>
       source_observation_{this};
 };

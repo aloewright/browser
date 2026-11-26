@@ -73,7 +73,22 @@ bool KoFiltersProvider::IsInitialized() const {
 }
 
 void KoFiltersProvider::Refresh() {
+  // Catalog loads and pref changes arrive often; a rebuild of both engines is
+  // only worth it when the applicable lists changed.
+  std::vector<std::string> ids = SelectedIds();
+  if (last_selection_ == ids) {
+    return;
+  }
+  last_selection_ = std::move(ids);
   NotifyObservers(engine_is_default_);
+}
+
+std::vector<std::string> KoFiltersProvider::SelectedIds() const {
+  std::vector<std::string> ids;
+  for (const auto& entry : SelectLists()) {
+    ids.push_back(entry.id);
+  }
+  return ids;
 }
 
 std::vector<KoFilterListEntry> KoFiltersProvider::GetSelectedListsForTesting()
@@ -99,6 +114,10 @@ std::vector<KoFilterListEntry> KoFiltersProvider::SelectLists() const {
 void KoFiltersProvider::LoadFilterSet(
     base::OnceCallback<void(FilterSetCallback)> cb) {
   const std::vector<KoFilterListEntry> lists = SelectLists();
+  last_selection_.emplace();
+  for (const auto& entry : lists) {
+    last_selection_->push_back(entry.id);
+  }
   if (lists.empty()) {
     std::move(cb).Run(base::BindOnce([](rust::Box<adblock::FilterSet>*) {}));
     return;
@@ -118,7 +137,10 @@ void KoFiltersProvider::LoadFilterSet(
 }
 
 void KoFiltersProvider::OnKoFilterListsChanged() {
-  Refresh();
+  // The list contents changed (new snapshot or channel update): always
+  // rebuild, even if the same ids are selected.
+  last_selection_ = SelectedIds();
+  NotifyObservers(engine_is_default_);
 }
 
 }  // namespace brave_shields
