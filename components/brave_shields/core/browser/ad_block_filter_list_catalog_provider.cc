@@ -34,6 +34,26 @@ AdBlockFilterListCatalogProvider::AdBlockFilterListCatalogProvider(
         cus,
         base::BindRepeating(&AdBlockFilterListCatalogProvider::OnComponentReady,
                             weak_factory_.GetWeakPtr()));
+#if BUILDFLAG(IS_KO)
+    // The catalog component may never arrive; start from the embedded copy.
+    // Observers get it like a component update.
+    base::ThreadPool::PostTaskAndReplyWithResult(
+        FROM_HERE, {base::MayBlock()},
+        base::BindOnce([] {
+          return LoadKoEmbeddedList("brave-list-catalog").value_or("");
+        }),
+        base::BindOnce(
+            [](base::WeakPtr<AdBlockFilterListCatalogProvider> provider,
+               const std::string& catalog_json) {
+              // The component wins if it showed up meanwhile.
+              if (!provider || !provider->component_path_.empty() ||
+                  catalog_json.empty()) {
+                return;
+              }
+              provider->OnFilterListCatalogLoaded(catalog_json);
+            },
+            weak_factory_.GetWeakPtr()));
+#endif
   }
 }
 
@@ -80,27 +100,6 @@ void AdBlockFilterListCatalogProvider::OnComponentReady(
 void AdBlockFilterListCatalogProvider::LoadFilterListCatalog(
     base::OnceCallback<void(const std::string& catalog_json)> cb) {
   if (component_path_.empty()) {
-#if BUILDFLAG(IS_KO)
-    // The catalog component may never arrive; start from the embedded copy.
-    // A later component update is pushed to observers as usual.
-    base::ThreadPool::PostTaskAndReplyWithResult(
-        FROM_HERE, {base::MayBlock()},
-        base::BindOnce([] {
-          return LoadKoEmbeddedList("brave-list-catalog").value_or("");
-        }),
-        base::BindOnce(
-            [](base::WeakPtr<AdBlockFilterListCatalogProvider> provider,
-               base::OnceCallback<void(const std::string&)> cb,
-               const std::string& catalog_json) {
-              // Prefer the component if it showed up meanwhile.
-              if (!provider || !provider->component_path_.empty() ||
-                  catalog_json.empty()) {
-                return;
-              }
-              std::move(cb).Run(catalog_json);
-            },
-            weak_factory_.GetWeakPtr(), std::move(cb)));
-#endif
     // If the path is not ready yet, don't run the callback. An update should be
     // pushed soon.
     return;
