@@ -1,0 +1,31 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# K-O overrides for PostHog's pinned hobby stack (see setup.sh):
+# NetBird-only HTTP listener behind the private TLS proxy, no instance
+# telemetry, pinned proxy image, ClickHouse backups disk.
+name: ko-posthog
+
+services:
+  proxy:
+    image: caddy:2.11.8-alpine@sha256:f6228111e5fafa1a5238258d0858e103f10599b8d1659a146e7726681a002bb9
+    # Replace upstream's 0.0.0.0:80/443 publications.
+    # The Caddyfile is interpolated at compose time from CADDY_HOST and
+    # CADDY_TLS_BLOCK in versions.env (plain HTTP on :80); service
+    # environment entries would not reach it.
+    ports: !override
+      - '${KO_BIND_IP:?set in Doppler}:${POSTHOG_PORT:-8010}:80'
+
+  web:
+    environment:
+      OPT_OUT_CAPTURE: 'true'
+  worker:
+    environment:
+      OPT_OUT_CAPTURE: 'true'
+
+  clickhouse:
+    volumes:
+      - ./clickhouse-backups.xml:/etc/clickhouse-server/config.d/ko-backups.xml:ro
+      - ./backups/clickhouse:/backups
