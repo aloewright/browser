@@ -248,6 +248,8 @@ IN_PROC_BROWSER_TEST_F(BraveNetworkDelegateBrowserTest, Iframe3PCookieAllowed) {
   EXPECT_FALSE(cookie.empty());
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveNetworkDelegateBrowserTest, Iframe3PShieldsDown) {
   ShieldsDown(top_level_page_url_);
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_));
@@ -270,6 +272,7 @@ IN_PROC_BROWSER_TEST_F(BraveNetworkDelegateBrowserTest,
   cookie = content::GetCookies(browser()->GetProfile(), GURL("https://c.com/"));
   EXPECT_FALSE(cookie.empty());
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 // Fetching not just a frame, but some other resource.
 IN_PROC_BROWSER_TEST_F(BraveNetworkDelegateBrowserTest,
