@@ -60,13 +60,16 @@
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/common/chrome_isolated_world_ids.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/chrome_test_utils.h"
 #include "chrome/test/base/platform_browser_test.h"
 #include "components/prefs/pref_change_registrar.h"
 #include "components/prefs/pref_service.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
+#include "content/public/test/test_utils.h"
 #include "crypto/sha2.h"
+#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "net/test/embedded_test_server/install_default_websocket_handlers.h"
@@ -143,7 +146,14 @@ void WaitForSelectorBlocked(const content::ToRenderFrameHost& target,
 }  // namespace
 
 AdBlockServiceTest::AdBlockServiceTest()
-    : https_server_(net::EmbeddedTestServer::Type::TYPE_HTTPS) {}
+    : https_server_(net::EmbeddedTestServer::Type::TYPE_HTTPS) {
+#if BUILDFLAG(IS_KO)
+  // K-O's strict HTTPS upgrade default would put the HTTPS-only interstitial
+  // in front of pages the plain HTTP test server serves for test hosts. See
+  // also SetUpOnMainThread.
+  ko_feature_list_.InitAndDisableFeature(net::features::kBraveHttpsByDefault);
+#endif
+}
 AdBlockServiceTest::~AdBlockServiceTest() = default;
 
 void AdBlockServiceTest::SetUpCommandLine(base::CommandLine* command_line) {
@@ -160,6 +170,11 @@ void AdBlockServiceTest::SetUpInProcessBrowserTestFixture() {
 
 void AdBlockServiceTest::SetUpOnMainThread() {
   PlatformBrowserTest::SetUpOnMainThread();
+#if BUILDFLAG(IS_KO)
+  // With HTTPS by default off, profile init moves K-O's strict default into
+  // upstream HTTPS-Only Mode. Undo that so plain HTTP test pages load.
+  profile()->GetPrefs()->ClearPref(prefs::kHttpsOnlyModeEnabled);
+#endif
   mock_cert_verifier_.mock_cert_verifier()->set_default_result(net::OK);
   host_resolver()->AddRule("*", "127.0.0.1");
   InitEmbeddedTestServer();
@@ -185,8 +200,24 @@ void AdBlockServiceTest::PreRunTestOnMainThread() {
         ->IsFilterListLoadedForTesting(true);
   })) << "Timeout waiting for initial engine creation";
 
+#if BUILDFLAG(IS_KO)
+  // K-O loads its embedded catalog over the test's empty one and rebuilds the
+  // engines for it, so the build count differs. Let that finish, restore the
+  // empty catalog and give each list K-O's snapshot stands in for an empty
+  // component, so tests see only their own rules plus K-O's always-on extras.
+  content::RunAllTasksUntilIdle();
+  component_service_manager()->SetFilterListCatalog({});
+  for (const auto& [uuid, provider] :
+       component_service_manager()->component_filters_providers()) {
+    if (provider->GetFilterSetPath().empty()) {
+      provider->OnComponentReady(MakeFileInTempDir("list.txt", ""));
+    }
+  }
+  content::RunAllTasksUntilIdle();
+#else
   histogram_tester_.ExpectTotalCount(
       "Brave.Adblock.MakeEngineWithRules.Default", 1);
+#endif
   InstallDefaultAdBlockComponent();
   // The histogram is recorded on the ad-block background thread before the
   // OnEngineLoaded reply is posted back to the UI thread.  Although the
@@ -389,6 +420,11 @@ void AdBlockServiceTest::InstallComponent(
     brave_shields::AdBlockServiceTestObserver observer(service);
     observer.Wait(catalog_entry.first_party_protections);
   }
+#if BUILDFLAG(IS_KO)
+  // A catalog change also refreshes K-O's baseline lists, which rebuilds both
+  // engines. Finish those builds so they can't satisfy a later wait.
+  content::RunAllTasksUntilIdle();
+#endif
 }
 
 void AdBlockServiceTest::InstallDefaultAdBlockComponent() {
@@ -554,6 +590,8 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest,
 // startup.
 // Warning: each engine updating is a CPU-heavy thing and degrades startup
 // performance.
+// K-O also rebuilds for its embedded catalog and baseline lists.
+#if !BUILDFLAG(IS_KO)
 IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, DefaultStartupWithCookieList) {
   // The empty ruleset building until the components are loaded.
   // TODO(matuchin): remove that excessive work.
@@ -572,6 +610,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, DefaultStartupWithCookieList) {
   histogram_tester_.ExpectTotalCount(
       "Brave.Adblock.MakeEngineWithRules.Additional", 2);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 // Load a page with an ad image, and make sure it is blocked by a filter from a
 // regional list component.
@@ -705,6 +744,13 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, SubFrameShieldsOff) {
   NavigateToURL(url);
   content::WebContents* contents = web_contents();
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds don't drop Shields per site, so the ad stays blocked.
+  EXPECT_EQ(true, EvalJs(ChildFrameAt(contents, 0),
+                         "setExpectations(0, 0, 0, 1);"
+                         "xhr('adbanner.js?1')"));
+  EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 1ULL);
+#else
   EXPECT_EQ(true, EvalJs(ChildFrameAt(contents, 0),
                          "setExpectations(0, 0, 1, 0);"
                          "xhr('adbanner.js?1')"));
@@ -724,6 +770,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, SubFrameShieldsOff) {
                          )"));
   content::RunAllTasksUntilIdle();
   EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 0ULL);
+#endif  // defined(KO_SHIELDS_STRICT_BUILD)
   brave_shields::SetBraveShieldsEnabled(content_settings(), true, url);
 }
 
@@ -744,6 +791,8 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ServiceWorkerRequest) {
 
 // A service worker request should use the controlling page's Shields setting.
 // Regression test for https://github.com/brave/brave-browser/issues/57535.
+// Strict K-O builds don't drop Shields per site; see SubFrameShieldsOff.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ServiceWorkerRequestShieldsOff) {
   UpdateAdBlockInstanceWithRules("adbanner.js");
 
@@ -756,6 +805,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ServiceWorkerRequestShieldsOff) {
                          "installBlockingServiceWorker()"));
   EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 0ULL);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 // See crbug.com/1372291.
 #if BUILDFLAG(IS_ANDROID)
@@ -1718,6 +1768,19 @@ IN_PROC_BROWSER_TEST_F(Default1pBlockingFlagDisabledTest, Default1pBlocking) {
   NavigateToURL(url);
   content::WebContents* contents = web_contents();
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores the global standard mode; both stay blocked as in
+  // Aggressive1pBlocking.
+  ASSERT_EQ(true, EvalJs(contents,
+                         "setExpectations(0, 1, 0, 0);"
+                         "addImage('ad_banner.png')"));
+  EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 1ULL);
+
+  ASSERT_EQ(true, EvalJs(contents,
+                         "setExpectations(0, 2, 0, 0);"
+                         "addImage('https://thirdparty.com/ad_banner.png')"));
+  EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 2ULL);
+#else
   ASSERT_EQ(true, EvalJs(contents,
                          "setExpectations(1, 0, 0, 0);"
                          "addImage('ad_banner.png')"));
@@ -1727,6 +1790,7 @@ IN_PROC_BROWSER_TEST_F(Default1pBlockingFlagDisabledTest, Default1pBlocking) {
                          "setExpectations(1, 1, 0, 0);"
                          "addImage('https://thirdparty.com/ad_banner.png')"));
   EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 1ULL);
+#endif  // BUILDFLAG(IS_KO)
 }
 
 // Load a page with an image from a first party and a third party, which both
@@ -2119,6 +2183,8 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, HiddenListsNotPresented) {
 
 // Verify that scripts violating a Content Security Policy from a `$csp` rule
 // are not loaded.
+// Strict K-O builds don't drop Shields per site; see SubFrameShieldsOff.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CspRuleShieldsDown) {
   UpdateAdBlockInstanceWithRules(
       "||example.com^$csp=script-src 'nonce-abcdef' 'unsafe-eval' 'self'");
@@ -2140,6 +2206,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CspRuleShieldsDown) {
 
   EXPECT_EQ(profile()->GetPrefs()->GetUint64(kAdsBlocked), 0ULL);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 class CosmeticFilteringFlagDisabledTest : public AdBlockServiceTest {
  public:
@@ -2292,6 +2359,13 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CosmeticFilteringDisabled) {
 
   content::WebContents* contents = web_contents();
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores the global setting, so the filters still apply.
+  WaitForSelectorBlocked(contents, "#ad-banner");
+  WaitForSelectorBlocked(contents, ".ad");
+  ASSERT_EQ(true, EvalJs(contents,
+                         "checkSelector('.ad-banner', 'display', 'block')"));
+#else
   ASSERT_EQ(true, EvalJs(contents,
                          "checkSelector('#ad-banner', 'display', 'block')"));
 
@@ -2299,6 +2373,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CosmeticFilteringDisabled) {
                          "checkSelector('.ad-banner', 'display', 'block')"));
 
   ASSERT_EQ(true, EvalJs(contents, "checkSelector('.ad', 'display', 'block')"));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 // Test simple cosmetic filtering
@@ -2376,8 +2451,16 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest,
 
   content::WebContents* contents = web_contents();
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores the global standard mode, so `:has` applies as in
+  // CosmeticFilteringHasPseudoclassAggressive.
+  EXPECT_EQ("none", EvalJs(contents,
+                           "window.getComputedStyle(document.getElementById('"
+                           "promotion').parentElement).display"));
+#else
   EXPECT_EQ(true, EvalJs(contents,
                          "checkSelector('.container', 'display', 'block')"));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 // Test cosmetic filtering applies rules with the `:has` pseudoclass in
@@ -2429,6 +2512,18 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CosmeticFilteringProtect1p) {
 
   content::WebContents* contents = web_contents();
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores the global standard mode, so 1st party content is hidden too,
+  // as in CosmeticFilteringHide1pContent.
+  for (const char* id :
+       {"#relative-url-div", "#same-origin-div", "#subdomain-div", "#same-etld",
+        "#another-etld", "#another-etld-significant-text"}) {
+    EXPECT_EQ(true,
+              EvalJs(contents, content::JsReplace(
+                                   "checkSelector($1, 'display', 'none')", id)))
+        << id;
+  }
+#else
   EXPECT_EQ(true,
             EvalJs(contents,
                    "checkSelector('#relative-url-div', 'display', 'block')"));
@@ -2445,6 +2540,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, CosmeticFilteringProtect1p) {
   EXPECT_EQ(true, EvalJs(contents,
                          "checkSelector('#another-etld-significant-text', "
                          "'display', 'block')"));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 // Test cosmetic filtering bypasses 1st party checks in Aggressive mode
@@ -2990,6 +3086,19 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest,
 
   content::WebContents* contents = web_contents();
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores the global standard mode; filters apply as in
+  // ProceduralFilterHasText.
+  WaitForSelectorBlocked(
+      contents, "#procedural-filter-has-text [data-expect=\"hidden\"]");
+  {
+    auto result = EvalJs(
+        contents,
+        R"(waitCSSSelector('#procedural-filter-has-text [data-expect="visible"]', 'display', 'block'))");
+    ASSERT_TRUE(result.is_ok());
+    EXPECT_EQ(base::Value(true), result);
+  }
+#else
   {
     auto result = EvalJs(
         contents,
@@ -2997,6 +3106,7 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest,
     ASSERT_TRUE(result.is_ok());
     EXPECT_EQ(base::Value(true), result);
   }
+#endif  // BUILDFLAG(IS_KO)
 }
 
 // Test `has-text` procedural filters
@@ -3386,8 +3496,13 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ContentPicker) {
     TestRenderViewContextMenu menu(*web_contents()->GetPrimaryMainFrame(),
                                    params);
     menu.Init();
+#if defined(KO_SHIELDS_STRICT_BUILD)
+    // Strict K-O builds don't drop Shields per site, so the item stays.
+    EXPECT_TRUE(menu.IsItemEnabled(IDC_ADBLOCK_CONTEXT_BLOCK_ELEMENTS));
+#else
     // No menu item if Shields are down.
     EXPECT_FALSE(menu.IsItemEnabled(IDC_ADBLOCK_CONTEXT_BLOCK_ELEMENTS));
+#endif
   }
 }
 

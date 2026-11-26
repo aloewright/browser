@@ -343,12 +343,19 @@ IN_PROC_BROWSER_TEST_F(DomainBlockTest, NoInterstitialUnlessAggressive) {
   NavigateTo(url);
   ASSERT_FALSE(IsShowingInterstitial());
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse each relaxation below, so a.com stays blocked.
+  constexpr bool kRelaxedShowsInterstitial = true;
+#else
+  constexpr bool kRelaxedShowsInterstitial = false;
+#endif
+
   // Block a.com in rules but allow a.com via shields, then attempt to navigate
   // to a page on a.com. This should not show an interstitial.
   BlockDomainByURL(url);
   SetCosmeticFilteringControlType(content_settings(), ControlType::ALLOW, url);
   NavigateTo(url);
-  ASSERT_FALSE(IsShowingInterstitial());
+  ASSERT_EQ(kRelaxedShowsInterstitial, IsShowingInterstitial());
 
   // Block a.com in rules but set a.com to default shield settings, then attempt
   // to navigate to a page on a.com. This should not show an interstitial.
@@ -356,7 +363,7 @@ IN_PROC_BROWSER_TEST_F(DomainBlockTest, NoInterstitialUnlessAggressive) {
   SetCosmeticFilteringControlType(content_settings(),
                                   ControlType::BLOCK_THIRD_PARTY, url);
   NavigateTo(url);
-  ASSERT_FALSE(IsShowingInterstitial());
+  ASSERT_EQ(kRelaxedShowsInterstitial, IsShowingInterstitial());
 
   // Block a.com in rules but drop shields, then attempt to navigate
   // to a page on a.com. This should not show an interstitial.
@@ -364,7 +371,7 @@ IN_PROC_BROWSER_TEST_F(DomainBlockTest, NoInterstitialUnlessAggressive) {
   SetCosmeticFilteringControlType(content_settings(), ControlType::BLOCK, url);
   SetBraveShieldsEnabled(content_settings(), false /* enable */, url);
   NavigateTo(url);
-  ASSERT_FALSE(IsShowingInterstitial());
+  ASSERT_EQ(kRelaxedShowsInterstitial, IsShowingInterstitial());
 }
 
 IN_PROC_BROWSER_TEST_F(DomainBlockDisabledTest, NoInterstitial) {

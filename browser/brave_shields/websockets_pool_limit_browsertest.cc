@@ -310,6 +310,8 @@ IN_PROC_BROWSER_TEST_F(WebSocketsPoolLimitBrowserTest, ServiceWorkerIsLimited) {
   ExpectWebSocketsAreLimited(rfh, kWsOpenScript);
 }
 
+// Strict K-O builds don't drop Shields per site, so the pool stays limited.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(WebSocketsPoolLimitBrowserTest,
                        PoolIsNotLimitedWithDisabledShields) {
   const GURL url(https_server_.GetURL("a.com", "/ephemeral_storage.html"));
@@ -333,6 +335,7 @@ IN_PROC_BROWSER_TEST_F(WebSocketsPoolLimitBrowserTest,
   ASSERT_TRUE(content::ExecJs(a_com_rfh, register_sw_script));
   OpenWebSockets(a_com_rfh, kWsOpenInSwScript, kWebSocketsPoolLimit + 5);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(WebSocketsPoolLimitBrowserTest,
                        PoolIsNotLimitedWithWebcompatException) {
