@@ -504,8 +504,6 @@ if (is_brave_origin_branded) {
   ]
 }
 
-brave_chrome_browser_deps += [ "//brave/components/ko/buildflags" ]
-
 if (is_ko && !is_android) {
   brave_chrome_browser_deps += [
     "//brave/browser/ui/webui/ko_machines",

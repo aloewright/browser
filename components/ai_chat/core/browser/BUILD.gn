@@ -154,6 +154,7 @@ static_library("browser") {
     "//brave/components/brave_service_keys",
     "//brave/components/brave_stats/browser",
     "//brave/components/constants",
+    "//brave/components/ko/common:paths",
     "//brave/components/l10n/common",
     "//brave/components/p3a_utils",
     "//brave/components/resources:static_resources_grit",

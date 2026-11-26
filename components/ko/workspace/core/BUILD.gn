@@ -20,7 +20,10 @@ static_library("core") {
     "//url",
   ]
 
-  deps = [ "//components/prefs" ]
+  deps = [
+    "//brave/components/ko/common:paths",
+    "//components/prefs",
+  ]
 }
 
 source_set("unit_tests") {

@@ -26,6 +26,7 @@ static_library("core") {
   ]
 
   deps = [
+    "//brave/components/ko/common:paths",
     "//components/prefs",
     "//url",
   ]

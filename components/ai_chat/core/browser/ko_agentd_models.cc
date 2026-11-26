@@ -24,6 +24,7 @@
 #include "brave/components/ai_chat/core/browser/model_validator.h"
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/api_request_helper/api_request_helper.h"
+#include "brave/components/ko/common/ko_paths.h"
 #include "build/build_config.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
@@ -33,14 +34,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#endif
-
-#if BUILDFLAG(IS_MAC)
-#include "base/base_paths.h"
-#include "base/path_service.h"
-#elif BUILDFLAG(IS_LINUX)
-#include "base/environment.h"
-#include "base/nix/xdg_util.h"
 #endif
 
 namespace ai_chat::ko {
@@ -170,27 +163,7 @@ AgentdFetchResult& AgentdFetchResult::operator=(AgentdFetchResult&&) = default;
 AgentdFetchResult::~AgentdFetchResult() = default;
 
 base::FilePath GetDataDir() {
-#if BUILDFLAG(IS_MAC)
-  base::FilePath app_support;
-  if (!base::PathService::Get(base::DIR_APP_DATA, &app_support)) {
-    return base::FilePath();
-  }
-  return app_support.Append("K-O");
-#elif BUILDFLAG(IS_LINUX)
-  std::unique_ptr<base::Environment> env = base::Environment::Create();
-  base::FilePath data_home =
-      base::nix::GetXDGDirectory(env.get(), "XDG_DATA_HOME", ".local/share");
-  if (data_home.empty() || !data_home.IsAbsolute()) {
-    base::FilePath home = base::GetHomeDir();
-    if (home.empty()) {
-      return base::FilePath();
-    }
-    data_home = home.Append(".local").Append("share");
-  }
-  return data_home.Append("k-o");
-#else
-  return base::FilePath();
-#endif
+  return ::ko::GetDataDir();
 }
 
 uint16_t GetAgentdPort() {

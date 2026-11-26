@@ -1,5 +1,6 @@
 include_rules = [
   "+brave/components/containers/core",
+  "+brave/components/ko/common",
   "+brave/components/ko/workspace",
   "+components/prefs",
   "+components/pref_registry",
