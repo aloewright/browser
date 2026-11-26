@@ -1,11 +1,11 @@
 # ko-agentd
 
-`ko-agentd` is the local daemon behind K-O's workspace and machine pages. It
-exposes model providers (Claude Code, Codex, Cloudflare AI Gateway, NanoGPT)
-through one OpenAI-compatible API. It also stores workspaces and encrypted
-artifacts, runs agents with MCP servers, and deploys per-workspace Cloudflare
-agents. It is a Rust (edition 2024) binary in `ko/agentd/`. It is not part of
-the GN build.
+`ko-agentd` is the local daemon behind `chrome://ko-workspace` and the K-O
+Assistant. It exposes model providers (Claude Code, Codex, Cloudflare AI
+Gateway, NanoGPT) through one OpenAI-compatible API. It also stores
+workspaces and encrypted artifacts, runs agents with MCP servers, and deploys
+per-workspace Cloudflare agents. It is a Rust (edition 2024) binary in
+`ko/agentd/`. It is not part of the GN build.
 
 ## Files
 
@@ -45,11 +45,14 @@ are loose. Core dumps are off.
 - **DNS rebinding.** TCP requests must carry exactly one `Host` header equal to
   `127.0.0.1:<port>` or `localhost:<port>`. An absolute-form target must name
   the same host. Anything else gets 403.
-- **Origin / CORS.** Only `chrome://ko-workspace` and `chrome://ko-machines` are
-  allowed. They get `Access-Control-Allow-Origin` (no credentials) and
-  `Access-Control-Expose-Headers: X-Ko-Mime-Type`, and preflight answers 204. Any other `Origin` (including `null`) gets 403 with no
-  CORS headers. A request without `Origin` but with `Sec-Fetch-Site` other
-  than `none` or `same-origin` also gets 403. This blocks `<img>`-style probes.
+- **Origin / CORS.** Only `chrome://ko-workspace` is allowed. It gets
+  `Access-Control-Allow-Origin` (no credentials) and
+  `Access-Control-Expose-Headers: X-Ko-Mime-Type`, and preflight answers 204.
+  Any other `Origin` (including `null` and `chrome://ko-machines`, which never
+  calls agentd) gets 403 with no CORS headers. The assistant calls from the
+  browser process and sends no `Origin`. A request without `Origin` but with
+  `Sec-Fetch-Site` other than `none` or `same-origin` also gets 403. This
+  blocks `<img>`-style probes.
 - **Response headers.** Every response carries `nosniff`, `no-store`,
   `no-referrer`, `CSP: default-src 'none'; sandbox`, `X-Frame-Options: DENY`
   and `Vary: Origin`.
