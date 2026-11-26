@@ -21,6 +21,7 @@
 #include "brave/components/brave_shields/resources/panel_new/grit/brave_shields_panel_new_generated_map.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/favicon/favicon_service_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -70,6 +71,10 @@ ShieldsPanelUI::ShieldsPanelUI(content::WebUI* web_ui)
   // Debloated builds have no webcompat report endpoint.
   source->AddBoolean("isWebcompatReporterEnabled",
                      !BUILDFLAG(IS_BRAVE_DEBLOATED));
+
+  // Strict K-O builds don't allow turning Shields off per site.
+  source->AddBoolean("isKoShieldsStrict",
+                     BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT));
 
   source->AddBoolean("isBraveForgetFirstPartyStorageFeatureEnabled",
                      base::FeatureList::IsEnabled(

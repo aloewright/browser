@@ -199,7 +199,9 @@
           <template is="dom-repeat" items="[[filterList_]]"
           filter="{{searchListBy_(filterListTitle)}}" observe="val" initial-count="10">
             <div class$="filter-list-item selected-[[item.enabled]]">
-              <cr-checkbox checked="{{item.enabled}}" on-change="handleFilterListItemToggle_">
+              <cr-checkbox checked="{{item.enabled}}" on-change="handleFilterListItemToggle_"
+                  disabled="[[item.locked]]"
+                  title="[[lockedTitle_(item.locked)]]">
                 <div>
                   <div>[[item.title]]</div>
                   <div class="filter-list-description">[[item.desc]]</div>

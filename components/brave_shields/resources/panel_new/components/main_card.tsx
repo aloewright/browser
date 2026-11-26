@@ -11,6 +11,7 @@ import { formatString } from '$web-common/formatString'
 import { useShieldsApi } from '../api/shields_api_context'
 import { getString } from './strings'
 import { isWebcompatReporterEnabled } from '../webcompat_reporter'
+import { isKoShieldsStrict } from '../ko_shields'
 
 import { style } from './main_card.style'
 
@@ -88,6 +89,7 @@ export function MainCard() {
         </div>
         <Toggle
           checked={shieldsEnabled}
+          disabled={isKoShieldsStrict()}
           onChange={(event) => api.setBraveShieldsEnabled([event.checked])}
         />
       </div>

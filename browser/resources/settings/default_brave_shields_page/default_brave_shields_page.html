@@ -39,6 +39,14 @@
     background-color: var(--leo-color-container-disabled);
     pointer-events: none;
   }
+  #koDefaultsLockedNotice {
+    column-gap: var(--leo-spacing-m);
+  }
+  .ko-locked-icon {
+    --leo-icon-size: 20px;
+    color: var(--leo-color-icon-default);
+    flex-shrink: 0;
+  }
 </style>
 
 <settings-section
@@ -57,6 +65,11 @@
       </div>
     </div>
   </div>
+  <div id="koDefaultsLockedNotice" class="settings-box"
+      hidden="[[!isKoShieldsDefaultsLocked_]]">
+    <leo-icon name="lock" class="ko-locked-icon"></leo-icon>
+    <div class="secondary">$i18n{koShieldsDefaultsLocked}</div>
+  </div>
   <settings-toggle-button
       hidden="[[isShowBraveShieldsInPageInfoEnabled_]]"
       class="cr-row"
@@ -67,7 +80,7 @@
     <div class="start">$i18n{adControlLabel}</div>
     <select id="adControlType" class="md-select"
         on-change="onAdControlChange_"
-        disabled="[[isAdBlockOnlyModeEnabled_]]">
+        disabled="[[isDefaultLocked_(isAdBlockOnlyModeEnabled_)]]">
       <template is="dom-repeat" items="[[adControlTypes_]]">
         <option value="[[item.value]]"
             selected="[[controlEqual_(item.value, adControlType_)]]">
@@ -80,7 +93,7 @@
     <div class="start">$i18n{httpsUpgradeControlLabel}</div>
     <select id="httpsUpgradeControlType" class="md-select"
         on-change="onHttpsUpgradeControlChange_"
-        disabled="[[isAdBlockOnlyModeEnabled_]]">
+        disabled="[[isDefaultLocked_(isAdBlockOnlyModeEnabled_)]]">
       <template is="dom-repeat" items="[[httpsUpgradeControlTypes_]]">
         <option value="[[item.value]]"
             selected="[[controlEqual_(item.value, httpsUpgradeControlType_)]]">
@@ -100,7 +113,7 @@
     <div class="start">$i18n{fingerprintingControlLabel}</div>
     <select id="fingerprintingSelectControlType" class="md-select"
         on-change="onFingerprintingSelectControlChange_"
-        disabled="[[isAdBlockOnlyModeEnabled_]]">
+        disabled="[[isDefaultLocked_(isAdBlockOnlyModeEnabled_)]]">
       <template is="dom-repeat" items="[[fingerprintingControlTypes_]]">
         <option value="[[item.value]]"
             selected="[[controlEqual_(item.value, fingerprintingControlType_)]]">
@@ -115,7 +128,7 @@
     checked="[[isFingerprintingEnabled_]]"
     label="$i18n{fingerprintingControlLabel}"
     on-settings-boolean-control-change="onFingerprintingToggleControlChange_"
-    disabled="[[isAdBlockOnlyModeEnabled_]]">
+    disabled="[[isDefaultLocked_(isAdBlockOnlyModeEnabled_)]]">
   </settings-toggle-button>
   <div class="settings-box">
     <div class="start">

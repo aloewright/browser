@@ -13,6 +13,12 @@
 #include "brave/components/brave_shields/core/common/brave_shield_constants.h"
 #include "url/gurl.h"
 
+#if defined(KO_BUILD)
+#include "brave/components/brave_shields/core/common/brave_shields_settings_values.h"
+#include "components/content_settings/core/common/content_settings.h"
+#include "components/content_settings/core/common/content_settings_utils.h"
+#endif
+
 namespace {
 
 bool CanPatternBeConvertedToWildcardSchemeAndPort(
@@ -110,5 +116,51 @@ content_settings::mojom::SessionModel GetSessionModelFromDictionary(
       static_cast<content_settings::mojom::SessionModel>(model_int.value());
   return session_model;
 }
+
+#if defined(KO_BUILD)
+bool IsKoLockedShieldsDefault(ContentSettingsType content_type) {
+  switch (content_type) {
+    case ContentSettingsType::BRAVE_SHIELDS:
+    case ContentSettingsType::BRAVE_ADS:
+    case ContentSettingsType::BRAVE_TRACKERS:
+    case ContentSettingsType::BRAVE_COSMETIC_FILTERING:
+    case ContentSettingsType::BRAVE_HTTPS_UPGRADE:
+    case ContentSettingsType::BRAVE_HTTP_UPGRADABLE_RESOURCES:
+    case ContentSettingsType::BRAVE_FINGERPRINTING_V2:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool IsKoWeakeningShieldsValue(ContentSettingsType content_type,
+                               const base::Value& value) {
+  if (value.is_none()) {
+    return false;  // Removing a rule restores the K-O default.
+  }
+  if (content_type == ContentSettingsType::BRAVE_COSMETIC_FILTERING) {
+    // Anything but aggressive (first-party hiding) is weaker.
+    const base::DictValue* dict = value.GetIfDict();
+    const std::optional<int> type =
+        dict ? dict->FindInt(brave_shields::CosmeticFilteringSetting::kName)
+             : std::nullopt;
+    return type != static_cast<int>(brave_shields::ControlType::BLOCK);
+  }
+  const ContentSetting setting = ValueToContentSetting(value);
+  switch (content_type) {
+    case ContentSettingsType::BRAVE_SHIELDS:
+      return setting == CONTENT_SETTING_BLOCK;  // Shields down.
+    case ContentSettingsType::BRAVE_ADS:
+    case ContentSettingsType::BRAVE_TRACKERS:
+    case ContentSettingsType::BRAVE_HTTP_UPGRADABLE_RESOURCES:
+    case ContentSettingsType::BRAVE_FINGERPRINTING_V2:
+      return setting == CONTENT_SETTING_ALLOW;
+    case ContentSettingsType::BRAVE_HTTPS_UPGRADE:
+      return setting != CONTENT_SETTING_BLOCK;  // Not strict.
+    default:
+      return false;
+  }
+}
+#endif  // defined(KO_BUILD)
 
 }  // namespace content_settings

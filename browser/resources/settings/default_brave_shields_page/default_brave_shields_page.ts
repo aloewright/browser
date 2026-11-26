@@ -134,6 +134,10 @@ class BraveShieldsPage extends BraveShieldsPageBase {
         type: Boolean,
         value: loadTimeData.getBoolean('isShowBraveShieldsInPageInfoEnabled')
       },
+      isKoShieldsDefaultsLocked_: {
+        type: Boolean,
+        value: loadTimeData.getBoolean('isKoShieldsDefaultsLocked')
+      },
       isHttpsByDefaultEnabled_: {
         type: Boolean,
         value: loadTimeData.getBoolean('isHttpsByDefaultEnabled')
@@ -192,6 +196,7 @@ class BraveShieldsPage extends BraveShieldsPageBase {
   private declare isBlockElementFeatureEnabled_: boolean
   private declare isForgetFirstPartyStorageFeatureEnabled_: boolean
   private declare isShowBraveShieldsInPageInfoEnabled_: boolean
+  private declare isKoShieldsDefaultsLocked_: boolean
 
   private browserProxy_: DefaultBraveShieldsBrowserProxy =
     DefaultBraveShieldsBrowserProxyImpl.getInstance()
@@ -238,6 +243,11 @@ class BraveShieldsPage extends BraveShieldsPageBase {
 
   controlEqual_ (val1: unknown, val2: unknown) {
     return val1 === val2
+  }
+
+  // Blocking defaults are fixed in K-O builds.
+  isDefaultLocked_ (isAdBlockOnlyModeEnabled: boolean) {
+    return isAdBlockOnlyModeEnabled || this.isKoShieldsDefaultsLocked_
   }
 
   onShieldsSettingsChanged_ () {

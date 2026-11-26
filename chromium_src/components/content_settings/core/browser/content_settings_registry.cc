@@ -75,7 +75,13 @@ void ContentSettingsRegistry::BraveInit() {
            PermissionSettingsInfo::EXCEPTIONS_ON_SECURE_AND_INSECURE_ORIGINS);
 
   Register(ContentSettingsType::BRAVE_HTTPS_UPGRADE,
-           brave_shields::kHTTPSUpgrades, CONTENT_SETTING_ASK,
+           brave_shields::kHTTPSUpgrades,
+#if defined(KO_BUILD)
+           // K-O: strict HTTPS upgrades by default.
+           CONTENT_SETTING_BLOCK,
+#else
+           CONTENT_SETTING_ASK,
+#endif
            WebsiteSettingsInfo::SYNCABLE, /*allowlisted_schemes=*/{},
            /*valid_settings=*/
            {CONTENT_SETTING_ALLOW, CONTENT_SETTING_ASK, CONTENT_SETTING_BLOCK},
@@ -388,7 +394,13 @@ void ContentSettingsRegistry::BraveInit() {
   website_settings_registry_->Register(
       ContentSettingsType::BRAVE_COSMETIC_FILTERING,
       brave_shields::kCosmeticFiltering,
+#if defined(KO_BUILD)
+      // K-O: aggressive blocking (first-party too) by default.
+      brave_shields::CosmeticFilteringSetting::ToValue(
+          brave_shields::ControlType::BLOCK),
+#else
       brave_shields::CosmeticFilteringSetting::DefaultValue(),
+#endif
       WebsiteSettingsInfo::SYNCABLE, WebsiteSettingsInfo::NOT_LOSSY,
       WebsiteSettingsInfo::TOP_ORIGIN_ONLY_SCOPE,
       WebsiteSettingsRegistry::DESKTOP |

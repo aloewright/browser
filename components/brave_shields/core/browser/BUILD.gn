@@ -70,7 +70,10 @@ static_library("browser") {
     "//brave/components/brave_shields/core/common/adblock",
   ]
 
-  deps += [ "//brave/components/ko/buildflags" ]
+  deps += [
+    "//brave/components/ko/buildflags",
+    "//brave/components/ko/shields/buildflags",
+  ]
 
   if (is_ko) {
     sources += [

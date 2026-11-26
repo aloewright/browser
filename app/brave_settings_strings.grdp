@@ -436,6 +436,12 @@
   <message name="IDS_SETTINGS_BRAVE_SHIELDS_DEFAULTS_DESCRIPTION_2" desc="The description for Brave shields Defaults sub-section in settings.">
     This will block most ads on websites.
   </message>
+  <message name="IDS_SETTINGS_KO_SHIELDS_DEFAULTS_LOCKED" desc="Notice in K-O builds that the default Shields settings are fixed.">
+    K-O sets these defaults and they can't be changed here. You can still adjust Shields for a single site from the Shields panel.
+  </message>
+  <message name="IDS_SETTINGS_KO_FILTER_LIST_LOCKED" desc="Tooltip in K-O builds for a filter list that is always on.">
+    Always on in K-O
+  </message>
   <message name="IDS_SETTINGS_BRAVE_SHIELDS_SHOW_STATS_BLOCKED_BADGE_LABEL" desc="Default Brave show stats blocked badge control setting label">
     Show the number of blocked items on the Shields icon
   </message>

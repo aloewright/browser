@@ -23,6 +23,8 @@ export interface FilterList {
   support_url: string
   component_id: string
   enabled: boolean
+  // K-O core list that cannot be turned off.
+  locked?: boolean
 }
 
 export interface SubscriptionInfo {
