@@ -55,6 +55,10 @@ class FakeNetworkContext : public network::TestNetworkContextWithHostResolver {
       mojo::PendingRemote<network::mojom::SocketObserver> observer,
       CreateTCPConnectedSocketCallback callback) override {
     requests_.push_back(remote_addr_list);
+    if (drop_replies_) {
+      // As when the network service crashes: the reply never comes.
+      return;
+    }
     if (connect_error_ != net::OK) {
       std::move(callback).Run(connect_error_, std::nullopt, std::nullopt,
                               mojo::ScopedDataPipeConsumerHandle(),
@@ -88,11 +92,13 @@ class FakeNetworkContext : public network::TestNetworkContextWithHostResolver {
   }
   void set_connect_error(int error) { connect_error_ = error; }
   void set_peer_override(net::IPEndPoint peer) { peer_override_ = peer; }
+  void set_drop_replies(bool drop) { drop_replies_ = drop; }
 
  private:
   std::vector<net::AddressList> requests_;
   std::vector<mojo::ScopedMessagePipeHandle> socket_pipes_;
   int connect_error_ = net::OK;
+  bool drop_replies_ = false;
   std::optional<net::IPEndPoint> peer_override_;
 };
 
@@ -209,6 +215,22 @@ TEST_F(KOMachineBridgeTest, ConnectErrorIsReported) {
   ConnectResponse response = Connect("studio");
   EXPECT_EQ(mojom::ConnectResult::kConnectFailed, response.result);
   EXPECT_FALSE(response.has_streams);
+}
+
+TEST_F(KOMachineBridgeTest, DroppedConnectReplyFailsClosed) {
+  AddMachine("studio", "100.64.0.10");
+  network_context_.set_drop_replies(true);
+  // Each dropped reply is answered and frees its slot, and the bridge pipe
+  // stays usable.
+  for (size_t i = 0; i <= kMaxConnectionsPerPage; ++i) {
+    ConnectResponse response = Connect("studio");
+    EXPECT_EQ(mojom::ConnectResult::kConnectFailed, response.result);
+    EXPECT_FALSE(response.has_streams);
+  }
+  EXPECT_TRUE(remote_.is_connected());
+
+  network_context_.set_drop_replies(false);
+  EXPECT_EQ(mojom::ConnectResult::kOk, Connect("studio").result);
 }
 
 TEST_F(KOMachineBridgeTest, LimitsOpenConnections) {

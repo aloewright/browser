@@ -11,6 +11,7 @@
 #include "base/functional/bind.h"
 #include "brave/components/ko/machines/core/machine.h"
 #include "brave/components/ko/machines/core/prefs.h"
+#include "mojo/public/cpp/bindings/callback_helpers.h"
 #include "net/base/net_errors.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/mojom/network_context.mojom.h"
@@ -147,14 +148,22 @@ void MachineBridge::OnResolved(
 
   mojo::Remote<network::mojom::TCPConnectedSocket> socket;
   auto socket_receiver = socket.BindNewPipeAndPassReceiver();
-  // Connects to the vetted addresses only; nothing is re-resolved.
+  // Connects to the vetted addresses only; nothing is re-resolved. If the
+  // network service goes away the reply is dropped; report a failure then, so
+  // the page's call is answered and the slot is freed.
   network_context->CreateTCPConnectedSocket(
       /*local_addr=*/std::nullopt, *addresses, std::move(options),
       net::MutableNetworkTrafficAnnotationTag(kTrafficAnnotation),
       std::move(socket_receiver), /*observer=*/mojo::NullRemote(),
-      base::BindOnce(&MachineBridge::OnConnected, weak_factory_.GetWeakPtr(),
-                     std::move(allowlist), std::move(socket),
-                     std::move(connection), std::move(callback)));
+      mojo::WrapCallbackWithDefaultInvokeIfNotRun(
+          base::BindOnce(&MachineBridge::OnConnected,
+                         weak_factory_.GetWeakPtr(), std::move(allowlist),
+                         std::move(socket), std::move(connection),
+                         std::move(callback)),
+          static_cast<int32_t>(net::ERR_FAILED),
+          std::optional<net::IPEndPoint>(), std::optional<net::IPEndPoint>(),
+          mojo::ScopedDataPipeConsumerHandle(),
+          mojo::ScopedDataPipeProducerHandle()));
 }
 
 void MachineBridge::OnConnected(

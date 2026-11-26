@@ -75,14 +75,18 @@ export class MojoSocketChannel {
     return this.queuedBytes
   }
 
-  // Data that arrives before noVNC attaches is held until it does.
+  // Data that arrives before noVNC attaches is held, then delivered after the
+  // setter returns: RFB sets this in Websock.attach() and starts its handshake
+  // only afterwards, so earlier data would fail with "Unknown init state".
   get onmessage(): ((event: MessageEvent) => void) | null {
     return this.messageHandler
   }
 
   set onmessage(handler: ((event: MessageEvent) => void) | null) {
     this.messageHandler = handler
-    this.deliverReceived()
+    if (handler && this.received.length > 0) {
+      queueMicrotask(() => this.deliverReceived())
+    }
   }
 
   send(data: ArrayBuffer | ArrayBufferView) {
