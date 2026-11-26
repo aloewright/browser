@@ -32,24 +32,17 @@ constexpr auto kAllowedChannels = std::to_array<std::string_view>(
 constexpr auto kAllowedOs =
     std::to_array<std::string_view>({"mac", "linux", "windows"});
 
-struct PropertyRule {
-  std::string_view key;
-  base::span<const std::string_view> values;
-};
-
+// Each event takes at most one property, and it is required.
 struct EventRule {
   std::string_view name;
-  base::span<const PropertyRule> properties;  // All required.
+  std::string_view property;  // Empty: no properties.
 };
 
-constexpr PropertyRule kSessionLengthRules[] = {{"bucket", kBucketValues}};
-constexpr PropertyRule kFeatureUsedRules[] = {{"feature", kFeatureValues}};
-
 constexpr EventRule kEventRules[] = {
-    {kEventBrowserStart, {}},
-    {kEventSessionLengthBucket, kSessionLengthRules},
-    {kEventCrashFreeSession, {}},
-    {kEventFeatureUsed, kFeatureUsedRules},
+    {kEventBrowserStart, ""},
+    {kEventSessionLengthBucket, "bucket"},
+    {kEventCrashFreeSession, ""},
+    {kEventFeatureUsed, "feature"},
 };
 
 const EventRule* FindEventRule(std::string_view event) {
@@ -59,6 +52,16 @@ const EventRule* FindEventRule(std::string_view event) {
     }
   }
   return nullptr;
+}
+
+base::span<const std::string_view> AllowedValues(std::string_view property) {
+  if (property == "bucket") {
+    return kBucketValues;
+  }
+  if (property == "feature") {
+    return kFeatureValues;
+  }
+  return {};
 }
 
 bool IsDigits(std::string_view s) {
@@ -135,12 +138,12 @@ std::optional<base::DictValue> ScrubEventProperties(
     return std::nullopt;
   }
   base::DictValue scrubbed;
-  for (const auto& property : rule->properties) {
-    const std::string* value = props.FindString(property.key);
-    if (!value || !base::Contains(property.values, *value)) {
+  if (!rule->property.empty()) {
+    const std::string* value = props.FindString(rule->property);
+    if (!value || !base::Contains(AllowedValues(rule->property), *value)) {
       return std::nullopt;
     }
-    scrubbed.Set(property.key, *value);
+    scrubbed.Set(rule->property, *value);
   }
   // Anything not in the rule is dropped.
   return scrubbed;
