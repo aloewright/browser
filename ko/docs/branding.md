@@ -139,6 +139,7 @@ What the macOS build reads (all present):
   `components/omnibox/browser/vector_icons/ko/*.icon` (omnibox, infobars).
 - DMG: `build/mac/dmg-background.ko.png`, `dmg[-development].ko.icns`,
   `ds_store/DS_Store.ko`.
+- First-run welcome logo: `components/brave_welcome_ui/assets/ko_logo@2x.webp`.
 
 Linux uses `app/theme/ko/linux/*` and `default_100_percent/ko/linux/*`.
 `app/theme/ko/win/ko.ico` is generated but not wired (no Windows branding).
@@ -150,8 +151,10 @@ Linux uses `app/theme/ko/linux/*` and `default_100_percent/ko/linux/*`.
 - **DMG background**: `DS_Store.ko` was generated on Linux with icon positions
   but no background alias. Run `build/mac/ds_store/update_ds_store_files.py`
   on a Mac to add it.
-- **Shields button** still shows Brave's lion icon (owned by the Shields
-  area), so "the Brave icon" is kept in Shields onboarding text.
+- **Lion icons left**: the Shields button (owned by the Shields area), so
+  "the Brave icon" is kept in Shields onboarding text; and the Leo
+  `social-brave-release-favicon-fullheight-color` icon in the newer welcome
+  page, which is also Brave Search's engine icon and so is not replaced.
 - **Importing from Brave**: passwords cannot be imported, since K-O's Keychain
   key differs from Brave's. Export a CSV from Brave and import it instead.
 - **Linux policies** are still read from Brave's `/etc/brave/policies`.

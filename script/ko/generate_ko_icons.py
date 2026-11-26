@@ -30,6 +30,8 @@ SOURCE = os.path.join(KO, 'source')
 P100 = os.path.join(THEME, 'default_100_percent', 'ko')
 P200 = os.path.join(THEME, 'default_200_percent', 'ko')
 MAC_BUILD = os.path.join(BRAVE_DIR, 'build', 'mac')
+WELCOME_ASSETS = os.path.join(BRAVE_DIR, 'components', 'brave_welcome_ui',
+                              'assets')
 
 # Colours. Release: charcoal tile; development: slate blue tile.
 INK = '#F4F5F7'
@@ -465,6 +467,15 @@ def render():
 
     _png(src('dmg_background.svg'),
          os.path.join(MAC_BUILD, 'dmg-background.ko.png'), 602, 320)
+
+    # First-run welcome page logo (shown at 150 px).
+    welcome = os.path.join(WELCOME_ASSETS, 'ko_logo@2x.webp')
+    _png(full['release'], welcome + '.png', 300)
+    subprocess.check_call([
+        'convert', welcome + '.png', '-strip', '-define', 'webp:lossless=true',
+        welcome
+    ])
+    os.remove(welcome + '.png')
 
 
 def main():
