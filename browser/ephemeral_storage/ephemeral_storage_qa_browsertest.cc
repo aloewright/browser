@@ -22,7 +22,6 @@
 #include "chrome/browser/ui/tabs/tab_enums.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
-#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
 #include "components/content_settings/core/browser/cookie_settings.h"
@@ -152,14 +151,6 @@ class EphemeralStorageQaBrowserTest : public InProcessBrowserTest {
     ASSERT_TRUE(embedded_test_server()->Start());
     mock_cert_verifier_.mock_cert_verifier()->set_default_result(net::OK);
     host_resolver()->AddRule("*", "127.0.0.1");
-#if defined(KO_BUILD)
-    // K-O upgrades http:// navigations strictly (HTTP interstitial on
-    // failure); the QA pages are served over plain HTTP.
-    browser()->GetProfile()->GetPrefs()->SetList(
-        prefs::kHttpAllowlist, base::ListValue()
-                                   .Append("dev-pages.brave.software")
-                                   .Append("dev-pages.bravesoftware.com"));
-#endif
   }
 
   void TearDownOnMainThread() override {
