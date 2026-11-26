@@ -13,6 +13,8 @@
 
 #include "base/memory/scoped_refptr.h"
 #include "brave/browser/net/resource_context_data.h"
+#include "brave/components/containers/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/chrome_content_browser_client.h"
@@ -226,6 +228,31 @@ class BraveContentBrowserClient : public ChromeContentBrowserClient {
       const content::StoragePartitionConfig& partition_config) const override;
 
   bool AllowSignedExchange(content::BrowserContext* context) override;
+
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+  // K-O: per-container proxies.
+  void ConfigureNetworkContextParams(
+      content::BrowserContext* context,
+      bool in_memory,
+      const base::FilePath& relative_partition_path,
+      network::mojom::NetworkContextParams* network_context_params,
+      cert_verifier::mojom::CertVerifierCreationParams*
+          cert_verifier_creation_params) override;
+  std::unique_ptr<content::LoginDelegate> CreateLoginDelegate(
+      const net::AuthChallengeInfo& auth_info,
+      content::WebContents* web_contents,
+      content::BrowserContext* browser_context,
+      const content::GlobalRequestID& request_id,
+      bool is_request_for_primary_main_frame_navigation,
+      bool is_request_for_navigation,
+      const GURL& url,
+      scoped_refptr<net::HttpResponseHeaders> response_headers,
+      bool first_auth_attempt,
+      bool do_not_prompt_for_login,
+      content::GuestPageHolder* guest,
+      content::LoginDelegate::LoginAuthRequiredCallback auth_required_callback)
+      override;
+#endif  // BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
 
 #if BUILDFLAG(IS_ANDROID)
   void GetAdditionalMappedFilesForChildProcess(

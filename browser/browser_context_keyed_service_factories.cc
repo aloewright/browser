@@ -35,6 +35,7 @@
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
 #include "brave/components/commander/common/buildflags/buildflags.h"
 #include "brave/components/containers/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
@@ -125,6 +126,10 @@
 #include "brave/browser/containers/containers_service_factory.h"
 #endif
 
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+#include "brave/browser/containers/ko_container_proxy_service_factory.h"
+#endif
+
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/browser/traffic_control/traffic_control_service_factory.h"
 #endif
@@ -209,6 +214,9 @@ void EnsureBrowserContextKeyedServiceFactoriesBuilt() {
 
 #if BUILDFLAG(ENABLE_CONTAINERS)
   ContainersServiceFactory::GetInstance();
+#endif
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+  KoContainerProxyServiceFactory::GetInstance();
 #endif
 
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)

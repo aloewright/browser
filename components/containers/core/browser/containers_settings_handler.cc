@@ -15,6 +15,13 @@
 #include "third_party/abseil-cpp/absl/container/flat_hash_map.h"
 #include "third_party/re2/src/re2/re2.h"
 
+#if BUILDFLAG(IS_KO)
+#include "base/functional/bind.h"
+#include "base/logging.h"
+#include "base/strings/string_util.h"
+#include "base/types/expected.h"
+#endif
+
 namespace containers {
 
 namespace {
@@ -34,6 +41,31 @@ bool IsBackgroundColorValid(SkColor color) {
   return SkColorGetA(color) == SK_AlphaOPAQUE;
 }
 
+#if BUILDFLAG(IS_KO)
+struct ProxyUpdate {
+  std::optional<ParsedContainerProxy> proxy;
+  bool keep_credentials = false;
+};
+
+base::expected<ProxyUpdate, mojom::ContainerOperationError> ParseProxyUpdate(
+    const mojom::ContainerProxyPtr& proxy) {
+  ProxyUpdate update;
+  if (!proxy || base::TrimWhitespaceASCII(proxy->url, base::TRIM_ALL).empty()) {
+    return update;
+  }
+  auto parsed = ParseContainerProxyUrl(proxy->url);
+  if (!parsed.has_value()) {
+    // Never log the URL itself: it may carry credentials.
+    VLOG(1) << "Rejected container proxy: "
+            << ContainerProxyErrorToString(parsed.error());
+    return base::unexpected(mojom::ContainerOperationError::kInvalidProxy);
+  }
+  update.keep_credentials = !parsed->credentials && proxy->has_credentials;
+  update.proxy = std::move(*parsed);
+  return update;
+}
+#endif  // BUILDFLAG(IS_KO)
+
 }  // namespace
 
 ContainersSettingsHandler::ContainersSettingsHandler(PrefService* prefs)
@@ -47,6 +79,21 @@ ContainersSettingsHandler::ContainersSettingsHandler(PrefService* prefs)
                           base::Unretained(this)));
 }
 
+#if BUILDFLAG(IS_KO)
+ContainersSettingsHandler::ContainersSettingsHandler(
+    PrefService* prefs,
+    ProxyDelegate* proxy_delegate)
+    : ContainersSettingsHandler(prefs) {
+  proxy_delegate_ = proxy_delegate;
+  if (proxy_delegate_) {
+    pref_change_registrar_.Add(
+        kKoContainerProxiesPref,
+        base::BindRepeating(&ContainersSettingsHandler::OnContainersChanged,
+                            base::Unretained(this)));
+  }
+}
+#endif  // BUILDFLAG(IS_KO)
+
 ContainersSettingsHandler::~ContainersSettingsHandler() {}
 
 void ContainersSettingsHandler::BindUI(
@@ -56,7 +103,7 @@ void ContainersSettingsHandler::BindUI(
 }
 
 void ContainersSettingsHandler::GetContainers(GetContainersCallback callback) {
-  std::move(callback).Run(GetContainersFromPrefs(*prefs_));
+  std::move(callback).Run(GetContainersForUI());
 }
 
 void ContainersSettingsHandler::AddContainer(mojom::ContainerPtr container,
@@ -71,10 +118,27 @@ void ContainersSettingsHandler::AddContainer(mojom::ContainerPtr container,
     return;
   }
 
-  auto containers = GetContainersFromPrefs(*prefs_);
+#if BUILDFLAG(IS_KO)
+  if (proxy_delegate_) {
+    auto update = ParseProxyUpdate(container->proxy);
+    if (!update.has_value()) {
+      std::move(callback).Run(update.error());
+      return;
+    }
+    container->proxy = nullptr;
+    container->id = base::Uuid::GenerateRandomV4().AsLowercaseString();
+    const std::string id = container->id;
+    proxy_delegate_->SetProxy(
+        id, std::move(update->proxy), /*keep_credentials=*/false,
+        base::BindOnce(&ContainersSettingsHandler::OnProxyStored,
+                       weak_ptr_factory_.GetWeakPtr(), std::move(container),
+                       /*is_new=*/true, std::move(callback)));
+    return;
+  }
+#endif  // BUILDFLAG(IS_KO)
+
   container->id = base::Uuid::GenerateRandomV4().AsLowercaseString();
-  containers.push_back(std::move(container));
-  SetContainersToPrefs(std::move(containers), *prefs_);
+  AddContainerToPrefs(std::move(container));
   std::move(callback).Run(std::nullopt);
 }
 
@@ -91,15 +155,29 @@ void ContainersSettingsHandler::UpdateContainer(
     return;
   }
 
-  auto containers = GetContainersFromPrefs(*prefs_);
-  auto it = std::ranges::find(containers, container->id, &mojom::Container::id);
-  if (it == containers.end()) {
-    std::move(callback).Run(mojom::ContainerOperationError::kNotFound);
+#if BUILDFLAG(IS_KO)
+  if (proxy_delegate_) {
+    if (!GetContainerFromPrefs(*prefs_, container->id)) {
+      std::move(callback).Run(mojom::ContainerOperationError::kNotFound);
+      return;
+    }
+    auto update = ParseProxyUpdate(container->proxy);
+    if (!update.has_value()) {
+      std::move(callback).Run(update.error());
+      return;
+    }
+    container->proxy = nullptr;
+    const std::string id = container->id;
+    proxy_delegate_->SetProxy(
+        id, std::move(update->proxy), update->keep_credentials,
+        base::BindOnce(&ContainersSettingsHandler::OnProxyStored,
+                       weak_ptr_factory_.GetWeakPtr(), std::move(container),
+                       /*is_new=*/false, std::move(callback)));
     return;
   }
-  *it = std::move(container);
-  SetContainersToPrefs(std::move(containers), *prefs_);
-  std::move(callback).Run(std::nullopt);
+#endif  // BUILDFLAG(IS_KO)
+
+  std::move(callback).Run(UpdateContainerInPrefs(std::move(container)));
 }
 
 void ContainersSettingsHandler::RemoveContainer(
@@ -180,8 +258,60 @@ ContainersSettingsHandler::ValidateEditableContainerProperties(
 void ContainersSettingsHandler::OnContainersChanged() {
   // Notify UI about container list changes (from this window or others).
   if (ui_) {
-    ui_->OnContainersChanged(GetContainersFromPrefs(*prefs_));
+    ui_->OnContainersChanged(GetContainersForUI());
   }
 }
+
+std::vector<mojom::ContainerPtr> ContainersSettingsHandler::GetContainersForUI()
+    const {
+  auto containers = GetContainersFromPrefs(*prefs_);
+#if BUILDFLAG(IS_KO)
+  if (proxy_delegate_) {
+    for (auto& container : containers) {
+      container->proxy = proxy_delegate_->GetProxyForUI(container->id);
+    }
+  }
+#endif  // BUILDFLAG(IS_KO)
+  return containers;
+}
+
+void ContainersSettingsHandler::AddContainerToPrefs(
+    mojom::ContainerPtr container) {
+  auto containers = GetContainersFromPrefs(*prefs_);
+  containers.push_back(std::move(container));
+  SetContainersToPrefs(std::move(containers), *prefs_);
+}
+
+std::optional<mojom::ContainerOperationError>
+ContainersSettingsHandler::UpdateContainerInPrefs(
+    mojom::ContainerPtr container) {
+  auto containers = GetContainersFromPrefs(*prefs_);
+  auto it = std::ranges::find(containers, container->id, &mojom::Container::id);
+  if (it == containers.end()) {
+    return mojom::ContainerOperationError::kNotFound;
+  }
+  *it = std::move(container);
+  SetContainersToPrefs(std::move(containers), *prefs_);
+  return std::nullopt;
+}
+
+#if BUILDFLAG(IS_KO)
+void ContainersSettingsHandler::OnProxyStored(mojom::ContainerPtr container,
+                                              bool is_new,
+                                              OperationCallback callback,
+                                              bool success) {
+  if (!success) {
+    std::move(callback).Run(
+        mojom::ContainerOperationError::kProxyCredentialsUnavailable);
+    return;
+  }
+  if (is_new) {
+    AddContainerToPrefs(std::move(container));
+    std::move(callback).Run(std::nullopt);
+    return;
+  }
+  std::move(callback).Run(UpdateContainerInPrefs(std::move(container)));
+}
+#endif  // BUILDFLAG(IS_KO)
 
 }  // namespace containers

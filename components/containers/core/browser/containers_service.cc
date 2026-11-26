@@ -23,6 +23,11 @@
 #include "brave/components/containers/core/mojom/containers.mojom.h"
 #include "components/prefs/pref_service.h"
 
+#if BUILDFLAG(IS_KO)
+#include "base/uuid.h"
+#include "brave/components/containers/core/browser/containers_settings_handler.h"
+#endif
+
 namespace containers {
 
 ContainersService::ContainersService(PrefService* prefs,
@@ -95,6 +100,25 @@ mojom::ContainerPtr ContainersService::GetOrCreateTemporaryContainerByName(
   SetLocallyUsedContainerToPrefs(container, *prefs_);
   return container;
 }
+
+#if BUILDFLAG(IS_KO)
+mojom::ContainerPtr ContainersService::CreateContainer(
+    std::string_view name,
+    mojom::Icon icon,
+    SkColor background_color) {
+  auto container =
+      mojom::Container::New(base::Uuid::GenerateRandomV4().AsLowercaseString(),
+                            std::string(name), icon, background_color);
+  if (ContainersSettingsHandler::ValidateEditableContainerProperties(
+          container)) {
+    return nullptr;
+  }
+  auto containers = GetContainersFromPrefs(*prefs_);
+  containers.push_back(container.Clone());
+  SetContainersToPrefs(containers, *prefs_);
+  return container;
+}
+#endif  // BUILDFLAG(IS_KO)
 
 mojom::ContainerPtr ContainersService::GetRuntimeContainerById(
     std::string_view id) const {

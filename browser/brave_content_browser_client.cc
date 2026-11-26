@@ -252,6 +252,9 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #include "brave/components/containers/core/common/features.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
 #endif
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+#include "brave/browser/containers/ko_container_proxy_hooks.h"
+#endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/browser/traffic_control/traffic_control_navigation_throttle.h"
 #include "brave/browser/traffic_control/traffic_control_service_factory.h"
@@ -1312,6 +1315,13 @@ void BraveContentBrowserClient::WillCreateURLLoaderFactory(
     network::mojom::URLLoaderFactoryOverridePtr* factory_override,
     scoped_refptr<base::SequencedTaskRunner> navigation_response_task_runner,
     bool is_for_network_service) {
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+  if (type == URLLoaderFactoryType::kPrefetch &&
+      containers::MaybeBlockKoContainerPrefetch(frame, factory_builder)) {
+    return;
+  }
+#endif  // BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+
   // TODO(iefremov): Skip proxying for certain requests?
   base::OnceCallback<void(bool)> set_bypass_redirect_checks;
   if (base::FeatureList::IsEnabled(features::kBraveRequestInfoUniquePtr)) {
@@ -1817,6 +1827,48 @@ bool BraveContentBrowserClient::AllowSignedExchange(
   // exchanges.
   return false;
 }
+
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+void BraveContentBrowserClient::ConfigureNetworkContextParams(
+    content::BrowserContext* context,
+    bool in_memory,
+    const base::FilePath& relative_partition_path,
+    network::mojom::NetworkContextParams* network_context_params,
+    cert_verifier::mojom::CertVerifierCreationParams*
+        cert_verifier_creation_params) {
+  ChromeContentBrowserClient::ConfigureNetworkContextParams(
+      context, in_memory, relative_partition_path, network_context_params,
+      cert_verifier_creation_params);
+  containers::ConfigureKoContainerNetworkContext(
+      context, relative_partition_path, network_context_params);
+}
+
+std::unique_ptr<content::LoginDelegate>
+BraveContentBrowserClient::CreateLoginDelegate(
+    const net::AuthChallengeInfo& auth_info,
+    content::WebContents* web_contents,
+    content::BrowserContext* browser_context,
+    const content::GlobalRequestID& request_id,
+    bool is_request_for_primary_main_frame_navigation,
+    bool is_request_for_navigation,
+    const GURL& url,
+    scoped_refptr<net::HttpResponseHeaders> response_headers,
+    bool first_auth_attempt,
+    bool do_not_prompt_for_login,
+    content::GuestPageHolder* guest,
+    content::LoginDelegate::LoginAuthRequiredCallback auth_required_callback) {
+  if (auto delegate = containers::MaybeCreateKoContainerProxyLoginDelegate(
+          auth_info, web_contents, request_id, first_auth_attempt,
+          auth_required_callback)) {
+    return delegate;
+  }
+  return ChromeContentBrowserClient::CreateLoginDelegate(
+      auth_info, web_contents, browser_context, request_id,
+      is_request_for_primary_main_frame_navigation, is_request_for_navigation,
+      url, std::move(response_headers), first_auth_attempt,
+      do_not_prompt_for_login, guest, std::move(auth_required_callback));
+}
+#endif  // BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
 
 #if !BUILDFLAG(IS_ANDROID)
 content::HidDelegate* BraveContentBrowserClient::GetHidDelegate() {

@@ -1053,6 +1053,7 @@ source_set("ui") {
     "//brave/components/brave_vpn/common/buildflags",
     "//brave/components/constants",
     "//brave/components/containers/buildflags",
+    "//brave/components/ko/buildflags",
     "//brave/components/cosmetic_filters/resources/data:generated_resources",
     "//brave/components/de_amp/common",
     "//brave/components/debounce/core/browser",
