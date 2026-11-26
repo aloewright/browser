@@ -21,7 +21,7 @@
 namespace {
 
 void UpdateBraveScheme(NavigateParams* params) {
-  if (params->url.SchemeIs(content::kBraveUIScheme)) {
+  if (content::IsBraveUIAliasScheme(params->url.scheme())) {
     GURL::Replacements replacements;
     replacements.SetSchemeStr(content::kChromeUIScheme);
     params->url = params->url.ReplaceComponents(replacements);

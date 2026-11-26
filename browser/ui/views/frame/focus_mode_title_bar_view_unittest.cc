@@ -113,7 +113,11 @@ TEST_F(FocusModeTitleBarViewTest, UpdatesOnNavigation) {
   EXPECT_EQ(GetDomainText(), u"http://insecure.example.com");
 
   tab->NavigateAndCommit(GURL("chrome://abc"));
+#if defined(KO_BUILD)
+  EXPECT_EQ(GetDomainText(), u"ko://abc");
+#else
   EXPECT_EQ(GetDomainText(), u"brave://abc");
+#endif
 
   tab->NavigateAndCommit(GURL("chrome-untrusted://print"));
   EXPECT_EQ(GetDomainText(), u"chrome-untrusted://print");

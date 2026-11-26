@@ -9,9 +9,9 @@
 
 #include "base/strings/string_util.h"
 #include "brave/components/constants/pref_names.h"
-#include "brave/components/constants/url_constants.h"
 #include "chrome/browser/profiles/profile.h"
 #include "components/prefs/pref_service.h"
+#include "content/public/common/url_constants.h"
 
 BraveAutocompleteSchemeClassifier::BraveAutocompleteSchemeClassifier(
     Profile* profile)
@@ -20,7 +20,7 @@ BraveAutocompleteSchemeClassifier::BraveAutocompleteSchemeClassifier(
 BraveAutocompleteSchemeClassifier::~BraveAutocompleteSchemeClassifier() =
     default;
 
-// Without this override, typing in brave:// URLs will search Google
+// Without this override, typing brave:// or ko:// URLs runs a search.
 metrics::OmniboxInputType
 BraveAutocompleteSchemeClassifier::GetInputTypeForScheme(
     const std::string& scheme) const {
@@ -28,7 +28,7 @@ BraveAutocompleteSchemeClassifier::GetInputTypeForScheme(
     return metrics::OmniboxInputType::EMPTY;
   }
   if (base::IsStringASCII(scheme) &&
-      base::EqualsCaseInsensitiveASCII(scheme, kBraveUIScheme)) {
+      content::IsBraveUIAliasScheme(base::ToLowerASCII(scheme))) {
     return metrics::OmniboxInputType::URL;
   }
 

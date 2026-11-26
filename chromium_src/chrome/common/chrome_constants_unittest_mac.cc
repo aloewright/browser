@@ -12,7 +12,9 @@
 // Only checks prefix (Brave Browser/Brave Origin) because test build don't
 // update branding.
 TEST(ChromeConstantsTest, ProductStringTest) {
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if defined(KO_BUILD)
+  EXPECT_EQ(std::string(chrome::kFrameworkName).substr(0, 3), "K-O");
+#elif BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   EXPECT_EQ(std::string(chrome::kFrameworkName).substr(0, 12), "Brave Origin");
 #else
   EXPECT_EQ(std::string(chrome::kFrameworkName).substr(0, 13),

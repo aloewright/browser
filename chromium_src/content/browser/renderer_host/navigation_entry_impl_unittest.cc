@@ -36,14 +36,19 @@ class BraveNavigationEntryTest : public testing::Test {
 
 TEST_F(BraveNavigationEntryTest,
        GetTitleForDisplayConvertsChromeSchemeToBrave) {
+#if defined(KO_BUILD)
+  const std::u16string prefix = u"ko://";
+#else
+  const std::u16string prefix = u"brave://";
+#endif
   auto entry = CreateEntry(GURL("chrome://settings"));
-  EXPECT_EQ(u"brave://settings", entry->GetTitleForDisplay());
+  EXPECT_EQ(prefix + u"settings", entry->GetTitleForDisplay());
 
   entry = CreateEntry(GURL("chrome://history"));
-  EXPECT_EQ(u"brave://history", entry->GetTitleForDisplay());
+  EXPECT_EQ(prefix + u"history", entry->GetTitleForDisplay());
 
   entry = CreateEntry(GURL("chrome://flags"));
-  EXPECT_EQ(u"brave://flags", entry->GetTitleForDisplay());
+  EXPECT_EQ(prefix + u"flags", entry->GetTitleForDisplay());
 }
 
 TEST_F(BraveNavigationEntryTest, GetTitleForDisplayPreservesExplicitTitle) {

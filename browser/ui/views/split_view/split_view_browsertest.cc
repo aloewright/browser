@@ -506,10 +506,15 @@ IN_PROC_BROWSER_TEST_F(SplitViewBrowserTest, SelectTabTest) {
   ASSERT_TRUE(
       content::NavigateToURL(browser()->tab_strip_model()->GetWebContentsAt(2),
                              GURL("chrome://settings")));
-  EXPECT_EQ(u"brave://settings", brave_multi_contents_view()
-                                     ->mini_toolbar_for_testing(0)
-                                     ->domain_label_for_testing()
-                                     ->GetText());
+#if defined(KO_BUILD)
+  constexpr char16_t kSettings[] = u"ko://settings";
+#else
+  constexpr char16_t kSettings[] = u"brave://settings";
+#endif
+  EXPECT_EQ(kSettings, brave_multi_contents_view()
+                           ->mini_toolbar_for_testing(0)
+                           ->domain_label_for_testing()
+                           ->GetText());
 
   // Activate non split view tab.
   tab_strip()->SelectTab(tab_strip()->tab_at(0), GetDummyEvent());

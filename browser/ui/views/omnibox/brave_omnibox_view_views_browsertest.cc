@@ -351,7 +351,11 @@ IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsTest, DoNotSanitizeInternalURLS) {
   std::string text_from_clipboard = ui::clipboard_test_util::ReadAsciiText(
       clipboard, ui::ClipboardBuffer::kCopyPaste,
       /* data_dst = */ nullptr);
+#if defined(KO_BUILD)
+  EXPECT_EQ(text_from_clipboard, "ko://settings/?utm_ad=1");
+#else
   EXPECT_EQ(text_from_clipboard, "brave://settings/?utm_ad=1");
+#endif
 }
 
 IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsDisabledFeatureTest,

@@ -61,7 +61,19 @@ std::string GetDesktopName(base::Environment* env) {
   }
 #if defined(OFFICIAL_BUILD)
   version_info::Channel product_channel(chrome::GetChannel());
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if defined(KO_BUILD)
+  // Matches the package name in //brave/build/config.gni.
+  switch (product_channel) {
+    case version_info::Channel::DEV:
+      return "k-o-dev.desktop";
+    case version_info::Channel::BETA:
+      return "k-o-beta.desktop";
+    case version_info::Channel::CANARY:
+      return "k-o-nightly.desktop";
+    default:
+      return "k-o.desktop";
+  }
+#elif BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   switch (product_channel) {
     case version_info::Channel::DEV:
       return "brave-origin-dev.desktop";
@@ -92,7 +104,11 @@ std::string GetDesktopName(base::Environment* env) {
       !name.empty()) {
     return name;
   }
+#if defined(KO_BUILD)
+  return "k-o.desktop";
+#else
   return "brave-browser.desktop";
+#endif
 #endif
 }
 #endif  // BUILDFLAG(IS_LINUX)
