@@ -151,7 +151,8 @@ Linux uses `app/theme/ko/linux/*` and `default_100_percent/ko/linux/*`.
 ## Known limitations
 
 - **Windows and Android** keep Brave's identity (installer GUIDs, profile
-  dir, strings).
+  dir, strings). The `ko://` alias and display follow `KO_BUILD`, so they
+  apply there too whenever `is_ko` is set.
 - **DMG background**: `DS_Store.ko` was generated on Linux with icon positions
   but no background alias. Run `build/mac/ds_store/update_ds_store_files.py`
   on a Mac to add it.
@@ -168,7 +169,8 @@ Linux uses `app/theme/ko/linux/*` and `default_100_percent/ko/linux/*`.
 Static only (no Chromium checkout, no Mac):
 
 - `node --experimental-strip-types` runs of `buildArgs.test.ts` and
-  `koBranding.test.js` (jest API shim).
+  `koBranding.test.js` (jest API shim); `tsc` over `build/` adds no errors.
+- The `.icon` commands compile as C++ `PathElement` initializers.
 - `python3 script/ko_branding_test.py`; grit hook wiring exercised with
   stand-in grit classes.
 - Generated `.icns` parsed back; PNG sizes match Brave's assets.
