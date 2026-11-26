@@ -13,6 +13,8 @@
 #include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/telemetry/crash_buildflags.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/metrics/metrics_reporting_state.h"
 #include "chrome/common/channel_info.h"
@@ -20,7 +22,10 @@
 #include "components/version_info/channel.h"
 
 bool GetDefaultPrefValueForMetricsReporting() {
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
+#if BUILDFLAG(IS_KO)
+  // Crash reports go only to the user's own endpoint; on when one is set.
+  return BUILDFLAG(KO_CRASH_REPORTING_CONFIGURED);
+#elif BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED) || BUILDFLAG(IS_BRAVE_DEBLOATED)
   return false;
 #else
   auto channel = chrome::GetChannel();

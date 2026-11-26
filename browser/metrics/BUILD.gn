@@ -48,6 +48,8 @@ source_set("brave_metrics_unit_tests") {
     deps += [
       "//brave/components/brave_debloat/buildflags",
       "//brave/components/brave_origin/buildflags",
+      "//brave/components/ko/buildflags",
+      "//brave/components/ko/telemetry:crash_buildflags",
       "//chrome/common:channel_info",
       "//components/version_info:channel",
     ]

@@ -1,0 +1,7 @@
+include_rules = [
+  "+components/prefs",
+  "+net",
+  "+services/network/public",
+  "+services/network/test",
+  "+url",
+]

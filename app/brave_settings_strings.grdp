@@ -928,6 +928,18 @@
   <message name="IDS_BRAVE_SETTINGS_SPONSORED_ADS_ENABLED_DESC" desc="Description under the settings toggle that enables Sponsored Ads">
     Help support Brave's mission to build an independent, user-first Web with Sponsored Ads. We measure ad performance privately, without identifying you.
   </message>
+  <message name="IDS_SETTINGS_KO_CRASH_REPORTS_TITLE" desc="K-O: title of the toggle that sends crash reports to the user's own crash server">
+    Automatically send crash reports
+  </message>
+  <message name="IDS_SETTINGS_KO_CRASH_REPORTS_DESC" desc="K-O: description under the crash reports toggle">
+    Sends crash reports to your own crash server, never to Brave. Reports leave out the page address, but can hold fragments of memory from the crash.
+  </message>
+  <message name="IDS_SETTINGS_KO_ANALYTICS_TITLE" desc="K-O: title of the toggle that sends anonymous usage events to the user's own analytics server">
+    Send anonymous usage statistics
+  </message>
+  <message name="IDS_SETTINGS_KO_ANALYTICS_DESC" desc="K-O: description under the anonymous usage statistics toggle">
+    Sends a few anonymous events, such as browser start, session length and which K-O features you use, to your own analytics server. Never page addresses, titles or content. Turning this off deletes unsent events.
+  </message>
 
   <!-- Settings / Privacy and security / Clear Browsing Data dialog -->
   <message name="IDS_SETTINGS_BRAVE_ON_EXIT" desc="Clear Browsing Data dialog On exit tab label">

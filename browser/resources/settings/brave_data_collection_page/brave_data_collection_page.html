@@ -18,20 +18,30 @@
         on-settings-boolean-control-change="onStatsUsagePingEnabledChange_">
     </settings-toggle-button>
   </template>
-  <settings-toggle-button id="metricsReportingControl"
-      class="hr"
-      checked="[[metricsReportingEnabled_]]"
-      disabled="[[isMetricsReportingManaged_]]"
-      label="$i18n{enablePersonalizationLogging}"
-      sub-label="$i18n{enablePersonalizationLoggingDesc}"
-      on-settings-boolean-control-change="onMetricsReportingChange_">
-    <template is="dom-if" if="[[showRestartForMetricsReporting_]]" restamp>
-      <cr-button on-click="restartBrowser_" id="restart"
-          slot="more-actions">
-        $i18n{restart}
-      </cr-button>
-    </template>
-  </settings-toggle-button>
+  <template is="dom-if" if="[[showMetricsReporting_]]">
+    <settings-toggle-button id="metricsReportingControl"
+        class="hr"
+        checked="[[metricsReportingEnabled_]]"
+        disabled="[[isMetricsReportingManaged_]]"
+        label="[[metricsReportingLabel_]]"
+        sub-label="[[metricsReportingSubLabel_]]"
+        on-settings-boolean-control-change="onMetricsReportingChange_">
+      <template is="dom-if" if="[[showRestartForMetricsReporting_]]" restamp>
+        <cr-button on-click="restartBrowser_" id="restart"
+            slot="more-actions">
+          $i18n{restart}
+        </cr-button>
+      </template>
+    </settings-toggle-button>
+  </template>
+  <template is="dom-if" if="[[showKOAnalytics_]]">
+    <settings-toggle-button id="koAnalyticsEnabled"
+        class="hr"
+        pref-key="ko.analytics.enabled"
+        label="$i18n{koAnalyticsTitle}"
+        sub-label="$i18n{koAnalyticsDesc}">
+    </settings-toggle-button>
+  </template>
 <if expr="enable_brave_ads">
   <template is="dom-if" if="[[showSponsoredAdsEnabledToggle_]]">
     <settings-toggle-button id="sponsoredAdsEnabled"

@@ -7,12 +7,18 @@
 #include "brave/browser/metrics/metrics_reporting_util.h"
 #include "brave/components/brave_debloat/buildflags/buildflags.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/telemetry/crash_buildflags.h"
 #include "chrome/common/channel_info.h"
 #include "components/version_info/channel.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(MetricsUtilTest, DefaultValueTest) {
-#if defined(OFFICIAL_BUILD)
+#if BUILDFLAG(IS_KO)
+  // On exactly when a self-hosted crash endpoint is configured.
+  EXPECT_EQ(GetDefaultPrefValueForMetricsReporting(),
+            BUILDFLAG(KO_CRASH_REPORTING_CONFIGURED));
+#elif defined(OFFICIAL_BUILD)
   auto env = base::Environment::Create();
 
   env->SetVar("CHROME_VERSION_EXTRA", LINUX_CHANNEL_STABLE);
