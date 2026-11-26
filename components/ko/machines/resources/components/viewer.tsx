@@ -12,8 +12,15 @@ import Toggle from '@brave/leo/react/toggle'
 import Tooltip from '@brave/leo/react/tooltip'
 import RFB from '../../../../../third_party/novnc/core/rfb.js'
 import { formatLocale, getLocale } from '$web-common/locale'
-import { ConnectResult, Machine, connectToMachine, getHandler } from '../api'
+import {
+  ConnectResult,
+  Machine,
+  MachineError,
+  connectToMachine,
+  getHandler,
+} from '../api'
 import { CredentialsDialog, EnteredCredentials } from './credentials_dialog'
+import { errorText } from './machine_editor'
 import '../strings'
 
 type Status = 'loading' | 'connecting' | 'connected' | 'disconnected'
@@ -149,8 +156,11 @@ export function Viewer(props: { machineId: string }) {
       rfb.scaleViewport = scaleRef.current
       rfb.background = 'var(--leo-color-page-background)'
 
+      // Events from a replaced or closed session are ignored.
+      const isCurrent = () => rfbRef.current === rfb
+
       rfb.addEventListener('connect', () => {
-        if (rfbRef.current !== rfb) {
+        if (!isCurrent()) {
           return
         }
         setStatus('connected')
@@ -160,26 +170,36 @@ export function Viewer(props: { machineId: string }) {
         if (toSave?.remember) {
           getHandler()
             .setCredentials(target.id, toSave.username ?? null, toSave.password)
-            .then(() =>
-              setMachine((current) =>
-                current ? { ...current, hasCredentials: true } : current,
-              ),
-            )
+            .then(({ error }) => {
+              if (error === MachineError.None) {
+                setMachine((current) =>
+                  current ? { ...current, hasCredentials: true } : current,
+                )
+              } else {
+                setError(errorText(error))
+              }
+            })
         }
         rfb.focus()
       })
       rfb.addEventListener('disconnect', () => {
-        if (rfbRef.current === rfb) {
-          rfbRef.current = null
+        if (!isCurrent()) {
+          return
         }
+        rfbRef.current = null
         pendingSave.current = null
         setPrompt(null)
         setStatus('disconnected')
       })
       rfb.addEventListener('credentialsrequired', (event) => {
-        onCredentialsRequired(rfb, target, event.detail.types)
+        if (isCurrent()) {
+          onCredentialsRequired(rfb, target, event.detail.types)
+        }
       })
       rfb.addEventListener('securityfailure', () => {
+        if (!isCurrent()) {
+          return
+        }
         authFailed.current = true
         pendingSave.current = null
         setError(getLocale(S.KO_MACHINES_AUTH_FAILED))
@@ -190,7 +210,7 @@ export function Viewer(props: { machineId: string }) {
         rfb.disconnect()
       })
       rfb.addEventListener('clipboard', (event) => {
-        if (clipboardRef.current) {
+        if (isCurrent() && clipboardRef.current) {
           navigator.clipboard.writeText(event.detail.text).catch(() => {})
         }
       })
