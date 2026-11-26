@@ -29,6 +29,7 @@
 #include "brave/components/ai_chat/core/common/features.h"
 #include "brave/components/ai_chat/core/common/mojom/ai_chat.mojom.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/actor/site_policy.h"
 #include "chrome/browser/glic/actor/glic_actor_policy_checker.h"
@@ -53,6 +54,12 @@
 #include "components/tabs/public/tab_interface.h"
 #include "net/dns/mock_host_resolver.h"
 #endif  // BUILDFLAG(ENABLE_BRAVE_AI_CHAT_AGENT_PROFILE)
+
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/ai_chat/model_service_factory.h"
+#include "brave/components/ai_chat/core/browser/model_service.h"
+#include "url/gurl.h"
+#endif  // BUILDFLAG(IS_KO)
 
 using ::testing::_;
 using ::testing::NiceMock;
@@ -110,6 +117,28 @@ class AIChatConversationTaskBrowserTest
 
     // Verify content agent is allowed for agent profiles
     EXPECT_TRUE(service_->content_agent_tools_allowed());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's default is agentd's model, which has no tool support until agentd
+    // lists one that does, so the content agent's tools would be filtered out.
+    // Default to a custom model with tools instead, as a K-O user would.
+    ModelService* model_service =
+        ModelServiceFactory::GetForBrowserContext(agent_profile_);
+    ASSERT_TRUE(model_service);
+    auto options = mojom::CustomModelOptions::New();
+    options->model_request_name = "test-model";
+    options->endpoint = GURL("https://example.com/v1/chat/completions");
+    auto model = mojom::Model::New();
+    model->display_name = "Test model";
+    model->vision_support = true;
+    model->supports_tools = true;
+    model->options =
+        mojom::ModelOptions::NewCustomModelOptions(std::move(options));
+    model_service->AddCustomModel(std::move(model));
+    const std::string model_key = model_service->GetCustomModels().back()->key;
+    model_service->SetDefaultModelKey(model_key);
+    ASSERT_EQ(model_service->GetDefaultModelKey(), model_key);
+#endif  // BUILDFLAG(IS_KO)
   }
 
   void TearDownOnMainThread() override {
