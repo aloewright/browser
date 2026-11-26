@@ -21,19 +21,26 @@ PRODUCT_NAME = 'K-O'
 
 # Names of Brave services and credits that K-O still uses or must not claim.
 _KEEP = (
+    'Brave AI',
     'Brave Account',
     'Brave Accounts',
+    'Brave Additional Terms',
     'Brave Ads',
+    'Brave and ChromeOS',
     'Brave Authors',
     'Brave Firewall',
+    'Brave LLC',
     'Brave Leo',
     'Brave News',
     'Brave Origin',
     'Brave Playlist',
+    'Brave Privacy Policy',
     'Brave Private Ads',
     'Brave Rewards',
     'Brave Root',
     'Brave Search',
+    'Brave products',
+    'Brave server',  # Also "Brave servers".
     'Brave Software',
     'Brave Sync',
     'Brave Talk',
@@ -48,11 +55,28 @@ _KEEP = (
     'Brave-hosted',
     "Brave's mission",
     "Brave's proxy",
+    "Brave's server",
+    "Brave's Terms",
     "Brave's updater",
     'Brave\u2019s mission',
     'Brave\u2019s proxy',
+    'Brave\u2019s server',
+    'Brave\u2019s Terms',
     'Brave\u2019s updater',
 )
+
+# "Brave" as the remote recipient of user data ("sent to Brave", "shared with
+# Brave", "verified by Brave") stays: K-O must not claim data that leaves the
+# device. Only the final "Brave" is kept.
+_RECIPIENT = re.compile(
+    r'(\b(?i:sen[dt]s?|sending|shar(?:e|es|ed|ing)|upload(?:s|ed|ing)?|'
+    r'report(?:s|ed|ing)?|collect(?:s|ed)?|review(?:s|ed)?|'
+    r'process(?:es|ed)?|verif(?:y|ies|ied))\b[^.!?]{0,120}?'
+    r'\b(?:to|with|by|including) )Brave\b')
+
+# Single-word messages that name Brave Search, not the browser.
+_KEPT_MESSAGES = ('IDS_NTP_DEFAULT_SEARCH_TITLE',
+                  'IDS_SEARCH_ENGINES_STARTER_PACK_ASK_BRAVE_SEARCH_NAME')
 
 # Applied before the generic Brave -> K-O replacement. Shields keeps its name.
 _REWRITE = (
@@ -92,6 +116,12 @@ def rebrand_text(text):
         return _MARK.format(len(kept) - 1)
 
     text = _PROTECT.sub(stash, text)
+
+    def stash_recipient(match):
+        kept.append('Brave')
+        return match.group(1) + _MARK.format(len(kept) - 1)
+
+    text = _RECIPIENT.sub(stash_recipient, text)
     for old, new in _REWRITE:
         text = re.sub(r'\b%s\b' % re.escape(old), new, text)
     text = _WORD.sub(PRODUCT_NAME, text)
@@ -100,7 +130,7 @@ def rebrand_text(text):
 
 def rebrand_message(name, text):
     """grit hook: `name` is the message's IDS_ name, `text` its output."""
-    if not text or _is_skipped(name):
+    if not text or _is_skipped(name) or name in _KEPT_MESSAGES:
         return text
     if name in _UPSTREAM_CREDIT_MESSAGES:
         held = _LINK_TEXT_BRAVE.sub('\\1\x01\\2', text)

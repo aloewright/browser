@@ -32,6 +32,27 @@ class RebrandTextTest(unittest.TestCase):
         self.assertEqual(rebrand_text('Brave uses Brave Search'),
                          'K-O uses Brave Search')
 
+    def test_keeps_brave_as_data_recipient(self):
+        for before, after in (
+            ('Brave sends part of the URL to Brave through a privacy server',
+             'K-O sends part of the URL to Brave through a privacy server'),
+            ('Help make Brave better by sending crash reports to Brave',
+             'Help make K-O better by sending crash reports to Brave'),
+            ('The passphrase is not sent to or stored by Brave.',
+             'The passphrase is not sent to or stored by Brave.'),
+            ('Remove your encrypted data from Brave servers',
+             'Remove your encrypted data from Brave servers'),
+            ('Help by sending <a href="#">URLs you visit</a> to Brave.',
+             'Help by sending <a href="#">URLs you visit</a> to Brave.'),
+            ('Info is sent to Brave about your Brave usage',
+             'Info is sent to Brave about your K-O usage'),
+            ('See the Brave Privacy Policy', 'See the Brave Privacy Policy'),
+            ('$1 may be dangerous. Send to Brave for scanning?',
+             '$1 may be dangerous. Send to Brave for scanning?'),
+        ):
+            self.assertEqual(rebrand_text(before), after)
+        self.assertEqual(rebrand_text('Sign in to Brave'), 'Sign in to K-O')
+
     def test_leaves_other_words(self):
         for text in ('brave://settings', 'https://brave.com', 'BraveSoftware',
                      'Bravery', 'Be brave', 'Braves'):
@@ -61,6 +82,12 @@ class RebrandMessageTest(unittest.TestCase):
         self.assertEqual(
             rebrand_message('IDS_OTHER', '<a href="$1">Brave</a>'),
             '<a href="$1">K-O</a>')
+
+    def test_keeps_brave_search_names(self):
+        for name in ('IDS_SEARCH_ENGINES_STARTER_PACK_ASK_BRAVE_SEARCH_NAME',
+                     'IDS_NTP_DEFAULT_SEARCH_TITLE'):
+            self.assertEqual(rebrand_message(name, 'Brave'), 'Brave')
+        self.assertEqual(rebrand_message('IDS_PRODUCT_NAME', 'Brave'), 'K-O')
 
     def test_empty(self):
         self.assertEqual(rebrand_message('IDS_X', ''), '')
