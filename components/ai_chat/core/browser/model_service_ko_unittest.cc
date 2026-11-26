@@ -221,6 +221,25 @@ TEST_F(ModelServiceKOTest, SavingEmptyApiKeyKeepsStoredKey) {
             "secret-key");
 }
 
+TEST_F(ModelServiceKOTest, SavingEmptyApiKeyForNewOriginDropsStoredKey) {
+  ModelService* service = CreateService();
+  service->AddCustomModel(MakeCustomModel("secret-key", true));
+  std::vector<mojom::ModelPtr> custom = service->GetCustomModels();
+  ASSERT_EQ(custom.size(), 1u);
+
+  mojom::ModelPtr edited = custom[0]->Clone();
+  edited->options->get_custom_model_options()->endpoint =
+      GURL("https://example.com/v1/chat/completions");
+  edited->options->get_custom_model_options()->api_key.clear();
+  service->SaveCustomModel(0, std::move(edited));
+
+  std::vector<mojom::ModelPtr> saved = service->GetCustomModels();
+  ASSERT_EQ(saved.size(), 1u);
+  EXPECT_EQ(saved[0]->options->get_custom_model_options()->endpoint,
+            GURL("https://example.com/v1/chat/completions"));
+  EXPECT_TRUE(saved[0]->options->get_custom_model_options()->api_key.empty());
+}
+
 TEST_F(ModelServiceKOTest, MigrationClearsLeoDefault) {
   pref_service_.SetString(kDefaultModelKeyPref, "chat-claude-sonnet");
   ModelService::MigrateProfilePrefs(&pref_service_);

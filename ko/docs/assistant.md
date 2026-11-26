@@ -111,7 +111,10 @@ gateway stores provider keys for you (it is sent as `Authorization: Bearer`).
 Keys are stored OSCrypt-encrypted in the `brave.ai_chat.custom_models` pref
 (Keychain-backed on macOS). In K-O the settings page never receives stored
 keys: the key field is a password field, and saving an edit with an empty
-key keeps the stored one (delete and re-add the model to clear a key).
+key keeps the stored one if the endpoint keeps its origin. An edit that
+moves the endpoint to another origin drops the stored key, so a hidden key
+never follows a new server. To clear a key otherwise, delete and re-add the
+model.
 Custom models with tool support also get the `CONTENT_AGENT` capability.
 
 Remote endpoints must be HTTPS (`ModelValidator`); no request follows a

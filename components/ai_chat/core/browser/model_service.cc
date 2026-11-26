@@ -54,6 +54,7 @@
 
 #if BUILDFLAG(IS_KO)
 #include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
+#include "url/origin.h"
 #else
 #include "brave/components/ai_chat/core/browser/engine/engine_consumer_conversation_api.h"
 #include "brave/components/ai_chat/core/browser/engine/oblivious_http_config_manager.h"
@@ -1120,9 +1121,15 @@ void ModelService::SaveCustomModel(uint32_t index, mojom::ModelPtr model) {
       << ", sent model key: " << model->key << ".";
 
 #if BUILDFLAG(IS_KO)
-  // Settings never receives stored keys, so an empty one means "keep".
+  // Settings never receives stored keys, so an empty one means "keep", but
+  // only on the same origin: a hidden key must not follow a new endpoint.
+  const mojom::CustomModelOptions& new_options =
+      *model->options->get_custom_model_options();
+  const std::string* stored_endpoint =
+      model_iter->GetDict().FindString(kCustomModelItemEndpointUrlKey);
   const bool keep_api_key =
-      model->options->get_custom_model_options()->api_key.empty();
+      new_options.api_key.empty() && stored_endpoint &&
+      url::IsSameOriginWith(GURL(*stored_endpoint), new_options.endpoint);
 #endif
   base::DictValue model_dict = CustomModelToPrefDict(std::move(model));
 #if BUILDFLAG(IS_KO)

@@ -1706,6 +1706,18 @@ void AIChatService::AddToolProvidersToConversation(
 
 void AIChatService::CreateTabOrganizationEngineIfNeeded() {
   if (tab_organization_engine_) {
+#if BUILDFLAG(IS_KO)
+    // Nothing else updates this engine, and agentd's token can arrive or
+    // rotate after it was made.
+    const mojom::Model* model = model_service_->GetModel(
+        profile_prefs_->GetString(prefs::kBraveAIChatTabOrganizationModelKey));
+    if (!model) {
+      model = model_service_->GetModel(kChatAutomaticModelKey);
+    }
+    if (model) {
+      tab_organization_engine_->UpdateModelOptions(*model->options);
+    }
+#endif
     return;
   }
 

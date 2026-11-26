@@ -22,6 +22,7 @@
 #include "base/timer/elapsed_timer.h"
 #include "base/trace_event/trace_event.h"
 #include "brave/components/api_request_helper/utils.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "net/base/load_flags.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
@@ -261,7 +262,16 @@ APIRequestHelper::CreateURLLoaderHandler(
 
   if (!headers.empty()) {
     for (auto entry : headers) {
+#if BUILDFLAG(IS_KO)
+      // Provider keys and the agentd token never reach logs.
+      DVLOG(4) << "> " << entry.first << ": "
+               << (base::EqualsCaseInsensitiveASCII(entry.first,
+                                                    "Authorization")
+                       ? std::string_view("<redacted>")
+                       : std::string_view(entry.second));
+#else
       DVLOG(4) << "> " << entry.first << ": " << entry.second;
+#endif
       request->headers.SetHeader(entry.first, entry.second);
     }
   }

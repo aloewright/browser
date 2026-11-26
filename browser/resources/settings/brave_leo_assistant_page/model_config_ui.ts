@@ -321,15 +321,16 @@ export class ModelConfigUI extends ModelConfigUIBase {
     this.checkEndpointValidity_()
   }
 
-  private computeShowProviderPresets_(isEditing: boolean) {
+  // Template-only helpers are protected so noUnusedLocals doesn't flag them.
+  protected computeShowProviderPresets_(isEditing: boolean) {
     return this.isKOBuild_ && !isEditing
   }
 
-  private isPreset_(preset: ProviderPreset, value: ProviderPreset) {
+  protected isPreset_(preset: ProviderPreset, value: ProviderPreset) {
     return preset === value
   }
 
-  private computeShowApiKeyKeepNote_(isEditing: boolean) {
+  protected computeShowApiKeyKeepNote_(isEditing: boolean) {
     return this.isKOBuild_ && isEditing
   }
 

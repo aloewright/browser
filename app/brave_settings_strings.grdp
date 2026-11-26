@@ -2040,7 +2040,7 @@
     Use a NanoGPT model ID, e.g. gpt-5-mini, with your NanoGPT API key.
   </message>
   <message name="IDS_SETTINGS_KO_ASSISTANT_API_KEY_KEEP_NOTE" desc="A note under the API key input when editing a model whose key is already saved.">
-    The saved key is never shown. Leave this empty to keep it.
+    The saved key is never shown. Leave this empty to keep it; changing the endpoint to another server clears it.
   </message>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_PROXY_NOTE" desc="A note for users when adding model server info">
     Brave doesn't proxy these requests, please read privacy terms of the chosen provider.
