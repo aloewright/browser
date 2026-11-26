@@ -77,6 +77,10 @@ files, for every `.grd` and every language
   Brave Software, Brave Rewards, Brave Wallet, Brave VPN, Brave News, ...
   (see `_KEEP`). The about page keeps "made possible by the Brave open
   source project".
+- Brave as the recipient of user data stays Brave ("sent to Brave",
+  "shared with Brave", "Brave servers", Brave Privacy Policy/Terms), so
+  disclosures never claim that data sent off the device goes to K-O. The
+  heuristic (`_RECIPIENT`) is English-only; translations may still say K-O.
 - AI chat / Leo strings (`IDS_CHAT_UI_*`, `*AI_CHAT*`, `*_LEO*`) are left to
   the ai-providers area.
 - Lowercase `brave`, `brave://` and URLs are untouched.
