@@ -3,6 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/ko/buildflags/buildflags.gni")
+
 static_library("browser") {
   sources = [
     "ad_block_component_filters_provider.cc",
@@ -67,6 +69,30 @@ static_library("browser") {
     "//base",
     "//brave/components/brave_shields/core/common/adblock",
   ]
+
+  deps += [ "//brave/components/ko/buildflags" ]
+
+  if (is_ko) {
+    sources += [
+      "ko/ko_filter_list_manifest.cc",
+      "ko/ko_filter_list_manifest.h",
+      "ko/ko_filter_list_source.cc",
+      "ko/ko_filter_list_source.h",
+      "ko/ko_filter_list_updater.cc",
+      "ko/ko_filter_list_updater.h",
+      "ko/ko_filters_provider.cc",
+      "ko/ko_filters_provider.h",
+    ]
+    deps += [
+      "//brave/components/ko/shields/buildflags",
+      "//brave/ko/shields:embedded_lists",
+      "//brave/ko/shields:resources",
+      "//net",
+      "//services/network/public/cpp",
+      "//third_party/boringssl",
+      "//ui/base",
+    ]
+  }
 }
 
 source_set("unit_tests") {
@@ -94,6 +120,16 @@ source_set("unit_tests") {
     "//testing/gtest",
     "//url",
   ]
+
+  if (is_ko) {
+    sources += [ "ko/ko_filter_lists_unittest.cc" ]
+    deps += [
+      "//crypto",
+      "//services/network:test_support",
+      "//services/network/public/cpp",
+      "//third_party/boringssl",
+    ]
+  }
 }
 
 static_library("test_support") {

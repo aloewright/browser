@@ -34,6 +34,7 @@
 #include "brave/components/brave_shields/core/browser/ad_block_list_p3a.h"
 #include "brave/components/brave_shields/core/browser/ad_block_resource_provider.h"
 #include "brave/components/brave_shields/core/common/adblock/rs/src/lib.rs.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/prefs/pref_registry_simple.h"
 #include "third_party/blink/public/mojom/loader/resource_load_info.mojom-shared.h"
 #include "third_party/rust/cxx/v1/cxx.h"
@@ -50,6 +51,11 @@ class ComponentUpdateService;
 namespace adblock {
 struct RegexManagerDiscardPolicy;
 }  // namespace adblock
+
+namespace network {
+class SharedURLLoaderFactory;
+}  // namespace network
+
 namespace brave_shields {
 
 class AdBlockComponentFiltersProvider;
@@ -60,6 +66,11 @@ class AdBlockCustomResourceProvider;
 class AdBlockLocalhostFiltersProvider;
 class AdBlockFilterListCatalogProvider;
 class AdBlockSubscriptionServiceManager;
+#if BUILDFLAG(IS_KO)
+class KoFilterListSource;
+class KoFilterListUpdater;
+class KoFiltersProvider;
+#endif
 
 // The brave shields service in charge of ad-block checking and init.
 class AdBlockService {
@@ -197,6 +208,13 @@ class AdBlockService {
   bool IsDebugMode() const;
   void SetDebugMode(bool debug_mode);
 
+#if BUILDFLAG(IS_KO)
+  // Starts the signed K-O filter list channel if one is configured.
+  void StartKoFilterListUpdater(
+      scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory);
+  KoFilterListSource* ko_filter_list_source();
+#endif
+
   // Test accessors
   AdBlockFiltersProviderManager* GetFiltersProviderManagerForTesting();
   AdBlockDefaultResourceProvider* GetDefaultResourceProviderForTesting();
@@ -222,6 +240,12 @@ class AdBlockService {
                             std::optional<DATFileDataBuffer> additional_dat);
 
   void OnPreferenceChanged(const std::string& pref_name);
+
+#if BUILDFLAG(IS_KO)
+  std::string GetKoDATFingerprint() const;
+  void RefreshKoFiltersProviders();
+  void OnKoFilterListsInstalled();
+#endif
 
   AdBlockComponentFiltersProvider* default_filters_provider() {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
@@ -253,6 +277,12 @@ class AdBlockService {
   base::SequenceBound<AdBlockEngineWrapper> engine_wrapper_
       GUARDED_BY_CONTEXT(sequence_checker_);
 
+#if BUILDFLAG(IS_KO)
+  // Outlives everything that reads K-O lists from it.
+  std::unique_ptr<KoFilterListSource> ko_filter_list_source_
+      GUARDED_BY_CONTEXT(sequence_checker_);
+#endif
+
   std::unique_ptr<AdBlockFiltersProviderManager> filters_provider_manager_
       GUARDED_BY_CONTEXT(sequence_checker_);
   std::unique_ptr<AdBlockDATCacheManager> dat_cache_manager_
@@ -278,6 +308,16 @@ class AdBlockService {
       subscription_service_manager_ GUARDED_BY_CONTEXT(sequence_checker_);
   std::unique_ptr<AdBlockComponentServiceManager> component_service_manager_
       GUARDED_BY_CONTEXT(sequence_checker_);
+
+#if BUILDFLAG(IS_KO)
+  // Query component_service_manager_, so declared after it.
+  std::unique_ptr<KoFiltersProvider> ko_default_filters_provider_
+      GUARDED_BY_CONTEXT(sequence_checker_);
+  std::unique_ptr<KoFiltersProvider> ko_additional_filters_provider_
+      GUARDED_BY_CONTEXT(sequence_checker_);
+  std::unique_ptr<KoFilterListUpdater> ko_filter_list_updater_
+      GUARDED_BY_CONTEXT(sequence_checker_);
+#endif
 
   std::unique_ptr<SourceProviderObserver> default_service_observer_
       GUARDED_BY_CONTEXT(sequence_checker_);

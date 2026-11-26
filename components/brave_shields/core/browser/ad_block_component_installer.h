@@ -31,12 +31,15 @@ void RegisterAdBlockFilterListCatalogComponent(
     component_updater::ComponentUpdateService* cus,
     OnComponentReadyCallback callback);
 
+// `on_registered`, if set, runs once registration has finished (after
+// `callback` for an installed component) or was skipped.
 void RegisterAdBlockFiltersComponent(
     component_updater::ComponentUpdateService* cus,
     base::span<const uint8_t, crypto::hash::kSha256Size>
         component_public_key_sha256,
     const std::string& component_name,
-    OnComponentReadyCallback callback);
+    OnComponentReadyCallback callback,
+    base::OnceClosure on_registered);
 
 }  // namespace brave_shields
 

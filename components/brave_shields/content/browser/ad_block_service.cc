@@ -43,7 +43,33 @@
 #include "components/prefs/pref_service.h"
 #include "services/network/public/cpp/features.h"
 
+#if BUILDFLAG(IS_KO)
+#include "base/strings/strcat.h"
+#include "base/strings/string_number_conversions.h"
+#include "brave/components/brave_shields/core/browser/ko/ko_filter_list_manifest.h"
+#include "brave/components/brave_shields/core/browser/ko/ko_filter_list_source.h"
+#include "brave/components/brave_shields/core/browser/ko/ko_filter_list_updater.h"
+#include "brave/components/brave_shields/core/browser/ko/ko_filters_provider.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
+#include "services/network/public/cpp/shared_url_loader_factory.h"
+#endif
+
 namespace brave_shields {
+
+#if BUILDFLAG(IS_KO)
+namespace {
+
+// "<embedded version>-<accepted channel version>" of the K-O lists the
+// cached DATs were built from.
+constexpr char kKoDATFingerprint[] = "brave.ko.shields.dat_fingerprint";
+constexpr char kKoFilterListsDir[] = "ko_filter_lists";
+
+std::string_view GetKoFilterListsUrl() {
+  return BUILDFLAG(KO_FILTER_LISTS_URL);
+}
+
+}  // namespace
+#endif  // BUILDFLAG(IS_KO)
 
 AdBlockService::SourceProviderObserver::SourceProviderObserver(
     OnResourcesLoadedCallback on_resources_loaded,
@@ -207,10 +233,21 @@ AdBlockService::AdBlockService(
     SetupDiscardPolicy(policy);
   }
 
+#if BUILDFLAG(IS_KO)
+  ko_filter_list_source_ =
+      KoFilterListSource::Create(profile_dir_.AppendASCII(kKoFilterListsDir));
+#endif
+
   auto default_resource_provider =
       std::make_unique<AdBlockDefaultResourceProvider>(
           component_update_service_);
   default_resource_provider_ = default_resource_provider.get();
+#if BUILDFLAG(IS_KO)
+  // Scriptlets and redirects keep working without the resources component.
+  default_resource_provider_->SetFallbackLoader(
+      base::BindRepeating(&KoFilterListSource::LoadResources,
+                          ko_filter_list_source_->AsWeakPtr()));
+#endif
 
   custom_resource_provider_ = new AdBlockCustomResourceProvider(
       profile_dir_, std::move(default_resource_provider));
@@ -228,6 +265,15 @@ AdBlockService::AdBlockService(
   }
 
   dat_cache_manager_ = std::make_unique<AdBlockDATCacheManager>(profile_dir_);
+#if BUILDFLAG(IS_KO)
+  // A cached engine built from older K-O lists would otherwise stay in use
+  // until some provider changes. The drop runs before the read below.
+  const std::string ko_fingerprint = GetKoDATFingerprint();
+  if (local_state_->GetString(kKoDATFingerprint) != ko_fingerprint) {
+    dat_cache_manager_->DropDATCache();
+    local_state_->SetString(kKoDATFingerprint, ko_fingerprint);
+  }
+#endif
   if (use_dat_cache_) {
     // Start reading cached DAT files from disk as early as possible so the
     // engine can be populated before components arrive from the network.
@@ -249,6 +295,32 @@ AdBlockService::AdBlockService(
           &list_p3a_);
   custom_filters_provider_ = std::make_unique<AdBlockCustomFiltersProvider>(
       local_state_, filters_provider_manager_.get());
+
+#if BUILDFLAG(IS_KO)
+  // Baseline lists; each steps aside once its Brave component is installed.
+  auto is_list_enabled =
+      base::BindRepeating(&AdBlockComponentServiceManager::IsFilterListEnabled,
+                          base::Unretained(component_service_manager_.get()));
+  auto is_component_ready = base::BindRepeating(
+      [](AdBlockComponentServiceManager* manager, const std::string& uuid) {
+        return !manager->GetFilterSetPath(uuid).empty();
+      },
+      base::Unretained(component_service_manager_.get()));
+  ko_default_filters_provider_ = std::make_unique<KoFiltersProvider>(
+      ko_filter_list_source_.get(), filters_provider_manager_.get(),
+      /*is_default_engine=*/true, is_list_enabled, is_component_ready);
+  ko_additional_filters_provider_ = std::make_unique<KoFiltersProvider>(
+      ko_filter_list_source_.get(), filters_provider_manager_.get(),
+      /*is_default_engine=*/false, is_list_enabled, is_component_ready);
+  // Catalog loads and list toggles change which baseline lists apply.
+  component_service_manager_->SetCatalogLoadedCallback(
+      base::BindRepeating(&AdBlockService::RefreshKoFiltersProviders,
+                          base::Unretained(this)));
+  pref_change_registrar_->Add(
+      prefs::kAdBlockRegionalFilters,
+      base::BindRepeating(&AdBlockService::RefreshKoFiltersProviders,
+                          base::Unretained(this)));
+#endif
 
   if (base::FeatureList::IsEnabled(
           network::features::kLocalNetworkAccessChecks) &&
@@ -452,6 +524,10 @@ void AdBlockService::SetDebugMode(bool debug_mode) {
 }
 
 void RegisterPrefsForAdBlockService(PrefRegistrySimple* registry) {
+#if BUILDFLAG(IS_KO)
+  registry->RegisterStringPref(kKoDATFingerprint, std::string());
+  KoFilterListUpdater::RegisterLocalStatePrefs(registry);
+#endif
   registry->RegisterBooleanPref(prefs::kAdBlockCookieListSettingTouched, false);
   registry->RegisterBooleanPref(
       prefs::kAdBlockMobileNotificationsListSettingTouched, false);
@@ -480,6 +556,50 @@ void MigrateObsoletePrefsForAdBlockService(PrefService* local_state) {
   // Added 2025-07-11
   local_state->ClearPref(prefs::kAdBlockCookieListOptInShown);
 }
+
+#if BUILDFLAG(IS_KO)
+void AdBlockService::StartKoFilterListUpdater(
+    scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory) {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  const std::string_view url = GetKoFilterListsUrl();
+  if (url.empty() || ko_filter_list_updater_ ||
+      !IsValidKoPublicKey(ko_filter_list_source_->public_key())) {
+    return;
+  }
+  ko_filter_list_updater_ = std::make_unique<KoFilterListUpdater>(
+      ko_filter_list_source_.get(), std::move(url_loader_factory),
+      local_state_, url,
+      base::BindRepeating(&AdBlockService::OnKoFilterListsInstalled,
+                          weak_factory_.GetWeakPtr()));
+  ko_filter_list_updater_->Start();
+}
+
+KoFilterListSource* AdBlockService::ko_filter_list_source() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  return ko_filter_list_source_.get();
+}
+
+std::string AdBlockService::GetKoDATFingerprint() const {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  return base::StrCat(
+      {base::NumberToString(ko_filter_list_source_->embedded_version()), "-",
+       local_state_->GetString(kKoFilterListsAcceptedVersion)});
+}
+
+void AdBlockService::RefreshKoFiltersProviders() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  ko_default_filters_provider_->Refresh();
+  ko_additional_filters_provider_->Refresh();
+}
+
+void AdBlockService::OnKoFilterListsInstalled() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  // The providers already reload from the new set; make sure the next start
+  // doesn't reuse an engine built from the old one.
+  dat_cache_manager_->DropDATCache();
+  local_state_->SetString(kKoDATFingerprint, GetKoDATFingerprint());
+}
+#endif  // BUILDFLAG(IS_KO)
 
 AdBlockDefaultResourceProvider* AdBlockService::default_resource_provider() {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);

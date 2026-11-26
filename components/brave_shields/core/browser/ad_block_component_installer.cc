@@ -7,10 +7,13 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/containers/span.h"
 #include "base/functional/bind.h"
+#include "base/location.h"
+#include "base/task/sequenced_task_runner.h"
 #include "brave/components/brave_component_updater/browser/brave_on_demand_updater.h"
 #include "brave/components/brave_shields/core/common/brave_shield_constants.h"
 #include "components/component_updater/component_installer.h"
@@ -134,6 +137,14 @@ void OnRegistered(const std::string& component_id) {
       component_id, component_updater::OnDemandUpdater::Priority::FOREGROUND);
 }
 
+void OnFiltersComponentRegistered(const std::string& component_id,
+                                  base::OnceClosure on_registered) {
+  OnRegistered(component_id);
+  if (on_registered) {
+    std::move(on_registered).Run();
+  }
+}
+
 }  // namespace
 
 void RegisterAdBlockDefaultResourceComponent(
@@ -177,10 +188,15 @@ void RegisterAdBlockFiltersComponent(
     base::span<const uint8_t, crypto::hash::kSha256Size>
         component_public_key_sha256,
     const std::string& component_name,
-    OnComponentReadyCallback callback) {
+    OnComponentReadyCallback callback,
+    base::OnceClosure on_registered) {
   // In test, |cus| could be nullptr.
   if (!cus ||
       BraveOnDemandUpdater::GetInstance()->is_component_update_disabled()) {
+    if (on_registered) {
+      base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+          FROM_HERE, std::move(on_registered));
+    }
     return;
   }
 
@@ -189,7 +205,9 @@ void RegisterAdBlockFiltersComponent(
   auto installer = base::MakeRefCounted<component_updater::ComponentInstaller>(
       std::make_unique<AdBlockComponentInstallerPolicy>(
           component_public_key_sha256, component_name, callback));
-  installer->Register(cus, base::BindOnce(&OnRegistered, component_id));
+  installer->Register(cus, base::BindOnce(&OnFiltersComponentRegistered,
+                                          component_id,
+                                          std::move(on_registered)));
 }
 
 }  // namespace brave_shields
