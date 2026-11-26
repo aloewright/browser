@@ -6,6 +6,7 @@
 #ifndef BRAVE_COMMON_BRAVE_CONTENT_CLIENT_H_
 #define BRAVE_COMMON_BRAVE_CONTENT_CLIENT_H_
 
+#include <string>
 #include <vector>
 
 #include "chrome/common/chrome_content_client.h"
@@ -23,6 +24,7 @@ class BraveContentClient : public ChromeContentClient {
   void AddContentDecryptionModules(
       std::vector<content::CdmInfo>* cdms,
       std::vector<media::CdmHostFilePath>* cdm_host_file_paths) override;
+  void SetActiveURL(const GURL& url, std::string top_origin) override;
 };
 
 #endif  // BRAVE_COMMON_BRAVE_CONTENT_CLIENT_H_

@@ -71,11 +71,12 @@ Stock behaviour is unchanged when `is_brave_debloated = false`.
   the first build (watch `brave://components` update the "Brave Ad Block"
   entries). Without a key the options are to accept stale bundled lists or to
   self-host a component updater.
-- **Shared profile with stock Brave.** A Release build uses stock Brave's
-  bundle id and profile directory. A Griffin seed saved there by stock Brave
-  is still applied (never refreshed), and old prefs carry over. Use a fresh
-  profile, or install the policy profile below, which sets
-  `ChromeVariations = 2` to ignore all variations.
+- **Shared profile with stock Brave** (only with `is_ko = false`). Such a
+  Release build uses stock Brave's bundle id and profile directory. A Griffin
+  seed saved there by stock Brave is still applied (never refreshed), and old
+  prefs carry over. Use a fresh profile, or install the policy profile below,
+  which sets `ChromeVariations = 2` to ignore all variations. K-O builds (the
+  default here) have their own profile; see the release identity note below.
 - **NTP wallpapers.** Brave's wallpaper component is not downloaded, so the
   New Tab Page uses its built-in background (gradient, solid colour or your own
   image). Sponsored images are compiled out with Brave Ads.
@@ -89,6 +90,7 @@ Stock behaviour is unchanged when `is_brave_debloated = false`.
 | ------------------------- | ------- | ------------------------------------------------------------------------ |
 | `is_brave_debloated`      | `true`  | The debloat. Set it to `false` to build stock Brave from this branch.    |
 | `is_brave_origin_branded` | `false` | Unchanged. Brave Origin branding. Already removes the same feature set. |
+| `is_ko`                   | `is_brave_debloated` | K-O, including its branding on macOS/Linux ([ko/docs/branding.md](../ko/docs/branding.md)). |
 
 The arg is declared in `components/brave_debloat/buildflags/buildflags.gni`.
 C++ reads it as `BUILDFLAG(IS_BRAVE_DEBLOATED)` from
@@ -129,7 +131,8 @@ pnpm start Release
 ```
 
 `pnpm run build` without `Release` makes a component build. Its channel is
-`development`, so its bundle id is `com.brave.Browser.development`.
+`development`, so its bundle id is `com.ko.browser.development` for K-O
+(`com.brave.Browser.development` with `is_ko = false`).
 
 **Using a `brave-browser` checkout instead.** The older flow uses a
 `brave-browser` checkout. You edit its `package.json` and point
@@ -139,11 +142,16 @@ ref (`tag` or `branch`) to `debloat/v1.100.58`. Then you run `npm run init` and
 own `package.json` lists only the `chrome` and `depot_tools` projects. Prefer
 the direct checkout above.
 
-**Release builds share stock Brave's identity.** A Release build uses bundle id
-`com.brave.Browser` and the profile directory
-`~/Library/Application Support/BraveSoftware/Brave-Browser`. Don't run it next
-to stock Brave on the same macOS user. An unsigned build also needs a Gatekeeper
-override the first time it opens.
+**Release identity.** With `is_ko` (on by default here, since it follows
+`is_brave_debloated`) a macOS or Linux build is K-O: `K-O.app`, bundle id
+`com.ko.browser` (GN arg `ko_bundle_id`), profile
+`~/Library/Application Support/K-O/Browser`, Keychain item `K-O Safe Storage`.
+It can run next to stock Brave on the same macOS user. See
+[ko/docs/branding.md](../ko/docs/branding.md). With `is_ko = false`, a Release
+build uses stock Brave's bundle id `com.brave.Browser` and profile
+`~/Library/Application Support/BraveSoftware/Brave-Browser`; don't run that next
+to stock Brave. An unsigned build needs a Gatekeeper override the first time it
+opens.
 
 ## Runtime policies (defence in depth)
 
@@ -157,6 +165,7 @@ Install it:
 debloat/macos/apply-policies.sh               # validate with plutil -lint, then open
 debloat/macos/apply-policies.sh --no-open     # validate only
 debloat/macos/apply-policies.sh --bundle-id com.brave.Browser.beta
+debloat/macos/apply-policies.sh --ko          # K-O: keeps AI chat (the K-O Assistant) on
 ```
 
 The script registers the profile with macOS but does not install it. To

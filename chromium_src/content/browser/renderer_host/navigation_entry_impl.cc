@@ -25,13 +25,13 @@ const std::u16string& NavigationEntryImpl::GetTitleForDisplay() const {
   // the page title is empty, GetTitleForDisplay falls back to formatting the
   // virtual URL as the display title. Since brave:// URLs are stored as
   // chrome:// internally, that fallback shows "chrome://host" instead of
-  // "brave://host". Convert it for display.
+  // "brave://host" ("ko://host" in K-O). Convert it for display.
   if (title_.empty() && !cached_display_title_.empty()) {
     static constexpr char16_t kChromePrefix[] = u"chrome://";
-    static constexpr char16_t kBravePrefix[] = u"brave://";
     if (cached_display_title_.starts_with(kChromePrefix)) {
-      cached_display_title_.replace(0, std::size(kChromePrefix) - 1,
-                                    kBravePrefix);
+      cached_display_title_.replace(
+          0, std::size(kChromePrefix) - 1,
+          std::u16string(kBraveUIDisplayScheme16) + u"://");
     }
   }
   return result;
@@ -39,8 +39,8 @@ const std::u16string& NavigationEntryImpl::GetTitleForDisplay() const {
 
 // Virtual url should never be set to brave
 void NavigationEntryImpl::SetVirtualURL(const GURL& url) {
-  DCHECK(!url.SchemeIs(kBraveUIScheme))
-      << "Virtual URL should not use brave:// scheme";
+  DCHECK(!IsBraveUIAliasScheme(url.scheme()))
+      << "Virtual URL should not use the brave:// (or ko://) scheme";
   SetVirtualURL_ChromiumImpl(url);
 }
 

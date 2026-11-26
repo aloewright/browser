@@ -19,12 +19,9 @@ import {loadTimeData} from "../i18n_setup.js"
 const SettingBraveDataCollectionPageElementBase =
   WebUiListenerMixin(SettingsViewMixin(PolymerElement))
 
-interface SettingsBraveDataCollectionPageElement {
-  $: {
-    p3aEnabled: SettingsToggleButtonElement,
-    statsUsagePingEnabled: SettingsToggleButtonElement,
-    metricsReportingControl: SettingsToggleButtonElement,
-  }
+// K-O: self-hosted telemetry; keys only exist in Brave settings WebUI.
+function getOptionalBoolean(key: string): boolean {
+  return loadTimeData.valueExists(key) && loadTimeData.getBoolean(key)
 }
 
 /**
@@ -52,6 +49,10 @@ extends SettingBraveDataCollectionPageElementBase
       showSponsoredAdsEnabledToggle_: Boolean,
       isStatsReportingEnabledManaged_: Boolean,
       isP3AEnabledManaged_: Boolean,
+      showMetricsReporting_: Boolean,
+      showKOAnalytics_: Boolean,
+      metricsReportingLabel_: String,
+      metricsReportingSubLabel_: String,
     }
   }
 
@@ -64,6 +65,10 @@ extends SettingBraveDataCollectionPageElementBase
   private declare showSponsoredAdsEnabledToggle_: boolean
   private declare isStatsReportingEnabledManaged_: boolean
   private declare isP3AEnabledManaged_: boolean
+  private declare showMetricsReporting_: boolean
+  private declare showKOAnalytics_: boolean
+  private declare metricsReportingLabel_: string
+  private declare metricsReportingSubLabel_: string
 
   browserProxy_ = BraveDataCollectionBrowserProxyImpl.getInstance()
 
@@ -75,6 +80,17 @@ extends SettingBraveDataCollectionPageElementBase
 
     this.isStatsReportingEnabledManaged_ = loadTimeData.getBoolean('isStatsReportingEnabledManaged')
     this.isP3AEnabledManaged_ = loadTimeData.getBoolean('isP3AEnabledManaged')
+
+    // Debloated builds have no crash endpoint unless K-O configures one.
+    const koCrashReporting = getOptionalBoolean('koCrashReportingAvailable')
+    this.showMetricsReporting_ =
+      !loadTimeData.getBoolean('isBraveDebloatedBuild') || koCrashReporting
+    this.showKOAnalytics_ = getOptionalBoolean('koAnalyticsAvailable')
+    this.metricsReportingLabel_ = loadTimeData.getString(
+      koCrashReporting ? 'koCrashReportsTitle' : 'enablePersonalizationLogging')
+    this.metricsReportingSubLabel_ = loadTimeData.getString(
+      koCrashReporting ? 'koCrashReportsDesc'
+                       : 'enablePersonalizationLoggingDesc')
 
     this.addWebUiListener('p3a-enabled-changed', setP3AEnabled)
     this.browserProxy_.getP3AEnabled().then(
@@ -121,9 +137,11 @@ extends SettingBraveDataCollectionPageElementBase
   // Metrics related code is copied from
   // chrome/browser/resources/settings/privacy_page/personalization_options.ts
   // as we hide that upstream option and put it in this page.
-  onMetricsReportingChange_() {
-    const enabled = this.$.metricsReportingControl.checked
-    this.browserProxy_.setMetricsReportingEnabled(enabled)
+  // The toggle sits in a dom-if, so read it from the event, not this.$.
+  onMetricsReportingChange_(event: Event) {
+    const target = event.target
+    assert(target instanceof SettingsToggleButtonElement)
+    this.browserProxy_.setMetricsReportingEnabled(target.checked)
   }
 
   setMetricsReporting_(metricsReporting: MetricsReporting) {

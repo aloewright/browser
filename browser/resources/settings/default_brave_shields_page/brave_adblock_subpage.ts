@@ -184,6 +184,10 @@ class AdBlockSubpage extends AdBlockSubpageBase {
     this.browserProxy_.enableFilterList(filterList.uuid, filterList.enabled)
   }
 
+  private lockedTitle_(locked?: boolean) {
+    return locked ? this.i18n('koFilterListLocked') : ''
+  }
+
   private handleSubscribeUrlItemItemToggle_(
     e: DomRepeatEvent<SubscriptionInfo>)
   {

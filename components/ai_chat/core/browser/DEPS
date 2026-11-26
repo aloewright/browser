@@ -1,4 +1,6 @@
 include_rules = [
+  "+brave/components/ko/buildflags",
+  "+brave/components/ko/common",
   "+brave/net/base",
   "+cc/port",
   "+cc/task/core",

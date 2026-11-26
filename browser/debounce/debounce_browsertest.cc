@@ -23,6 +23,7 @@
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/interstitials/security_interstitial_page_test_utils.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
 #include "content/public/common/content_client.h"
@@ -119,6 +120,16 @@ class DebounceBrowserTest : public BaseLocalDataFilesBrowserTest {
     ad_block_test_helper_ =
         std::make_unique<brave_shields::AdBlockBrowserTestHelper>();
   }
+
+#if defined(KO_BUILD)
+  void SetUpOnMainThread() override {
+    BaseLocalDataFilesBrowserTest::SetUpOnMainThread();
+    // K-O upgrades http:// navigations strictly (HTTP interstitial on
+    // failure); the test hosts here are served over plain HTTP.
+    browser()->GetProfile()->GetPrefs()->SetList(
+        prefs::kHttpAllowlist, base::ListValue().Append("[*.]com"));
+  }
+#endif
 
   // BaseLocalDataFilesBrowserTest overrides
   const char* test_data_directory() override { return kTestDataDirectory; }

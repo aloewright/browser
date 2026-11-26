@@ -1,0 +1,19 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+[Unit]
+Description=K-O telemetry backups (GlitchTip, PostHog)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# BACKUP_DIR, BACKUP_AGE_RECIPIENT (public key), POSTHOG_DIR.
+EnvironmentFile=/etc/ko-infra/backup.env
+ExecStart=/opt/ko-infra/backup/backup.sh
+Nice=10
+IOSchedulingClass=idle
+PrivateTmp=true
+NoNewPrivileges=true

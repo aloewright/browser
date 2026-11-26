@@ -14,6 +14,7 @@
 #include "brave/components/ai_chat/core/common/buildflags/buildflags.h"
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/ai_chat/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "components/prefs/pref_service.h"
 
@@ -140,14 +141,20 @@ bool IsAllowPrivateIPsEnabled() {
 }
 
 BASE_FEATURE(kOpenAIChatFromBraveSearch,
-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
+#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS) && !BUILDFLAG(IS_KO)
              base::FEATURE_ENABLED_BY_DEFAULT);
 #else
              base::FEATURE_DISABLED_BY_DEFAULT);
 #endif
 
+// K-O builds have no Brave cloud paths, whatever the feature state; the
+// helpers below are the single gate for each of them.
 bool IsOpenAIChatFromBraveSearchEnabled() {
+#if BUILDFLAG(IS_KO)
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kOpenAIChatFromBraveSearch);
+#endif
 }
 
 BASE_FEATURE(kPageContextEnabledInitially, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -175,22 +182,47 @@ BASE_FEATURE(kNEARModels,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 bool IsNEARModelsEnabled() {
+#if BUILDFLAG(IS_KO)
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kNEARModels);
+#endif
 }
 
 BASE_FEATURE(kBraveSummaryModel,
              "AIChatBraveSummaryModel",
+#if BUILDFLAG(IS_KO)
+             base::FEATURE_DISABLED_BY_DEFAULT);
+#else
              base::FEATURE_ENABLED_BY_DEFAULT);
+#endif
 
 bool IsBraveSummaryModelEnabled() {
+#if BUILDFLAG(IS_KO)
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kBraveSummaryModel);
+#endif
 }
 
-BASE_FEATURE(kRichSearchWidgets, base::FEATURE_ENABLED_BY_DEFAULT);
+BASE_FEATURE(kRichSearchWidgets,
+#if BUILDFLAG(IS_KO)
+             base::FEATURE_DISABLED_BY_DEFAULT);
+#else
+             base::FEATURE_ENABLED_BY_DEFAULT);
+#endif
 
 const base::FeatureParam<std::string> kRichSearchWidgetsOrigin{
     &kRichSearchWidgets, "rich_search_widgets_origin",
     "https://prod.browser-ai-includes.s.brave.app"};
+
+bool IsRichSearchWidgetsEnabled() {
+#if BUILDFLAG(IS_KO)
+  return false;
+#else
+  return base::FeatureList::IsEnabled(features::kRichSearchWidgets);
+#endif
+}
 
 BASE_FEATURE(kCodeExecutionTool,
              "AIChatCodeExecutionTool",
@@ -238,7 +270,12 @@ bool IsShowAIChatInputOnNewTabPageEnabled(PrefService* local_state,
 BASE_FEATURE(kAIChatDeepResearch, base::FEATURE_DISABLED_BY_DEFAULT);
 
 bool IsAIChatDeepResearchEnabled() {
+#if BUILDFLAG(IS_KO)
+  // Deep research runs on Brave's servers.
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kAIChatDeepResearch);
+#endif
 }
 
 BASE_FEATURE(kBraveSyncAIChat, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -252,7 +289,12 @@ BASE_FEATURE(kAIChatThreads, base::FEATURE_DISABLED_BY_DEFAULT);
 const base::FeatureParam<size_t> kMaxThreadsPerOriginEntry{
     &kAIChatThreads, "max_threads_per_origin_entry", 1};
 
-BASE_FEATURE(kAIChatConversationShare, base::FEATURE_ENABLED_BY_DEFAULT);
+BASE_FEATURE(kAIChatConversationShare,
+#if BUILDFLAG(IS_KO)
+             base::FEATURE_DISABLED_BY_DEFAULT);
+#else
+             base::FEATURE_ENABLED_BY_DEFAULT);
+#endif
 
 const base::FeatureParam<std::string> kAIChatConversationShareBaseUrl{
     &kAIChatConversationShare, "viewer_base_url",
@@ -260,6 +302,14 @@ const base::FeatureParam<std::string> kAIChatConversationShareBaseUrl{
 
 const base::FeatureParam<int> kAIChatConversationShareExpiryDays{
     &kAIChatConversationShare, "expiry_days", 7};
+
+bool IsConversationShareEnabled() {
+#if BUILDFLAG(IS_KO)
+  return false;
+#else
+  return base::FeatureList::IsEnabled(features::kAIChatConversationShare);
+#endif
+}
 
 BASE_FEATURE(kAIChatExportJSON, base::FEATURE_DISABLED_BY_DEFAULT);
 

@@ -1,0 +1,39 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# Unconditional so targets that guard K-O code with BUILDFLAG(IS_KO) can depend
+# on them in every build.
+static_library("paths") {
+  sources = [
+    "ko_paths.cc",
+    "ko_paths.h",
+  ]
+
+  public_deps = [ "//base" ]
+}
+
+# Reads ko-agentd's token and port files, for the Assistant and
+# chrome://ko-workspace.
+static_library("agentd_config") {
+  sources = [
+    "agentd_config.cc",
+    "agentd_config.h",
+  ]
+
+  public_deps = [ "//base" ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [ "agentd_config_unittest.cc" ]
+
+  deps = [
+    ":agentd_config",
+    "//base",
+    "//base/test:test_support",
+    "//testing/gtest",
+  ]
+}

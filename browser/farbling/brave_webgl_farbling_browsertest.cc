@@ -14,6 +14,8 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
@@ -26,6 +28,10 @@
 #include "content/public/test/browser_test_utils.h"
 #include "net/dns/mock_host_resolver.h"
 #include "third_party/blink/public/common/features.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -107,6 +113,13 @@ class BraveWebGLFarblingBrowserTest : public InProcessBrowserTest {
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com", "b.com", "c.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
   }
 
   HostContentSettingsMap* content_settings() {
@@ -118,19 +131,41 @@ class BraveWebGLFarblingBrowserTest : public InProcessBrowserTest {
     brave_shields::SetFingerprintingControlType(
         content_settings(), ControlType::ALLOW,
         embedded_test_server()->GetURL(domain, "/"));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+    // Strict K-O builds refuse the write above; the WebGL webcompat
+    // exceptions are the remaining way to unfarble WebGL.
+    SetWebGLWebcompatEnabled(domain, true);
+#endif
   }
 
   void BlockFingerprinting(std::string domain) {
     brave_shields::SetFingerprintingControlType(
         content_settings(), ControlType::BLOCK,
         embedded_test_server()->GetURL(domain, "/"));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+    SetWebGLWebcompatEnabled(domain, false);
+#endif
   }
 
   void SetFingerprintingDefault(std::string domain) {
     brave_shields::SetFingerprintingControlType(
         content_settings(), ControlType::DEFAULT,
         embedded_test_server()->GetURL(domain, "/"));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+    SetWebGLWebcompatEnabled(domain, false);
+#endif
   }
+
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  void SetWebGLWebcompatEnabled(const std::string& domain, bool enabled) {
+    for (auto type : {ContentSettingsType::BRAVE_WEBCOMPAT_WEBGL,
+                      ContentSettingsType::BRAVE_WEBCOMPAT_WEBGL2}) {
+      brave_shields::SetWebcompatEnabled(
+          content_settings(), type, enabled,
+          embedded_test_server()->GetURL(domain, "/"), nullptr);
+    }
+  }
+#endif
 
   content::WebContents* contents() {
     return browser()->tab_strip_model()->GetActiveWebContents();

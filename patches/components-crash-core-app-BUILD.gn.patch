@@ -1,0 +1,12 @@
+diff --git a/components/crash/core/app/BUILD.gn b/components/crash/core/app/BUILD.gn
+index ffbbd8cad579f1ddd407a4a52b08b3104a7c1995..424b21eac629170cf9e8ad0de08be370ffb88455 100644
+--- a/components/crash/core/app/BUILD.gn
++++ b/components/crash/core/app/BUILD.gn
+@@ -22,6 +22,7 @@ source_set("lib") {
+ 
+   deps = [
+     "//base",
++    "//brave/components/ko/telemetry:crash_buildflags",
+     "//build:branding_buildflags",
+   ]
+ }

@@ -235,9 +235,16 @@
       <message name="IDS_SHOW_BRAVE_WALLET" desc="The show Brave Wallet menu item (app menu)">
         Wallet
       </message>
+      <if expr="not is_ko">
       <message name="IDS_TOGGLE_AI_CHAT" desc="The show Brave Leo AI Chat menu item (app menu)">
         Leo AI
       </message>
+      </if>
+      <if expr="is_ko">
+      <message name="IDS_TOGGLE_AI_CHAT" desc="The show Brave Leo AI Chat menu item (app menu)">
+        K-O Assistant
+      </message>
+      </if>
       <message name="IDS_OPEN_MORE_OTHER_DEVICES_SESSIONS" desc="The history sub-menu item to show sessions from other devices">
         More…
       </message>
@@ -574,39 +581,109 @@ Or change later at <ph name="SETTINGS_EXTENIONS_LINK">$2<ex>brave://settings/ext
       </if>
 
       <if expr="use_titlecase">
+        <if expr="not is_ko">
         <message name="IDS_HIDE_BRAVE_AI_CHAT_ICON_ON_TOOLBAR" desc="The description for hiding the Brave AI Chat icon on the toolbar">
           Hide Leo AI Icon
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_HIDE_BRAVE_AI_CHAT_ICON_ON_TOOLBAR" desc="The description for hiding the Brave AI Chat icon on the toolbar">
+          Hide K-O Assistant Icon
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_OPEN_BRAVE_AI_CHAT_FULL_PAGE" desc="The description for opening the Brave AI Chat in a new tab">
           Open Leo AI in a New Tab
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_OPEN_BRAVE_AI_CHAT_FULL_PAGE" desc="The description for opening the Brave AI Chat in a new tab">
+          Open K-O Assistant in a New Tab
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_OPEN_BRAVE_AI_CHAT_SIDE_PANEL" desc="The description for opening the Brave AI Chat in the sidebar">
           Open Leo AI in the Sidebar
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_OPEN_BRAVE_AI_CHAT_SIDE_PANEL" desc="The description for opening the Brave AI Chat in the sidebar">
+          Open K-O Assistant in the Sidebar
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_MANAGE_BRAVE_AI_CHAT" desc="The description for opening the Brave AI Chat settings">
           Manage Leo AI Settings
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_MANAGE_BRAVE_AI_CHAT" desc="The description for opening the Brave AI Chat settings">
+          Manage K-O Assistant Settings
+        </message>
+        </if>
       </if>
       <if expr="not use_titlecase">
+        <if expr="not is_ko">
         <message name="IDS_HIDE_BRAVE_AI_CHAT_ICON_ON_TOOLBAR" desc="The description for hiding the Brave AI Chat icon on the toolbar">
           Hide Leo AI icon
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_HIDE_BRAVE_AI_CHAT_ICON_ON_TOOLBAR" desc="The description for hiding the Brave AI Chat icon on the toolbar">
+          Hide K-O Assistant icon
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_OPEN_BRAVE_AI_CHAT_FULL_PAGE" desc="The description for opening the Brave AI Chat in a new tab">
           Open Leo AI in a new tab
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_OPEN_BRAVE_AI_CHAT_FULL_PAGE" desc="The description for opening the Brave AI Chat in a new tab">
+          Open K-O Assistant in a new tab
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_OPEN_BRAVE_AI_CHAT_SIDE_PANEL" desc="The description for opening the Brave AI Chat in the sidebar">
           Open Leo AI in the sidebar
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_OPEN_BRAVE_AI_CHAT_SIDE_PANEL" desc="The description for opening the Brave AI Chat in the sidebar">
+          Open K-O Assistant in the sidebar
+        </message>
+        </if>
+        <if expr="not is_ko">
         <message name="IDS_MANAGE_BRAVE_AI_CHAT" desc="The description for opening the Brave AI Chat settings">
           Manage Leo AI settings
         </message>
+        </if>
+        <if expr="is_ko">
+        <message name="IDS_MANAGE_BRAVE_AI_CHAT" desc="The description for opening the Brave AI Chat settings">
+          Manage K-O Assistant settings
+        </message>
+        </if>
       </if>
+      <if expr="not is_ko">
       <message name="IDS_ABOUT_BRAVE_AI_CHAT" desc="The description for loading the Brave AI Chat about page">
         About Leo AI
       </message>
+      </if>
+      <if expr="is_ko">
+      <message name="IDS_ABOUT_BRAVE_AI_CHAT" desc="The description for loading the Brave AI Chat about page">
+        About K-O Assistant
+      </message>
+      </if>
+      <if expr="not is_ko">
       <message name="IDS_TOOLTIP_AI_CHAT_TOOLBAR_BUTTON" desc="Text for Leo toolbar button for toggling Leo side panel">
         Leo AI
       </message>
+      </if>
+      <if expr="is_ko">
+      <message name="IDS_TOOLTIP_AI_CHAT_TOOLBAR_BUTTON" desc="Text for Leo toolbar button for toggling Leo side panel">
+        K-O Assistant
+      </message>
+      </if>
 
       <!-- Screenshot feature strings -->
       <message name="IDS_BRAVE_SCREENSHOT_TOOLBAR_BUTTON_TOOLTIP" desc="Tooltip for the screenshot toolbar button">
@@ -1595,9 +1672,16 @@ Or change later at <ph name="SETTINGS_EXTENIONS_LINK">$2<ex>brave://settings/ext
       <message name="IDS_BRAVE_ORGANIZE_TAB_NO_MATCHING_TABS_MESSAGE" desc="Message shown when no open tab matches the topic the user asked for">
         No tabs matched that topic. Try describing it differently.
       </message>
+      <if expr="not is_ko">
       <message name="IDS_BRAVE_ORGANIZE_TAB_SEND_TAB_DATA_MESSAGE" desc="Description of how tab data is shared with Leo">
         This feature sends data about your open tabs to Leo, Brave's AI-powered browser assistant.
       </message>
+      </if>
+      <if expr="is_ko">
+      <message name="IDS_BRAVE_ORGANIZE_TAB_SEND_TAB_DATA_MESSAGE" desc="Description of how tab data is shared with Leo">
+        This feature sends data about your open tabs to K-O Assistant, using the model you chose for it.
+      </message>
+      </if>
       <message name="IDS_BRAVE_ORGANIZE_TAB_LEARN_MORE_LABEL" desc="Text of the learn more link">
         Learn more
       </message>
@@ -1607,9 +1691,16 @@ Or change later at <ph name="SETTINGS_EXTENIONS_LINK">$2<ex>brave://settings/ext
       <message name="IDS_BRAVE_ORGANIZE_TAB_DISMISS_BUTTON_LABEL" desc="Text of the dismiss button">
         Dismiss
       </message>
+      <if expr="not is_ko">
       <message name="IDS_BRAVE_ORGANIZE_TAB_PRIVACY_DISCLAIMER" desc="Disclaimer text for enabling the tab focus feature">
         When opened, this will automatically send the titles and origin of all non-private tabs to Leo to classify them. If you also turn on sending page content, short excerpts of the text of each tab are sent too.
       </message>
+      </if>
+      <if expr="is_ko">
+      <message name="IDS_BRAVE_ORGANIZE_TAB_PRIVACY_DISCLAIMER" desc="Disclaimer text for enabling the tab focus feature">
+        When opened, this will automatically send the titles and origin of all non-private tabs to K-O Assistant to classify them. If you also turn on sending page content, short excerpts of the text of each tab are sent too.
+      </message>
+      </if>
       <message name="IDS_BRAVE_ORGANIZE_TAB_ENABLE_BUTTON_LABEL" desc="Text of enable tab focus button">
         Enable
       </message>

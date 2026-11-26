@@ -1,0 +1,265 @@
+/* Copyright (c) 2026 The Brave Authors. All rights reserved.
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--leo-color-page-background);
+  color: var(--leo-color-text-primary);
+  font: var(--leo-font-default-regular);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+/* List page */
+
+.page {
+  box-sizing: border-box;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--leo-spacing-3xl) var(--leo-spacing-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-2xl);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--leo-spacing-xl);
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  font: var(--leo-font-heading-h2);
+}
+
+.page-header p,
+.help,
+.machine-detail {
+  color: var(--leo-color-text-secondary);
+}
+
+.page-header .text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-s);
+  flex: 1 1 320px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--leo-spacing-m);
+  flex-wrap: wrap;
+}
+
+.machines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-m);
+}
+
+.machine,
+.panel {
+  display: flex;
+  align-items: center;
+  gap: var(--leo-spacing-xl);
+  padding: var(--leo-spacing-xl);
+  background: var(--leo-color-container-background);
+  border: 1px solid var(--leo-color-divider-subtle);
+  border-radius: var(--leo-radius-l);
+}
+
+.panel {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--leo-spacing-m);
+}
+
+.panel h2 {
+  font: var(--leo-font-heading-h4);
+}
+
+.machine > leo-icon {
+  --leo-icon-size: var(--leo-icon-l);
+  color: var(--leo-color-icon-default);
+  flex-shrink: 0;
+}
+
+.machine-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.machine-name {
+  font: var(--leo-font-default-semibold);
+  overflow-wrap: anywhere;
+}
+
+.machine-detail {
+  font: var(--leo-font-small-regular);
+  overflow-wrap: anywhere;
+}
+
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--leo-spacing-xs);
+  font: var(--leo-font-small-regular);
+  color: var(--leo-color-text-secondary);
+}
+
+.saved leo-icon {
+  --leo-icon-size: var(--leo-icon-xs);
+}
+
+.cidrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--leo-spacing-s);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cidrs li {
+  padding: var(--leo-spacing-xs) var(--leo-spacing-m);
+  border: 1px solid var(--leo-color-divider-subtle);
+  border-radius: var(--leo-radius-m);
+  font: var(--leo-font-small-regular);
+}
+
+.empty {
+  padding: var(--leo-spacing-3xl) var(--leo-spacing-xl);
+  text-align: center;
+  color: var(--leo-color-text-secondary);
+}
+
+/* Dialog forms */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-l);
+  min-width: min(420px, 80vw);
+}
+
+.form .row {
+  display: flex;
+  gap: var(--leo-spacing-l);
+}
+
+.form .row > :first-child {
+  flex: 1;
+}
+
+.form .port {
+  width: 120px;
+}
+
+.help {
+  font: var(--leo-font-small-regular);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--leo-spacing-m);
+}
+
+/* Viewer */
+
+.viewer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--leo-spacing-l);
+  padding: var(--leo-spacing-m) var(--leo-spacing-xl);
+  background: var(--leo-color-container-background);
+  border-bottom: 1px solid var(--leo-color-divider-subtle);
+  flex-wrap: wrap;
+}
+
+.toolbar .title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-inline-end: auto;
+}
+
+.toolbar .title .machine-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--leo-spacing-s);
+  font: var(--leo-font-small-regular);
+  color: var(--leo-color-text-secondary);
+}
+
+.status leo-progressring {
+  --leo-progressring-size: var(--leo-icon-xs);
+}
+
+.toolbar .controls {
+  display: flex;
+  align-items: center;
+  gap: var(--leo-spacing-l);
+  flex-wrap: wrap;
+}
+
+.screen {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  /* The remote desktop is not a Leo surface; noVNC paints its own
+     background. */
+  background: var(--leo-color-page-background);
+}
+
+.rfb-target {
+  position: absolute;
+  inset: 0;
+}
+
+.screen-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--leo-spacing-2xl);
+  pointer-events: none;
+}
+
+.screen-overlay > * {
+  pointer-events: auto;
+  max-width: 560px;
+}

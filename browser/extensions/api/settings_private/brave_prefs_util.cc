@@ -22,6 +22,7 @@
 #include "brave/components/debounce/core/common/pref_names.h"
 #include "brave/components/decentralized_dns/core/pref_names.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/common/pref_names.h"
 #include "brave/components/omnibox/browser/brave_omnibox_prefs.h"
@@ -105,6 +106,10 @@
 
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/components/traffic_control/core/browser/pref_names.h"
+#endif
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/ko/telemetry/ko_analytics_prefs.h"
 #endif
 
 namespace extensions {
@@ -448,6 +453,12 @@ const PrefsUtil::TypedPrefMap& BravePrefsUtil::GetAllowlistedKeys() {
 
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
   (*s_brave_allowlist)[traffic_control::prefs::kTrafficControlEnabled] =
+      settings_api::PrefType::kBoolean;
+#endif
+
+#if BUILDFLAG(IS_KO)
+  // Local state: K-O self-hosted analytics toggle.
+  (*s_brave_allowlist)[::ko::analytics::prefs::kEnabled] =
       settings_api::PrefType::kBoolean;
 #endif
 

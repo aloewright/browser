@@ -3,11 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+#include <string_view>
+
 #include "base/memory/scoped_refptr.h"
 #include "base/test/scoped_feature_list.h"
 #include "brave/browser/brave_browser_process.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/https_upgrade_exceptions/browser/https_upgrade_exceptions_service.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/interstitials/security_interstitial_page_test_utils.h"
@@ -89,6 +92,24 @@ constexpr TestCase kTestCases[] = {
 base::FilePath GetTestDataDir() {
   return base::FilePath(FILE_PATH_LITERAL("net/data/url_request_unittest"));
 }
+
+#if BUILDFLAG(IS_KO)
+// K-O ignores global changes, and strict K-O builds also refuse per-site
+// relaxations, so such cases get K-O's strict default: every HTTP page
+// upgrades, and only the insecure* hosts (certificate errors) warn.
+PageResult KoExpectedResult(const TestCase& test_case, bool global_setting) {
+#if !defined(KO_SHIELDS_STRICT_BUILD)
+  if (!global_setting) {
+    return test_case.expected_result;
+  }
+#endif
+  if (!test_case.init_secure &&
+      std::string_view(test_case.domain).starts_with("insecure")) {
+    return PageResult::kInterstitial;
+  }
+  return PageResult::kHttps;
+}
+#endif  // BUILDFLAG(IS_KO)
 
 }  // namespace
 
@@ -197,6 +218,24 @@ class HttpsUpgradeBrowserTest : public PlatformBrowserTest {
         chrome_test_utils::GetProfile(this));
   }
 
+  void ExpectPageResult(const TestCase& test_case, PageResult expected_result) {
+    bool interstitial_or_dialog_showing =
+#if !BUILDFLAG(IS_ANDROID)
+        IsAskBeforeHttpDialogShowing(Contents());
+#else
+        chrome_browser_interstitials::IsShowingInterstitial(Contents());
+#endif
+    if (expected_result == PageResult::kInterstitial) {
+      EXPECT_TRUE(interstitial_or_dialog_showing);
+    } else {
+      EXPECT_FALSE(interstitial_or_dialog_showing);
+      GURL final_url = (expected_result == PageResult::kHttp ? http_server()
+                                                             : https_server())
+                           ->GetURL(test_case.domain, test_case.path);
+      EXPECT_EQ(final_url, Contents()->GetLastCommittedURL());
+    }
+  }
+
 #if !BUILDFLAG(IS_ANDROID)
   bool IsAskBeforeHttpDialogShowing(content::WebContents* web_contents) {
     auto* const tab = tabs::TabInterface::MaybeGetFromContents(web_contents);
@@ -239,26 +278,17 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, CheckUpgrades) {
     for (const TestCase& test_case : kTestCases) {
       RunTestCaseNavigation(true, global_setting, test_case,
                             test_case.type_url);
-      bool interstitial_or_dialog_showing =
-#if !BUILDFLAG(IS_ANDROID)
-          IsAskBeforeHttpDialogShowing(Contents());
+#if BUILDFLAG(IS_KO)
+      ExpectPageResult(test_case, KoExpectedResult(test_case, global_setting));
 #else
-          chrome_browser_interstitials::IsShowingInterstitial(Contents());
+      ExpectPageResult(test_case, test_case.expected_result);
 #endif
-      if (test_case.expected_result == PageResult::kInterstitial) {
-        EXPECT_TRUE(interstitial_or_dialog_showing);
-      } else {
-        EXPECT_FALSE(interstitial_or_dialog_showing);
-        GURL final_url =
-            (test_case.expected_result == PageResult::kHttp ? http_server()
-                                                            : https_server())
-                ->GetURL(test_case.domain, test_case.path);
-        EXPECT_EQ(final_url, Contents()->GetLastCommittedURL());
-      }
     }
   }
 }
 
+// Strict K-O builds don't drop Shields per site, so CheckUpgrades applies.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, CheckUpgradesWithShieldsDown) {
   for (bool global_setting : {true, false}) {
     for (const TestCase& test_case : kTestCases) {
@@ -272,10 +302,19 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, CheckUpgradesWithShieldsDown) {
     }
   }
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest_FlagDisabled, CheckUpgrades) {
   for (bool global_setting : {true, false}) {
     for (const TestCase& test_case : kTestCases) {
+#if BUILDFLAG(IS_KO)
+      RunTestCaseNavigation(true, global_setting, test_case,
+                            test_case.type_url);
+      // With the flag off, profile init moves K-O's strict default into
+      // upstream HTTPS-Only Mode, which ignores Brave's settings.
+      ExpectPageResult(test_case,
+                       KoExpectedResult(test_case, /*global_setting=*/true));
+#else
       const GURL initial_url = RunTestCaseNavigation(
           true, global_setting, test_case, test_case.type_url);
       // Disabled flag means no URLs change and no interstitials shown.
@@ -283,6 +322,7 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest_FlagDisabled, CheckUpgrades) {
       bool interstitial_showing =
           chrome_browser_interstitials::IsShowingInterstitial(Contents());
       EXPECT_FALSE(interstitial_showing);
+#endif
     }
   }
 }
@@ -302,6 +342,21 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, IsolateSettings) {
   auto* incognito_map =
       HostContentSettingsMapFactory::GetForProfile(incognito_profile);
 
+#if BUILDFLAG(IS_KO)
+  // K-O defaults to strict upgrades and ignores global changes.
+  constexpr ControlType kDefault = ControlType::BLOCK;
+  constexpr ControlType kGlobalAllowed = ControlType::BLOCK;
+#else
+  constexpr ControlType kDefault = ControlType::BLOCK_THIRD_PARTY;
+  constexpr ControlType kGlobalAllowed = ControlType::ALLOW;
+#endif
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds also refuse per-site relaxations.
+  constexpr ControlType kSiteAllowed = ControlType::BLOCK;
+#else
+  constexpr ControlType kSiteAllowed = ControlType::ALLOW;
+#endif
+
   // Disable upgrades for a site.
   brave_shields::SetHttpsUpgradeControlType(normal_map, ControlType::ALLOW,
                                             host1);
@@ -310,13 +365,13 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, IsolateSettings) {
 
   // Disabled upgrade per-site in normal windows should not apply to incognito
   // windows, nor vice versa.
-  EXPECT_EQ(ControlType::ALLOW,
+  EXPECT_EQ(kSiteAllowed,
             brave_shields::GetHttpsUpgradeControlType(normal_map, host1));
-  EXPECT_EQ(ControlType::BLOCK_THIRD_PARTY,
+  EXPECT_EQ(kDefault,
             brave_shields::GetHttpsUpgradeControlType(incognito_map, host1));
-  EXPECT_EQ(ControlType::BLOCK_THIRD_PARTY,
+  EXPECT_EQ(kDefault,
             brave_shields::GetHttpsUpgradeControlType(normal_map, host2));
-  EXPECT_EQ(ControlType::ALLOW,
+  EXPECT_EQ(kSiteAllowed,
             brave_shields::GetHttpsUpgradeControlType(incognito_map, host2));
 
   // Set strict per-site settings.
@@ -333,7 +388,7 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, IsolateSettings) {
             brave_shields::GetHttpsUpgradeControlType(incognito_map, host1));
   EXPECT_EQ(ControlType::BLOCK,
             brave_shields::GetHttpsUpgradeControlType(incognito_map, host2));
-  EXPECT_EQ(ControlType::BLOCK_THIRD_PARTY,
+  EXPECT_EQ(kDefault,
             brave_shields::GetHttpsUpgradeControlType(normal_map, host2));
 
   // Set global setting to strict.
@@ -351,8 +406,8 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, IsolateSettings) {
                                             GURL());
 
   // Disabled global upgrades should apply to normal windows but not incognito.
-  EXPECT_EQ(ControlType::ALLOW,
+  EXPECT_EQ(kGlobalAllowed,
             brave_shields::GetHttpsUpgradeControlType(normal_map, GURL()));
-  EXPECT_EQ(ControlType::BLOCK_THIRD_PARTY,
+  EXPECT_EQ(kDefault,
             brave_shields::GetHttpsUpgradeControlType(incognito_map, GURL()));
 }

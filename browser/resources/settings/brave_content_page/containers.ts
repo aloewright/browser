@@ -10,6 +10,7 @@ import '../controls/settings_toggle_button.js'
 
 import { I18nMixinLit } from '//resources/cr_elements/i18n_mixin_lit.js'
 import { assert } from '//resources/js/assert.js'
+import { loadTimeData } from '//resources/js/load_time_data.js'
 import { CrInputElement } from 'chrome://resources/cr_elements/cr_input/cr_input.js'
 import {
   CrLitElement,
@@ -21,6 +22,7 @@ import { ContainersStrings } from '../brave_generated_resources_webui_strings.js
 import {
   Container,
   ContainerOperationError,
+  ContainerProxy,
   Icon,
 } from '../containers.mojom-webui.js'
 
@@ -75,6 +77,18 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
       deleteDialogError_: {
         type: String,
       },
+      editingProxyUrl_: {
+        type: String,
+      },
+      editingProxyUsername_: {
+        type: String,
+      },
+      editingProxyPassword_: {
+        type: String,
+      },
+      keepProxyCredentials_: {
+        type: Boolean,
+      },
     }
   }
 
@@ -88,6 +102,13 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
   accessor isEditDialogNameInvalid_ = false
   accessor editDialogError_: string | undefined
   accessor deleteDialogError_: string | undefined
+  // K-O: per-container proxy. The browser never sends credentials back; the
+  // password only lives here until the dialog closes.
+  readonly isKOBuild_ = loadTimeData.getBoolean('isKOBuild')
+  accessor editingProxyUrl_ = ''
+  accessor editingProxyUsername_ = ''
+  accessor editingProxyPassword_ = ''
+  accessor keepProxyCredentials_ = false
 
   override connectedCallback() {
     super.connectedCallback()
@@ -137,7 +158,9 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
       name: '',
       icon: Icon.kDefault,
       backgroundColor: backgroundColors[0],
+      proxy: null,
     }
+    this.resetProxyFields_(null)
     this.editDialogError_ = undefined
   }
 
@@ -145,6 +168,7 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
     const id = (e.currentTarget as HTMLElement).dataset['id']
     assert(id)
     this.editingContainer_ = this.containersList_.find((c) => c.id === id)
+    this.resetProxyFields_(this.editingContainer_?.proxy ?? null)
     this.editDialogError_ = undefined
   }
 
@@ -158,6 +182,7 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
   onDialogClose_() {
     this.editingContainer_ = undefined
     this.deletingContainer_ = undefined
+    this.resetProxyFields_(null)
   }
 
   onCancelDialogClick_() {
@@ -190,14 +215,66 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
     }
   }
 
+  onProxyUrlInput_(e: InputEvent) {
+    this.editingProxyUrl_ = (e.target as CrInputElement).value
+  }
+
+  onProxyUsernameInput_(e: InputEvent) {
+    this.editingProxyUsername_ = (e.target as CrInputElement).value
+  }
+
+  onProxyPasswordInput_(e: InputEvent) {
+    this.editingProxyPassword_ = (e.target as CrInputElement).value
+  }
+
+  onClearProxyCredentialsClick_() {
+    this.keepProxyCredentials_ = false
+  }
+
+  private resetProxyFields_(proxy: ContainerProxy | null) {
+    this.editingProxyUrl_ = proxy?.url ?? ''
+    this.editingProxyUsername_ = ''
+    this.editingProxyPassword_ = ''
+    this.keepProxyCredentials_ = proxy?.hasCredentials ?? false
+  }
+
+  // Credentials go to the browser embedded in the URL, percent-encoded.
+  private buildProxy_(): ContainerProxy | null {
+    if (!this.isKOBuild_) {
+      return null
+    }
+    const url = this.editingProxyUrl_.trim()
+    if (!url) {
+      return null
+    }
+    const separator = url.indexOf('://')
+    const username = this.editingProxyUsername_
+    if (!username || separator < 0 || url.includes('@')) {
+      return { url, hasCredentials: !username && this.keepProxyCredentials_ }
+    }
+    const password = this.editingProxyPassword_
+    const userinfo =
+      encodeURIComponent(username)
+      + (password ? ':' + encodeURIComponent(password) : '')
+    return {
+      url: url.slice(0, separator + 3) + userinfo + '@'
+        + url.slice(separator + 3),
+      hasCredentials: false,
+    }
+  }
+
   async onSaveContainerFromDialogClick_() {
     assert(this.editingContainer_)
+    this.editingContainer_ = {
+      ...this.editingContainer_,
+      proxy: this.buildProxy_(),
+    }
     if (!this.editingContainer_.id) {
       const { error } = await this.browserProxy.handler.addContainer(
         this.editingContainer_,
       )
       if (!error) {
-        this.editingContainer_ = undefined
+        this.onDialogClose_()
       } else {
         this.editDialogError_ = this.formatError_(error)
       }
@@ -206,7 +283,7 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
         this.editingContainer_,
       )
       if (!error) {
-        this.editingContainer_ = undefined
+        this.onDialogClose_()
       } else {
         this.editDialogError_ = this.formatError_(error)
       }
@@ -238,6 +315,16 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
         // This is the only error we expect in normal operation.
         errorMessage = this.i18n(
           ContainersStrings.SETTINGS_CONTAINERS_ERROR_NOT_FOUND,
+        )
+        break
+      case ContainerOperationError.kInvalidProxy:
+        errorMessage = this.i18n(
+          ContainersStrings.SETTINGS_CONTAINERS_ERROR_INVALID_PROXY,
+        )
+        break
+      case ContainerOperationError.kProxyCredentialsUnavailable:
+        errorMessage = this.i18n(
+          ContainersStrings.SETTINGS_CONTAINERS_ERROR_PROXY_CREDENTIALS_UNAVAILABLE,
         )
         break
       default:

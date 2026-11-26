@@ -89,6 +89,9 @@ struct APIRequestOptions {
   bool enable_cache = false;
   size_t max_body_size = -1u;
   std::optional<base::TimeDelta> timeout;
+  // When false, a redirect fails the request instead of being followed, so
+  // credentials in |headers| never reach another URL.
+  bool allow_redirects = true;
 };
 
 using ValueOrError = base::expected<base::Value, std::string>;
@@ -254,7 +257,8 @@ class APIRequestHelper {
       bool auto_retry_on_network_change,
       bool enable_cache,
       bool allow_http_error_result,
-      const base::flat_map<std::string, std::string>& headers);
+      const base::flat_map<std::string, std::string>& headers,
+      bool allow_redirects);
 
   // TODO(petemill): When Download has been removed, we don't need two versions
   // of CreateURLLoaderHandler

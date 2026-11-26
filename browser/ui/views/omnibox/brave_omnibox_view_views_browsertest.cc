@@ -211,6 +211,12 @@ IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsTest,
                        CopyInternalURLToClipboardTest) {
   const std::string test_url("brave://version/");
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), GURL(test_url)));
+#if defined(KO_BUILD)
+  // chrome:// pages are copied as ko:// in K-O.
+  const std::string expected_url("ko://version/");
+#else
+  const std::string& expected_url = test_url;
+#endif
 
   omnibox_view()->SelectAll(true);
   omnibox_view()->ExecuteCommand(
@@ -219,13 +225,13 @@ IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsTest,
   std::string text_from_clipboard = ui::clipboard_test_util::ReadAsciiText(
       clipboard, ui::ClipboardBuffer::kCopyPaste,
       /* data_dst = */ nullptr);
-  EXPECT_EQ(test_url, text_from_clipboard);
+  EXPECT_EQ(expected_url, text_from_clipboard);
 
 #if BUILDFLAG(IS_LINUX)
   text_from_clipboard = ui::clipboard_test_util::ReadAsciiText(
       clipboard, ui::ClipboardBuffer::kSelection,
       /* data_dst = */ nullptr);
-  EXPECT_EQ(test_url, text_from_clipboard);
+  EXPECT_EQ(expected_url, text_from_clipboard);
 #endif
 }
 
@@ -351,7 +357,11 @@ IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsTest, DoNotSanitizeInternalURLS) {
   std::string text_from_clipboard = ui::clipboard_test_util::ReadAsciiText(
       clipboard, ui::ClipboardBuffer::kCopyPaste,
       /* data_dst = */ nullptr);
+#if defined(KO_BUILD)
+  EXPECT_EQ(text_from_clipboard, "ko://settings/?utm_ad=1");
+#else
   EXPECT_EQ(text_from_clipboard, "brave://settings/?utm_ad=1");
+#endif
 }
 
 IN_PROC_BROWSER_TEST_F(BraveOmniboxViewViewsDisabledFeatureTest,

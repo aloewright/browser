@@ -132,6 +132,9 @@ export default defineConfig([
 
     // Intentionally redefines/undefined browser globals.
     'components/ai_chat/resources/code_sandbox/interface_removal.js',
+
+    // Standalone Cloudflare Workers package with its own tsconfig and tests.
+    'ko/cloudflare/',
   ]),
 
   {

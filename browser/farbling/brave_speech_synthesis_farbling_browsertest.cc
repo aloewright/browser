@@ -15,6 +15,8 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -25,6 +27,10 @@
 #include "content/public/test/browser_test_utils.h"
 #include "net/dns/mock_host_resolver.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -95,6 +101,13 @@ class BraveSpeechSynthesisFarblingBrowserTest : public InProcessBrowserTest {
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"b.com", "z.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
   }
 
   HostContentSettingsMap* content_settings() {
@@ -154,9 +167,15 @@ IN_PROC_BROWSER_TEST_F(BraveSpeechSynthesisFarblingBrowserTest, FarbleVoices) {
   std::string off_voices_z =
       EvalJs(web_contents(), kTitleScript).ExtractString();
   ASSERT_NE("failed", off_voices_z);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so both "off" lists
+  // are farbled per domain.
+  EXPECT_NE(SortedVoices(off_voices_b), SortedVoices(off_voices_z));
+#else
   // The voices list should be the same on every domain if farbling is off
   // (order-independent; see SortedVoices).
   EXPECT_EQ(SortedVoices(off_voices_b), SortedVoices(off_voices_z));
+#endif
 
   // Farbling level: default
   // The voices list is farbled per domain.
@@ -175,8 +194,13 @@ IN_PROC_BROWSER_TEST_F(BraveSpeechSynthesisFarblingBrowserTest, FarbleVoices) {
   // Compare order-independently (see SortedVoices): otherwise these could pass
   // merely because the platform reorders the default voice between navigations,
   // masking a regression where farbling silently stops adding the fake voice.
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  EXPECT_EQ(SortedVoices(off_voices_b), SortedVoices(default_voices_b));
+  EXPECT_EQ(SortedVoices(off_voices_z), SortedVoices(default_voices_z));
+#else
   EXPECT_NE(SortedVoices(off_voices_b), SortedVoices(default_voices_b));
   EXPECT_NE(SortedVoices(off_voices_z), SortedVoices(default_voices_z));
+#endif
   EXPECT_NE(SortedVoices(default_voices_b), SortedVoices(default_voices_z));
 
   // Farbling level: maximum
@@ -199,7 +223,12 @@ IN_PROC_BROWSER_TEST_F(BraveSpeechSynthesisFarblingBrowserTest, FarbleVoices) {
   std::string off_voices_z2 =
       EvalJs(web_contents(), kTitleScript).ExtractString();
   ASSERT_NE("failed", off_voices_z2);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // The exception unfarbles the list.
+  EXPECT_NE(SortedVoices(default_voices_z), SortedVoices(off_voices_z2));
+#else
   // The voices list should be the same on every domain if farbling is off
   // (order-independent; see SortedVoices).
   EXPECT_EQ(SortedVoices(off_voices_b), SortedVoices(off_voices_z2));
+#endif
 }

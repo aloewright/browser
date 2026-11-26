@@ -88,6 +88,76 @@
 
 <div class="settings-box">
   <div class="container">
+    <template is="dom-if" if="[[showProviderPresets_]]">
+      <div class="input-container">
+        <div class="custom-label">
+          <span>$i18n{koAssistantProviderPresetLabel}</span>
+        </div>
+        <leo-dropdown
+          value="[[providerPreset_]]"
+          on-change="onProviderPresetChange_"
+        >
+          <leo-option value="custom">
+            $i18n{koAssistantProviderPresetCustom}
+          </leo-option>
+          <leo-option value="cloudflare">
+            $i18n{koAssistantProviderPresetCloudflare}
+          </leo-option>
+          <leo-option value="nanogpt">
+            $i18n{koAssistantProviderPresetNanoGpt}
+          </leo-option>
+        </leo-dropdown>
+        <div class="helper-text">
+          $i18n{koAssistantProviderPresetDesc}
+        </div>
+      </div>
+      <template is="dom-if" if="[[isPreset_(providerPreset_, 'cloudflare')]]">
+        <div class="input-container">
+          <div class="custom-label">
+            <div class="label-text">
+              <span>$i18n{koAssistantCloudflareAccountId}</span>
+              <span class="required">$i18n{braveLeoAssistantRequiredLabel}</span>
+            </div>
+          </div>
+          <leo-input
+            required
+            type="text"
+            value="[[cloudflareAccountId_]]"
+            placeholder="0123456789abcdef0123456789abcdef"
+            on-change="onCloudflareAccountIdChange_"
+            show-errors="[[isCloudflareIdsInvalid_]]"
+          >
+            <div slot="errors">$i18n{koAssistantCloudflareIdsError}</div>
+          </leo-input>
+        </div>
+        <div class="input-container">
+          <div class="custom-label">
+            <div class="label-text">
+              <span>$i18n{koAssistantCloudflareGatewayId}</span>
+              <span class="required">$i18n{braveLeoAssistantRequiredLabel}</span>
+            </div>
+          </div>
+          <leo-input
+            required
+            type="text"
+            value="[[cloudflareGatewayId_]]"
+            placeholder="default"
+            on-change="onCloudflareGatewayIdChange_"
+            show-errors="[[isCloudflareIdsInvalid_]]"
+          >
+          </leo-input>
+          <div class="helper-text">
+            $i18n{koAssistantCloudflareModelHint}
+          </div>
+        </div>
+      </template>
+      <template is="dom-if" if="[[isPreset_(providerPreset_, 'nanogpt')]]">
+        <div class="input-container helper-text">
+          $i18n{koAssistantNanoGptModelHint}
+        </div>
+      </template>
+    </template>
+
     <div class="input-container">
       <div class="custom-label">
         <div class="label-text">
@@ -176,7 +246,7 @@
       </div>
       <leo-input
         auto-validate
-        type="text"
+        type="[[apiKeyInputType_]]"
         value="[[apiKey]]"
         on-change="onModelApiKeyChange_"
       >
@@ -184,6 +254,9 @@
       <div class="helper-text">
         $i18n{braveLeoAssistantInputModelApiKeyTooltipInfo}
       </div>
+      <template is="dom-if" if="[[computeShowApiKeyKeepNote_(isEditing_)]]">
+        <div class="inline-note">$i18n{koAssistantApiKeyKeepNote}</div>
+      </template>
     </div>
 
     <div class="input-container toggle-row">

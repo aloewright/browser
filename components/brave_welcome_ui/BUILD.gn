@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/build/ko/branding.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//brave/components/common/typescript.gni")
 
@@ -13,7 +14,11 @@ if (is_brave_origin_branded) {
   _pyramid_source = "assets/pyramid_origin.webp"
   _sky_source = "assets/sky_origin.webp"
 } else {
-  _welcome_logo_source = "assets/brave_logo_3d@2x.webp"
+  if (is_ko_branded) {
+    _welcome_logo_source = "assets/ko_logo@2x.webp"
+  } else {
+    _welcome_logo_source = "assets/brave_logo_3d@2x.webp"
+  }
   _background_source = "assets/background@2x.webp"
   _hill_source = "assets/hill.webp"
   _pyramid_source = "assets/pyramid.webp"

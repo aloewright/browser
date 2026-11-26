@@ -81,8 +81,11 @@ class AdBlockComponentFiltersProvider : public AdBlockFiltersProvider {
   friend class ::DebounceBrowserTest;
 
   void OnComponentReady(const base::FilePath&);
+  void OnComponentRegistered();
 
   base::FilePath component_path_;
+  // Registration with the component updater has finished.
+  bool registered_ = false;
   std::string component_id_;
   uint8_t permission_mask_;
   const raw_ptr<component_updater::ComponentUpdateService>

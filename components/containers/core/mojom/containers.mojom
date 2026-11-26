@@ -30,6 +30,17 @@ enum Icon {
   kDefault = kPersonal,  // Default icon used when no specific icon is set.
 };
 
+// K-O: proxy for a container's network context. Unused in other builds.
+struct ContainerProxy {
+  // "<scheme>://[user:password@]host[:port]" from the UI, with scheme one of
+  // http, https, socks5, socks5h. The browser never sends credentials back:
+  // towards the UI this is always "<scheme>://host:port".
+  string url;
+  // Browser -> UI: whether credentials are stored for this container.
+  // UI -> browser: true with no credentials in `url` keeps the stored ones.
+  bool has_credentials = false;
+};
+
 // Represents a container that holds a separate browsing context/identity.
 // Containers allow users to maintain different identities within the same
 // browser profile, keeping cookies, storage, and other site data separate
@@ -43,6 +54,8 @@ struct Container {
   Icon icon;
   // Background color for the container icon.
   skia.mojom.SkColor background_color;
+  // K-O only. Stored locally (never synced), outside the containers list.
+  [MinVersion=1] ContainerProxy? proxy;
 };
 
 // Represents an error that occurred during a container CRUD operation.
@@ -59,6 +72,10 @@ enum ContainerOperationError {
   kInvalidBackgroundColor,
   // The container was not found.
   kNotFound,
+  // K-O: the proxy URL is invalid or would send credentials in cleartext.
+  kInvalidProxy,
+  // K-O: credentials could not be encrypted, so nothing was stored.
+  kProxyCredentialsUnavailable,
 };
 
 // Interface for settings UI -> browser communication. This interface allows the

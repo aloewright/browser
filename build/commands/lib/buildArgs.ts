@@ -65,6 +65,8 @@ export function getBuildArgs(config: Config) {
     if (config.isBraveOriginBranded) {
       args['import("//brave/build/args/brave_origin/branding_defaults.gni")'] =
         null
+    } else if (config.isKoBranded()) {
+      args['import("//brave/build/args/ko/branding_defaults.gni")'] = null
     } else {
       args['import("//brave/build/args/branding_defaults.gni")'] = null
     }
@@ -81,6 +83,10 @@ export function getBuildArgs(config: Config) {
   config.forwardEnvConfigVarsToObject(FORWARD_ENV_CONFIG_VARS_TO_GN_ARGS, args)
 
   args.is_brave_debloated = config.isBraveDebloated
+  args.is_ko = config.isKo
+  if (config.isKo) {
+    args.ko_bundle_id = config.koBundleId
+  }
 
   // Debloated forks ship without an updater; see is_brave_debloated.
   if (config.isOfficialBuild() && !config.isBraveDebloated) {

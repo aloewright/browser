@@ -1,0 +1,27 @@
+// Placeholders only. ko-agentd deploys this worker per workspace through the
+// Cloudflare API and sets these vars itself; this file is for `wrangler dev`
+// and for building the bundle (`bun run build`).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ko-agent-template",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "durable_objects": {
+    "bindings": [{ "name": "KoAgent", "class_name": "KoAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["KoAgent"] }],
+  "vars": {
+    // Required, no defaults: the worker answers 500 until both are set.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "AI_GATEWAY_ACCOUNT_ID": "",
+    "AI_GATEWAY_ID": "",
+    "DEFAULT_MODEL": "workers-ai/@cf/meta/llama-3.1-8b-instruct",
+    "KO_WORKSPACE_ID": ""
+  },
+  // AI_GATEWAY_TOKEN is a secret: `wrangler secret put AI_GATEWAY_TOKEN`.
+  "observability": { "enabled": false },
+  "send_metrics": false
+}

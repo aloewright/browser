@@ -289,6 +289,35 @@ void BravePrefProvider::MigrateShieldsSettings(bool incognito) {
     EnsureNoWildcardEntries(content_type);
   }
 
+#if defined(KO_BUILD)
+  // K-O Shields defaults are fixed: drop stored global overrides now and
+  // whenever the prefs change (e.g. through sync).
+  constexpr ContentSettingsType kKoLockedTypes[] = {
+      ContentSettingsType::BRAVE_ADS,
+      ContentSettingsType::BRAVE_TRACKERS,
+      ContentSettingsType::BRAVE_COSMETIC_FILTERING,
+      ContentSettingsType::BRAVE_HTTPS_UPGRADE,
+      ContentSettingsType::BRAVE_HTTP_UPGRADABLE_RESOURCES,
+      ContentSettingsType::BRAVE_FINGERPRINTING_V2,
+  };
+  auto* website_settings = WebsiteSettingsRegistry::GetInstance();
+  for (const auto content_type : kKoLockedTypes) {
+    const auto* info = website_settings->Get(content_type);
+    if (!info) {
+      continue;
+    }
+    if (!pref_change_registrar_.IsObserved(info->pref_name())) {
+      pref_change_registrar_.Add(
+          info->pref_name(),
+          base::BindPostTask(
+              base::SequencedTaskRunner::GetCurrentDefault(),
+              base::BindRepeating(&BravePrefProvider::EnsureNoWildcardEntries,
+                                  weak_factory_.GetWeakPtr(), content_type)));
+    }
+    EnsureNoWildcardEntries(content_type);
+  }
+#endif  // defined(KO_BUILD)
+
   // Prior to Chromium 88, we used the "plugins" ContentSettingsType along with
   // ResourceIdentifiers to store our settings, which we need to migrate now
   // first of all, before attempting any other migration.
@@ -312,7 +341,48 @@ void BravePrefProvider::EnsureNoWildcardEntries(
   SetWebsiteSetting(ContentSettingsPattern::Wildcard(),
                     ContentSettingsPattern::Wildcard(), content_type,
                     base::Value(), {});
+#if defined(KO_BUILD)
+  // PrefProvider refuses wildcard pairs for non-Shields types (e.g.
+  // BRAVE_HTTPS_UPGRADE), so drop a stored or synced "*,*" rule directly.
+  // No pref write (and no re-trigger) once the rule is gone.
+  if (IsKoLockedShieldsDefault(content_type) &&
+      !IsShieldsContentSettingsType(content_type) &&
+      supports_type(content_type)) {
+    GetPref(content_type)
+        ->SetWebsiteSetting(ContentSettingsPattern::Wildcard(),
+                            ContentSettingsPattern::Wildcard(), base::Value(),
+                            RuleMetaData());
+  }
+#endif
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  RemoveKoWeakeningRules(content_type);
+#endif
 }
+
+#if defined(KO_SHIELDS_STRICT_BUILD)
+void BravePrefProvider::RemoveKoWeakeningRules(
+    ContentSettingsType content_type) {
+  if (!IsKoLockedShieldsDefault(content_type)) {
+    return;
+  }
+  std::vector<std::pair<ContentSettingsPattern, ContentSettingsPattern>>
+      weakening;
+  {
+    // The iterator holds the value map lock; release it before writing.
+    auto it = PrefProvider::GetRuleIterator(content_type, off_the_record_);
+    while (it && it->HasNext()) {
+      const std::unique_ptr<Rule> rule = it->Next();
+      if (IsKoWeakeningShieldsValue(content_type, rule->value)) {
+        weakening.emplace_back(rule->primary_pattern, rule->secondary_pattern);
+      }
+    }
+  }
+  for (const auto& [primary, secondary] : weakening) {
+    SetWebsiteSettingInternal(primary, secondary, content_type, base::Value(),
+                              {});
+  }
+}
+#endif  // defined(KO_SHIELDS_STRICT_BUILD)
 
 void BravePrefProvider::MigrateShieldsSettingsFromResourceIds() {
   BravePrefProvider::CopyPluginSettingsForMigration(prefs_);
@@ -823,6 +893,22 @@ bool BravePrefProvider::SetWebsiteSettingInternal(
     ContentSettingsType content_type,
     const base::Value& in_value,
     const ContentSettingConstraints& constraints) {
+#if defined(KO_BUILD)
+  if (IsKoLockedShieldsDefault(content_type) && !in_value.is_none()) {
+    if (primary_pattern == ContentSettingsPattern::Wildcard() &&
+        secondary_pattern == ContentSettingsPattern::Wildcard()) {
+      // Locked K-O default; per-site rules only.
+      return true;
+    }
+#if defined(KO_SHIELDS_STRICT_BUILD)
+    if (IsKoWeakeningShieldsValue(content_type, in_value)) {
+      // Strict K-O builds allow no per-site relaxation.
+      return true;
+    }
+#endif
+  }
+#endif  // defined(KO_BUILD)
+
   // PrefProvider ignores default settings so handle them here for shields
   if (content_settings::IsShieldsContentSettingsType(content_type) &&
       primary_pattern == ContentSettingsPattern::Wildcard() &&

@@ -1,0 +1,62 @@
+// Copyright (c) 2026 The Brave Authors. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this file,
+// You can obtain one at https://mozilla.org/MPL/2.0/.
+
+module ko_workspace.mojom;
+
+import "url/mojom/url.mojom";
+
+// A Brave Container that a workspace's tabs open in.
+struct WorkspaceContainer {
+  string id;
+  string name;
+};
+
+// A user web app (e.g. behind Cloudflare Access). https only.
+struct WorkspaceApp {
+  string name;
+  url.mojom.Url url;
+};
+
+enum CaptureKind {
+  // PNG of the visible part of the active tab.
+  kScreenshot,
+  // MHTML snapshot of the active tab.
+  kPage,
+};
+
+struct Capture {
+  string file_name;
+  string mime_type;
+  array<uint8> data;
+  url.mojom.Url source_url;
+};
+
+// chrome://ko-workspace -> browser. Talking to ko-agentd is done by the page
+// itself; this only covers what needs the browser.
+interface PageHandler {
+  // Regular (synced) containers the user can pick for a workspace.
+  GetContainers() => (array<WorkspaceContainer> containers);
+
+  // Creates a container for a new workspace. Null if `name` is invalid.
+  CreateContainer(string name) => (WorkspaceContainer? container);
+
+  // Opens http(s) `urls` as new tabs in `container_id`. Returns how many
+  // were opened (0 if the container is unknown).
+  OpenTabsInContainer(string container_id, array<url.mojom.Url> urls)
+      => (uint32 opened);
+
+  // Workspace apps from prefs, seeded once from <data>/workspace_apps.json.
+  GetWorkspaceApps() => (array<WorkspaceApp> apps);
+  // Replaces the list with <data>/workspace_apps.json. False if unreadable.
+  ReloadWorkspaceAppsFromFile() => (bool success, array<WorkspaceApp> apps);
+  // Opens a workspace app (must be in the list) in a tab or the side panel.
+  OpenWorkspaceApp(url.mojom.Url url, bool in_side_panel);
+
+  // Captures the active tab of this window, unless it is this page.
+  CaptureActiveTab(CaptureKind kind) => (Capture? capture);
+
+  // Opens chrome://ko-workspace in the side panel, or in a tab.
+  ShowWorkspace(bool in_side_panel);
+};

@@ -4,9 +4,11 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 
 declare_args() {
-  enable_ai_chat = !is_brave_origin_branded && !is_brave_debloated
+  # K-O re-enables it with BYO providers only (ko/docs/assistant.md).
+  enable_ai_chat = !is_brave_origin_branded && (!is_brave_debloated || is_ko)
 }
 
 declare_args() {

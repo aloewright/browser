@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/containers/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 
 assert(enable_containers)
 
@@ -41,7 +42,10 @@ static_library("browser") {
     ":unit_tests",
   ]
 
-  public_deps = [ "//brave/components/containers/core/mojom" ]
+  public_deps = [
+    "//brave/components/containers/core/mojom",
+    "//brave/components/ko/buildflags",
+  ]
 
   deps = [
     "//base",
@@ -62,6 +66,12 @@ static_library("browser") {
     "//ui/color",
     "//url",
   ]
+
+  if (is_ko) {
+    public += [ "container_proxy.h" ]
+    sources += [ "container_proxy.cc" ]
+    deps += [ "//net" ]
+  }
 }
 
 source_set("test_support") {
@@ -105,4 +115,12 @@ source_set("unit_tests") {
     "//testing/gtest",
     "//ui/color",
   ]
+
+  if (is_ko) {
+    sources += [ "container_proxy_unittest.cc" ]
+    deps += [
+      "//components/pref_registry",
+      "//net",
+    ]
+  }
 }

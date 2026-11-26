@@ -1,0 +1,11 @@
+! Title: K-O unbreak
+! Hand-written exceptions that keep K-O's own login flows working. Loaded into
+! both adblock engines. Keep this list minimal: every line weakens blocking.
+!
+! Cloudflare Access login pages (<team>.cloudflareaccess.com) are exempt from
+! network, cosmetic and scriptlet filtering.
+@@||cloudflareaccess.com^$document
+@@||cloudflareaccess.com^
+! Per-application Access endpoints (/cdn-cgi/access/login, /callback, ...).
+! First-party only, so third parties can't use the path to dodge blocking.
+@@/cdn-cgi/access/$1p

@@ -7,6 +7,7 @@ import("//brave/components/ai_chat/core/common/buildflags/buildflags.gni")
 import("//brave/components/brave_education/buildflags.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//brave/components/brave_rewards/core/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
 import("//brave/components/tor/buildflags/buildflags.gni")
 import("//build/config/locales.gni")
@@ -81,6 +82,12 @@ template("brave_extra_paks") {
       if (enable_brave_education) {
         sources += [ "$root_gen_dir/brave/brave_education_resources.pak" ]
       }
+      if (is_ko) {
+        sources += [
+          "$root_gen_dir/brave/components/ko/machines/resources/ko_machines_all.pak",
+          "$root_gen_dir/brave/components/ko/workspace/resources/ko_workspace_all.pak",
+        ]
+      }
     }
 
     deps = [ "//brave/components/resources" ]
@@ -96,6 +103,12 @@ template("brave_extra_paks") {
       ]
       if (enable_brave_education) {
         deps += [ "//brave/browser/resources/brave_education:resources_grit" ]
+      }
+      if (is_ko) {
+        deps += [
+          "//brave/components/ko/machines/resources:ko_machines",
+          "//brave/components/ko/workspace/resources:ko_workspace",
+        ]
       }
     }
 
@@ -127,6 +140,12 @@ template("brave_extra_paks") {
     if (enable_psst) {
       sources += [ "$root_gen_dir/brave/components/psst/resources/brave_psst_resources.pak" ]
       deps += [ "//brave/components/psst/resources" ]
+    }
+
+    if (is_ko) {
+      sources +=
+          [ "$root_gen_dir/brave/ko/shields/ko_shields_resources.pak" ]
+      deps += [ "//brave/ko/shields:resources" ]
     }
 
     if (enable_extensions) {

@@ -10,11 +10,17 @@
 #include <string>
 #include <vector>
 
+#include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/prefs/pref_change_registrar.h"
 #include "mojo/public/cpp/bindings/remote.h"
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/containers/core/browser/container_proxy.h"
+#endif
 
 namespace containers {
 
@@ -23,6 +29,30 @@ namespace containers {
 // from settings UI and manages container data persistence through prefs.
 class ContainersSettingsHandler : public mojom::ContainersSettingsHandler {
  public:
+#if BUILDFLAG(IS_KO)
+  // K-O: stores per-container proxies outside the synced containers list.
+  class ProxyDelegate {
+   public:
+    using SetProxyCallback = base::OnceCallback<void(bool success)>;
+
+    virtual ~ProxyDelegate() = default;
+
+    // Proxy as shown to the UI (never with credentials), or null.
+    virtual mojom::ContainerProxyPtr GetProxyForUI(const std::string& id) = 0;
+
+    // Stores `proxy`; nullopt removes it. With `keep_credentials` and no
+    // credentials in `proxy`, the stored ones are kept if the server is
+    // unchanged. `callback` gets false if nothing could be stored.
+    virtual void SetProxy(const std::string& id,
+                          std::optional<ParsedContainerProxy> proxy,
+                          bool keep_credentials,
+                          SetProxyCallback callback) = 0;
+  };
+
+  // `proxy_delegate` must outlive this handler.
+  ContainersSettingsHandler(PrefService* prefs, ProxyDelegate* proxy_delegate);
+#endif  // BUILDFLAG(IS_KO)
+
   explicit ContainersSettingsHandler(PrefService* prefs);
   ~ContainersSettingsHandler() override;
 
@@ -55,8 +85,30 @@ class ContainersSettingsHandler : public mojom::ContainersSettingsHandler {
   ValidateEditableContainerProperties(const mojom::ContainerPtr& container);
 
  private:
+  using OperationCallback =
+      base::OnceCallback<void(std::optional<mojom::ContainerOperationError>)>;
+
   // Called when the containers list in preferences changes.
   void OnContainersChanged();
+
+  // Returns the containers to send to the UI.
+  std::vector<mojom::ContainerPtr> GetContainersForUI() const;
+
+  // Appends a validated container with a set id.
+  void AddContainerToPrefs(mojom::ContainerPtr container);
+
+  // Replaces a validated container. Returns kNotFound if it is gone.
+  std::optional<mojom::ContainerOperationError> UpdateContainerInPrefs(
+      mojom::ContainerPtr container);
+
+#if BUILDFLAG(IS_KO)
+  void OnProxyStored(mojom::ContainerPtr container,
+                     bool is_new,
+                     OperationCallback callback,
+                     bool success);
+
+  raw_ptr<ProxyDelegate> proxy_delegate_ = nullptr;
+#endif  // BUILDFLAG(IS_KO)
 
   // Interface to communicate with the settings page in the renderer.
   mojo::Remote<mojom::ContainersSettingsUI> ui_;

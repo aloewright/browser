@@ -85,7 +85,12 @@ class BraveShieldsUtilProfilesTest : public testing::Test {
 };
 
 TEST_F(BraveShieldsUtilProfilesTest, SetBraveShieldsEnabled) {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse per-site relaxations; Shields stay up.
+  constexpr std::pair<bool, bool> kExpects[] = {{true, true}, {false, true}};
+#else
   constexpr std::pair<bool, bool> kExpects[] = {{true, true}, {false, false}};
+#endif
 
   auto set = [this](HostContentSettingsMap* map, bool value) {
     SetBraveShieldsEnabled(map, value, kTestUrl);
@@ -98,8 +103,14 @@ TEST_F(BraveShieldsUtilProfilesTest, SetBraveShieldsEnabled) {
 }
 
 TEST_F(BraveShieldsUtilProfilesTest, SetAdControlType) {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse per-site relaxations.
+  constexpr std::pair<ControlType, ControlType> kExpects[] = {{ALLOW, BLOCK},
+                                                              {BLOCK, BLOCK}};
+#else
   constexpr std::pair<ControlType, ControlType> kExpects[] = {{ALLOW, ALLOW},
                                                               {BLOCK, BLOCK}};
+#endif
 
   auto set = [this](HostContentSettingsMap* map, ControlType value) {
     SetAdControlType(map, value, kTestUrl);
@@ -112,8 +123,14 @@ TEST_F(BraveShieldsUtilProfilesTest, SetAdControlType) {
 }
 
 TEST_F(BraveShieldsUtilProfilesTest, SetCosmeticFilteringControlType) {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse anything below aggressive per site.
+  constexpr std::pair<ControlType, ControlType> kExpects[] = {
+      {ALLOW, BLOCK}, {BLOCK, BLOCK}, {BLOCK_THIRD_PARTY, BLOCK}};
+#else
   constexpr std::pair<ControlType, ControlType> kExpects[] = {
       {ALLOW, ALLOW}, {BLOCK, BLOCK}, {BLOCK_THIRD_PARTY, BLOCK_THIRD_PARTY}};
+#endif
 
   auto set = [this](HostContentSettingsMap* map, ControlType value) {
     SetCosmeticFilteringControlType(map, value, kTestUrl);
@@ -143,8 +160,14 @@ TEST_F(BraveShieldsUtilProfilesTest, SetCookieControlType) {
 }
 
 TEST_F(BraveShieldsUtilProfilesTest, SetFingerprintingControlType) {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse per-site relaxations.
+  constexpr ControlType kAllowed = DEFAULT;
+#else
+  constexpr ControlType kAllowed = ALLOW;
+#endif
   constexpr std::pair<ControlType, ControlType> kExpects[] = {
-      {ALLOW, ALLOW},
+      {ALLOW, kAllowed},
       {BLOCK, DEFAULT},
       {BLOCK_THIRD_PARTY, DEFAULT},
       {DEFAULT, DEFAULT}};
@@ -160,8 +183,14 @@ TEST_F(BraveShieldsUtilProfilesTest, SetFingerprintingControlType) {
 }
 
 TEST_F(BraveShieldsUtilProfilesTest, SetHttpsUpgradeControlType) {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse anything below strict upgrades per site.
+  constexpr std::pair<ControlType, ControlType> kExpects[] = {
+      {ALLOW, BLOCK}, {BLOCK, BLOCK}, {BLOCK_THIRD_PARTY, BLOCK}};
+#else
   constexpr std::pair<ControlType, ControlType> kExpects[] = {
       {ALLOW, ALLOW}, {BLOCK, BLOCK}, {BLOCK_THIRD_PARTY, BLOCK_THIRD_PARTY}};
+#endif
 
   auto set = [this](HostContentSettingsMap* map, ControlType value) {
     SetHttpsUpgradeControlType(map, value, kTestUrl);

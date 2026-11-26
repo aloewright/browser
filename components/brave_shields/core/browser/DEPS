@@ -1,4 +1,6 @@
 include_rules = [
+  "+brave/components/ko/buildflags",
+  "+brave/components/ko/shields/buildflags",
   "+components/component_updater",
   "+components/content_settings/core",
   "+components/crx_file",

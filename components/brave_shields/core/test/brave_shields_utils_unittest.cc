@@ -16,6 +16,8 @@
 #include "brave/components/brave_shields/core/common/brave_shield_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/content_settings/cookie_settings_factory.h"
@@ -172,17 +174,24 @@ TEST_F(BraveShieldsUtilTest, ControlTypeFromString) {
 /* BRAVE_SHIELDS CONTROL */
 TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds drop per-site Shields-down rules; see
+  // KoStrictIgnoresRelaxations_ForOrigin. Policy still applies.
+  constexpr ContentSetting kShieldsDown = CONTENT_SETTING_ALLOW;
+#else
+  constexpr ContentSetting kShieldsDown = CONTENT_SETTING_BLOCK;
+#endif
 
   brave_shields::SetBraveShieldsEnabled(map, false, GURL("http://brave.com"));
   // setting should apply to origin
   auto setting = map->GetContentSetting(GURL("http://brave.com"), GURL(),
                                         ContentSettingsType::BRAVE_SHIELDS);
-  EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
+  EXPECT_EQ(kShieldsDown, setting);
 
   // setting should apply to different scheme
   setting = map->GetContentSetting(GURL("https://brave.com"), GURL(),
                                    ContentSettingsType::BRAVE_SHIELDS);
-  EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
+  EXPECT_EQ(kShieldsDown, setting);
 
   // setting should not apply to default
   setting = map->GetContentSetting(GURL(), GURL(),
@@ -229,6 +238,27 @@ TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_ForOrigin) {
   EXPECT_TRUE(brave_shields::IsBraveShieldsEnabled(map, GURL()));
 }
 
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+TEST_F(BraveShieldsUtilTest, KoStrictIgnoresRelaxations_ForOrigin) {
+  auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
+  const GURL url("http://brave.com");
+
+  brave_shields::SetBraveShieldsEnabled(map, false, url);
+  EXPECT_TRUE(brave_shields::IsBraveShieldsEnabled(map, url));
+
+  brave_shields::SetAdControlType(map, ControlType::ALLOW, url);
+  EXPECT_EQ(ControlType::BLOCK, brave_shields::GetAdControlType(map, url));
+
+  brave_shields::SetFingerprintingControlType(map, ControlType::ALLOW, url);
+  EXPECT_EQ(ControlType::DEFAULT,
+            brave_shields::GetFingerprintingControlType(map, url));
+
+  // Shields stay up and ads blocked, so domain blocking stays aggressive.
+  ExpectDomainBlockingType(GURL("https://brave.com"),
+                           DomainBlockingType::kAggressive);
+}
+#endif  // BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+
 TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_IsNotHttpHttps) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
   auto setting =
@@ -248,6 +278,8 @@ TEST_F(BraveShieldsUtilTest, SetBraveShieldsEnabled_IsNotHttpHttps) {
   EXPECT_EQ(false, setting);
 }
 
+// Strict K-O builds drop per-site Shields-down rules.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsUtilTest, IsBraveShieldsEnabled_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -275,6 +307,7 @@ TEST_F(BraveShieldsUtilTest, IsBraveShieldsEnabled_ForOrigin) {
   setting = brave_shields::IsBraveShieldsEnabled(map, GURL());
   EXPECT_EQ(true, setting);
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 TEST_F(BraveShieldsUtilTest, IsBraveShieldsEnabled_IsNotHttpHttps) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
@@ -287,6 +320,7 @@ TEST_F(BraveShieldsUtilTest, IsBraveShieldsEnabled_IsNotHttpHttps) {
 }
 
 /* AD CONTROL */
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, SetAdControlType_Default) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
   // settings should be default
@@ -319,7 +353,34 @@ TEST_F(BraveShieldsUtilTest, SetAdControlType_Default) {
                                    ContentSettingsType::BRAVE_ADS);
   EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
 }
+#else
+TEST_F(BraveShieldsUtilTest, KoLockedDefaults) {
+  auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
+  // Global changes are ignored.
+  brave_shields::SetAdControlType(map, ControlType::ALLOW, GURL());
+  brave_shields::SetCosmeticFilteringControlType(map, ControlType::ALLOW,
+                                                 GURL());
+  brave_shields::SetFingerprintingControlType(map, ControlType::ALLOW, GURL());
+  brave_shields::SetHttpsUpgradeControlType(map, ControlType::ALLOW, GURL());
+
+  for (const GURL& url : {GURL(), GURL("https://brave.com")}) {
+    SCOPED_TRACE(url.possibly_invalid_spec());
+    EXPECT_EQ(ControlType::BLOCK, brave_shields::GetAdControlType(map, url));
+    // Aggressive ad blocking.
+    EXPECT_EQ(ControlType::BLOCK,
+              brave_shields::GetCosmeticFilteringControlType(map, url));
+    EXPECT_EQ(ControlType::DEFAULT,
+              brave_shields::GetFingerprintingControlType(map, url));
+    // Strict HTTPS upgrades.
+    EXPECT_EQ(ControlType::BLOCK,
+              brave_shields::GetHttpsUpgradeControlType(map, url));
+  }
+}
+#endif  // !BUILDFLAG(IS_KO)
+
+// Strict K-O builds drop per-site "allow ads" rules.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsUtilTest, SetAdControlType_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -340,7 +401,9 @@ TEST_F(BraveShieldsUtilTest, SetAdControlType_ForOrigin) {
       map->GetContentSetting(GURL(), GURL(), ContentSettingsType::BRAVE_ADS);
   EXPECT_EQ(CONTENT_SETTING_BLOCK, setting);
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, GetAdControlType_Default) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -361,7 +424,9 @@ TEST_F(BraveShieldsUtilTest, GetAdControlType_Default) {
   setting = brave_shields::GetAdControlType(map, GURL());
   EXPECT_EQ(ControlType::BLOCK, setting);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, GetAdControlType_ForOrigin) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
 
@@ -413,6 +478,7 @@ TEST_F(BraveShieldsUtilTest, GetAdControlType_ForOrigin) {
   setting = brave_shields::GetAdControlType(map, GURL());
   EXPECT_EQ(ControlType::ALLOW, setting);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsUtilTest, GetAdControlType_ManagedPref) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
@@ -713,6 +779,7 @@ TEST_F(BraveShieldsUtilTest,
 }
 
 /* FINGERPRINTING CONTROL */
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_Default) {
   base::test::ScopedFeatureList scoped_feature_list;
   scoped_feature_list.InitAndEnableFeature(
@@ -773,6 +840,7 @@ TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_Default) {
                                                      GURL("http://brave.com"));
   EXPECT_EQ(ControlType::DEFAULT, type);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_ForOrigin) {
   base::test::ScopedFeatureList scoped_feature_list;
@@ -785,11 +853,16 @@ TEST_F(BraveShieldsUtilTest, SetFingerprintingControlType_ForOrigin) {
                                               GURL("http://brave.com"));
   auto type = brave_shields::GetFingerprintingControlType(
       map, GURL("http://brave.com"));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds drop per-site relaxations.
+  EXPECT_EQ(ControlType::DEFAULT, type);
+#else
   EXPECT_EQ(ControlType::ALLOW, type);
   // override should also apply to different scheme
   type = brave_shields::GetFingerprintingControlType(map,
                                                      GURL("https://brave.com"));
   EXPECT_EQ(ControlType::ALLOW, type);
+#endif
 
   brave_shields::SetFingerprintingControlType(map, ControlType::BLOCK,
                                               GURL("http://brave.com"));
@@ -996,13 +1069,16 @@ TEST_F(BraveShieldsUtilDomainBlockFeatureTest, GetDomainBlockingType) {
                            DomainBlockingType::kNone);
 }
 
-// Should not do domain blocking if Brave Shields is down
+// Should not do domain blocking if Brave Shields is down. Strict K-O builds
+// keep Shields up; see KoStrictIgnoresRelaxations_ForOrigin.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsUtilTest, GetDomainBlockingType_ShieldsDown) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile());
   GURL url = GURL("https://brave.com");
   brave_shields::SetBraveShieldsEnabled(map, false, url);
   ExpectDomainBlockingType(url, DomainBlockingType::kNone);
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 // Should not do domain blocking on non-HTTP(S) URLs
 TEST_F(BraveShieldsUtilTest, GetDomainBlockingType_IsNotHttpHttps) {
@@ -1039,12 +1115,23 @@ TEST_F(BraveShieldsUtilTest, GetDomainBlockingType_ControlTypes) {
     brave_shields::SetAdControlType(map, test_case.ad_control_type, url);
     brave_shields::SetCosmeticFilteringControlType(
         map, test_case.cosmetic_filtering_control_type, url);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+    // Strict K-O builds drop the relaxations; blocking stays aggressive.
+    ExpectDomainBlockingType(url, DomainBlockingType::kAggressive);
+#else
     ExpectDomainBlockingType(url, test_case.expected_blocking_type);
+#endif
   }
 }
 
 // Should do 1PES domain blocking if domain blocking feature is enabled.
 TEST_F(BraveShieldsUtilTest, GetDomainBlockingType) {
+#if !BUILDFLAG(IS_KO)
   ExpectDomainBlockingType(GURL("https://brave.com"),
                            DomainBlockingType::k1PES);
+#else
+  // K-O blocks aggressively by default.
+  ExpectDomainBlockingType(GURL("https://brave.com"),
+                           DomainBlockingType::kAggressive);
+#endif
 }

@@ -1,0 +1,13 @@
+include_rules = [
+  "+brave/components/ko/shields/buildflags",
+  "+brave/ko/shields",
+  "+services/network/public/cpp",
+  "+services/network/public/mojom",
+  "+third_party/boringssl/src/include/openssl/curve25519.h",
+]
+
+specific_include_rules = {
+  ".*_unittest\.cc": [
+    "+services/network/test",
+  ],
+}

@@ -32,6 +32,7 @@
 #include "brave/components/brave_shields/core/common/adblock/rs/src/lib.rs.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_shields/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/prefs/testing_pref_service.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/blink/public/mojom/loader/resource_load_info.mojom-shared.h"
@@ -229,6 +230,11 @@ class AdBlockServiceDATCacheDisabledTest : public AdBlockServiceTestBase {
   base::test::TaskEnvironment task_environment_;
 };
 
+// K-O drops a DAT cache not stamped with its current lists, as on a fresh
+// local state, and rebuilds from its baseline lists once the catalog loads,
+// so cached rules don't stay in effect here. See
+// KoKeepsDATCacheOnlyForCurrentLists.
+#if !BUILDFLAG(IS_KO)
 TEST_F(AdBlockServiceTest, LoadsCachedDATFilesOnCreation) {
   // Create cached DAT files with known rules
   CreateCachedDATFiles("||blocked-by-default.com^\n",
@@ -317,6 +323,37 @@ TEST_F(AdBlockServiceTest, LoadsOnlyAdditionalCachedDATFile) {
                               "https://blocked-by-additional.com/script.js");
   EXPECT_FALSE(result.matched);
 }
+#else   // !BUILDFLAG(IS_KO)
+// A cache from unknown lists is dropped at startup; the stamp recorded then
+// keeps the cache built afterwards.
+TEST_F(AdBlockServiceTest, KoKeepsDATCacheOnlyForCurrentLists) {
+  const base::FilePath cache_dir =
+      profile_dir_.GetPath().AppendASCII("adblock_cache");
+  CreateCachedDATFiles("||blocked-by-default.com^\n",
+                       "||blocked-by-additional.com^\n");
+  {
+    DATLoadObserver observer;
+    auto service = CreateService();
+    service->AddObserver(&observer);
+    ASSERT_TRUE(base::test::RunUntil([&]() { return observer.BothLoaded(); }));
+    EXPECT_FALSE(observer.default_success());
+    EXPECT_FALSE(observer.additional_success());
+    task_environment_.RunUntilIdle();
+  }
+  task_environment_.RunUntilIdle();
+
+  // Next start, with a cache written since.
+  ASSERT_TRUE(base::DeletePathRecursively(cache_dir));
+  CreateCachedDATFiles("||blocked-by-default.com^\n",
+                       "||blocked-by-additional.com^\n");
+  DATLoadObserver observer;
+  auto service = CreateService();
+  service->AddObserver(&observer);
+  ASSERT_TRUE(base::test::RunUntil([&]() { return observer.BothLoaded(); }));
+  EXPECT_TRUE(observer.default_success());
+  EXPECT_TRUE(observer.additional_success());
+}
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(AdBlockServiceTest, WorksWithoutCachedDATFiles) {
   // Don't create any cached files or set timestamp - service should still work.
@@ -398,6 +435,8 @@ TEST_F(AdBlockServiceTest, EmptyFilterSetDoesNotCrash) {
   }
 }
 
+// Relies on a cached DAT staying in effect; see the K-O note above.
+#if !BUILDFLAG(IS_KO)
 TEST_F(AdBlockServiceTest, CachedDATLoadedThenProviderUpdates) {
   // When a cached DAT exists and a provider later changes, the provider's
   // filter rules should override the cached DAT rules.
@@ -441,6 +480,7 @@ TEST_F(AdBlockServiceTest, CachedDATLoadedThenProviderUpdates) {
                               "https://from-filter-set.com/script.js");
   EXPECT_TRUE(result.matched);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 // Simulates the race condition where DAT loading fails before all providers
 // are initialized. The ForceNotifyObserver fallback fires but can't trigger

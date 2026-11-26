@@ -9,11 +9,17 @@
 #include "base/strings/strcat.h"
 #include "brave/components/brave_origin/brave_origin_policy_manager.h"
 #include "brave/components/brave_origin/features.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 
 namespace brave_origin {
 
 bool IsBraveOriginFeatureEnabled() {
+#if BUILDFLAG(IS_KO)
+  // K-O has no Origin purchase, activation or IAP flow, whatever the flag says.
+  return false;
+#else
   return base::FeatureList::IsEnabled(features::kBraveOrigin);
+#endif
 }
 
 bool IsBraveOriginPurchased() {

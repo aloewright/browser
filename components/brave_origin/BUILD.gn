@@ -3,6 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/ko/buildflags/buildflags.gni")
+
 source_set("features") {
   sources = [
     "features.cc",
@@ -64,6 +66,7 @@ static_library("brave_origin") {
     "//brave/brave_domains",
     "//brave/components/brave_debloat/buildflags",
     "//brave/components/brave_policy:brave_policy_observer",
+    "//brave/components/ko/buildflags",
     "//brave/components/skus/browser",
     "//brave/components/skus/common",
     "//brave/components/skus/common:mojom",
@@ -92,11 +95,19 @@ source_set("unit_tests") {
 
   sources = [
     "brave_origin_policy_manager_unittest.cc",
-    "brave_origin_service_unittest.cc",
-    "brave_origin_settings_handler_impl_unittest.cc",
-    "brave_origin_utils_unittest.cc",
     "profile_id_unittest.cc",
   ]
+
+  # K-O compiles the Origin purchase flow out, so these would only test that.
+  if (is_ko) {
+    sources += [ "brave_origin_ko_unittest.cc" ]
+  } else {
+    sources += [
+      "brave_origin_service_unittest.cc",
+      "brave_origin_settings_handler_impl_unittest.cc",
+      "brave_origin_utils_unittest.cc",
+    ]
+  }
 
   deps = [
     ":brave_origin",

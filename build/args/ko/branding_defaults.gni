@@ -1,0 +1,10 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# K-O assets come from //chrome/app/theme/ko (filled by
+# build/commands/lib/branding.js). Strings stay on brave_strings.grd and are
+# rebranded when grit builds them; see //brave/script/ko_branding.py.
+branding_path_component = "ko"
+branding_path_product = "brave"

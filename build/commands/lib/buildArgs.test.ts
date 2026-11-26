@@ -11,7 +11,11 @@ function makeConfig(overrides: {
   isOfficialBuild: boolean
   isBraveDebloated: boolean
   forwardedEnvArgs?: Record<string, unknown>
+  isKo?: boolean
+  targetOS?: string
 }): Config {
+  const isKo = overrides.isKo ?? false
+  const targetOS = overrides.targetOS ?? 'mac'
   const config = {
     isAsan: () => false,
     isLsan: () => false,
@@ -28,7 +32,10 @@ function makeConfig(overrides: {
     ) => Object.assign(args, overrides.forwardedEnvArgs),
     isBraveDebloated: overrides.isBraveDebloated,
     isBraveOriginBranded: false,
-    targetOS: 'mac',
+    isKo,
+    koBundleId: 'com.example.ko',
+    isKoBranded: () => isKo && (targetOS === 'mac' || targetOS === 'linux'),
+    targetOS,
     targetArch: 'arm64',
     channel: '',
     srcDir: '/nonexistent/src',
@@ -76,5 +83,55 @@ describe('getBuildArgs', () => {
       makeConfig({ isOfficialBuild: false, isBraveDebloated: false }),
     )
     expect(args.enable_updater).toBeUndefined()
+  })
+
+  it('imports the K-O branding defaults for K-O on macOS and Linux', () => {
+    for (const targetOS of ['mac', 'linux']) {
+      const args = getBuildArgs(
+        makeConfig({
+          isOfficialBuild: false,
+          isBraveDebloated: true,
+          isKo: true,
+          targetOS,
+        }),
+      )
+      expect(args).toHaveProperty([
+        'import("//brave/build/args/ko/branding_defaults.gni")',
+      ])
+      expect(args).not.toHaveProperty([
+        'import("//brave/build/args/branding_defaults.gni")',
+      ])
+      expect(args.is_ko).toBe(true)
+      expect(args.ko_bundle_id).toBe('com.example.ko')
+    }
+  })
+
+  it('keeps Brave branding for K-O on other platforms', () => {
+    const args = getBuildArgs(
+      makeConfig({
+        isOfficialBuild: false,
+        isBraveDebloated: true,
+        isKo: true,
+        targetOS: 'win',
+      }),
+    )
+    expect(args).toHaveProperty([
+      'import("//brave/build/args/branding_defaults.gni")',
+    ])
+    expect(args.is_ko).toBe(true)
+  })
+
+  it('keeps Brave branding when is_ko is off', () => {
+    const args = getBuildArgs(
+      makeConfig({ isOfficialBuild: false, isBraveDebloated: true }),
+    )
+    expect(args).toHaveProperty([
+      'import("//brave/build/args/branding_defaults.gni")',
+    ])
+    expect(args).not.toHaveProperty([
+      'import("//brave/build/args/ko/branding_defaults.gni")',
+    ])
+    expect(args.is_ko).toBe(false)
+    expect(args.ko_bundle_id).toBeUndefined()
   })
 })

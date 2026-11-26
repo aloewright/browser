@@ -31,6 +31,7 @@
 #include "brave/components/constants/webui_url_constants.h"
 #include "brave/components/containers/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
@@ -164,8 +165,10 @@ constexpr char16_t kSemanticHistorySearchSettingURL[] =
 constexpr char16_t kLeoMemoryLearnMoreURL[] =
     u"https://support.brave.app/hc/en-us/articles/38441287509261";
 
+#if !BUILDFLAG(IS_KO)
 constexpr char16_t kLeoPrivacyPolicyURL[] =
     u"https://brave.com/privacy/browser/#brave-leo";
+#endif
 #endif
 
 #if BUILDFLAG(ENABLE_LOCAL_AI)
@@ -431,6 +434,8 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
        IDS_SETTINGS_BRAVE_SHIELDS_DEFAULTS_DESCRIPTION_1},
       {"braveShieldsDefaultsSectionDescription2",
        IDS_SETTINGS_BRAVE_SHIELDS_DEFAULTS_DESCRIPTION_2},
+      {"koShieldsDefaultsLocked", IDS_SETTINGS_KO_SHIELDS_DEFAULTS_LOCKED},
+      {"koFilterListLocked", IDS_SETTINGS_KO_FILTER_LIST_LOCKED},
       {"adBlockOnlyModeAlertDesc", IDS_SETTINGS_AD_BLOCK_ONLY_MODE_ALERT_DESC},
       {"adBlockOnlyModeAlertTitle",
        IDS_SETTINGS_AD_BLOCK_ONLY_MODE_ALERT_TITLE},
@@ -747,6 +752,28 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
       {"braveLeoAssistantInputModelApiKeyTooltipInfo",
        IDS_SETTINGS_LEO_ASSISTANT_INPUT_MODEL_API_KEY_TOOLTIP_INFO},
       {"braveLeoAssistantProxyNote", IDS_SETTINGS_LEO_ASSISTANT_PROXY_NOTE},
+      {"koAssistantProviderPresetLabel",
+       IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_LABEL},
+      {"koAssistantProviderPresetDesc",
+       IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_DESC},
+      {"koAssistantProviderPresetCustom",
+       IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_CUSTOM},
+      {"koAssistantProviderPresetCloudflare",
+       IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_CLOUDFLARE},
+      {"koAssistantProviderPresetNanoGpt",
+       IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_NANOGPT},
+      {"koAssistantCloudflareAccountId",
+       IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_ACCOUNT_ID},
+      {"koAssistantCloudflareGatewayId",
+       IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_GATEWAY_ID},
+      {"koAssistantCloudflareIdsError",
+       IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_IDS_ERROR},
+      {"koAssistantCloudflareModelHint",
+       IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_MODEL_HINT},
+      {"koAssistantNanoGptModelHint",
+       IDS_SETTINGS_KO_ASSISTANT_NANOGPT_MODEL_HINT},
+      {"koAssistantApiKeyKeepNote",
+       IDS_SETTINGS_KO_ASSISTANT_API_KEY_KEEP_NOTE},
       {"braveLeoAssistantEndpointError",
        IDS_SETTINGS_LEO_ASSISTANT_ENDPOINT_ERROR},
       {"braveLeoAssistantAddNewModelButtonLabel",
@@ -965,6 +992,10 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
       {"statsUsagePingEnabledDesc", IDS_BRAVE_STATS_USAGE_PING_SETTING_SUBITEM},
       {"p3aEnableTitle", IDS_BRAVE_P3A_ENABLE_SETTING},
       {"p3aEnabledDesc", IDS_BRAVE_P3A_ENABLE_SETTING_SUBITEM},
+      {"koCrashReportsTitle", IDS_SETTINGS_KO_CRASH_REPORTS_TITLE},
+      {"koCrashReportsDesc", IDS_SETTINGS_KO_CRASH_REPORTS_DESC},
+      {"koAnalyticsTitle", IDS_SETTINGS_KO_ANALYTICS_TITLE},
+      {"koAnalyticsDesc", IDS_SETTINGS_KO_ANALYTICS_DESC},
       {"sponsoredAdsEnabledTitle",
        IDS_BRAVE_SETTINGS_SPONSORED_ADS_ENABLED_TITLE},
       {"sponsoredAdsEnabledDesc",
@@ -1310,10 +1341,17 @@ void BraveAddCommonStrings(content::WebUIDataSource* html_source,
       l10n_util::GetStringFUTF16(IDS_SETTINGS_LEO_ASSISTANT_YOUR_MODELS_DESC_2,
                                  kLeoCustomModelsLearnMoreURL));
 
+#if BUILDFLAG(IS_KO)
+  // Brave's AI privacy policy doesn't cover K-O's providers.
+  html_source->AddString(
+      "braveLeoAssistantAboutLeoDesc2",
+      l10n_util::GetStringUTF16(IDS_SETTINGS_KO_ASSISTANT_ABOUT_DESC_2));
+#else
   html_source->AddString(
       "braveLeoAssistantAboutLeoDesc2",
       l10n_util::GetStringFUTF16(IDS_SETTINGS_LEO_ASSISTANT_ABOUT_LEO_DESC_2,
                                  kLeoPrivacyPolicyURL));
+#endif
 
   html_source->AddString(
       "braveLeoAssistantCustomizationDescription",
@@ -1409,6 +1447,9 @@ void BraveAddLocalizedStrings(content::WebUIDataSource* html_source,
       "showStrictFingerprintingMode",
       base::FeatureList::IsEnabled(
           brave_shields::features::kBraveShowStrictFingerprintingMode));
+
+  // K-O fixes the Shields defaults; per-site exceptions stay in the panel.
+  html_source->AddBoolean("isKoShieldsDefaultsLocked", BUILDFLAG(IS_KO));
 
 #if BUILDFLAG(ENABLE_BRAVE_WAYBACK_MACHINE)
   html_source->AddBoolean(

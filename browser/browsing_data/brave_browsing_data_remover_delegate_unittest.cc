@@ -75,13 +75,20 @@ TEST_F(BraveBrowsingDataRemoverDelegateTest, ShieldsSettingsClearTest) {
   // defaults
   int start_count = GetShieldsSettingsCount();
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse per-site "allow" rules for these types.
+  constexpr ContentSetting kSiteSetting = CONTENT_SETTING_BLOCK;
+#else
+  constexpr ContentSetting kSiteSetting = CONTENT_SETTING_ALLOW;
+#endif
+
   // Three settings are added.
   map()->SetContentSettingDefaultScope(
       kBraveURL, GURL(), ContentSettingsType::BRAVE_HTTP_UPGRADABLE_RESOURCES,
-      CONTENT_SETTING_ALLOW);
+      kSiteSetting);
   map()->SetContentSettingDefaultScope(
       kBatURL, GURL(), ContentSettingsType::BRAVE_FINGERPRINTING_V2,
-      CONTENT_SETTING_ALLOW);
+      kSiteSetting);
   map()->SetContentSettingCustomScope(
       brave_shields::GetPatternFromURL(kGoogleURL),
       ContentSettingsPattern::Wildcard(), ContentSettingsType::JAVASCRIPT,
@@ -295,14 +302,41 @@ TEST_F(DataTypeContentSettings_Clearing, CheckAll) {
     if (!content_setting) {
       // Registered as WebsiteSetting only.
       base::Value value(base::DictValue().Set("test", "value"));
+#if defined(KO_SHIELDS_STRICT_BUILD)
+      // Strict K-O builds refuse weaker per-site Shields values.
+      if (type == ContentSettingsType::BRAVE_COSMETIC_FILTERING) {
+        value = brave_shields::CosmeticFilteringSetting::ToValue(
+            brave_shields::ControlType::BLOCK);
+      }
+#endif
       map()->SetWebsiteSettingDefaultScope(url, GURL::EmptyGURL(), type,
                                            value.Clone());
       EXPECT_EQ(value, map()->GetWebsiteSetting(url, GURL::EmptyGURL(), type));
     } else {
+#if defined(KO_SHIELDS_STRICT_BUILD)
+      // Strict K-O builds refuse weaker per-site Shields values; a per-site
+      // rule holding the default must still be cleared.
+      auto value = GetNonDefaultValidContentSettingValue(content_setting);
+      if (content_settings::IsKoWeakeningShieldsValue(
+              type, base::Value(static_cast<int>(value)))) {
+        value = content_setting->GetInitialDefaultSetting();
+      }
+#else
       const auto value = GetNonDefaultValidContentSettingValue(content_setting);
+#endif
       map()->SetContentSettingDefaultScope(url, GURL::EmptyGURL(), type, value);
       EXPECT_EQ(value, map()->GetContentSetting(url, GURL::EmptyGURL(), type));
     }
+
+#if defined(KO_SHIELDS_STRICT_BUILD)
+    if (content_settings::IsKoLockedShieldsDefault(type)) {
+      // The value above equals the locked default, so check that a per-site
+      // rule was stored; otherwise the clearing check below proves nothing.
+      content_settings::SettingInfo stored_info;
+      map()->GetWebsiteSetting(url, GURL::EmptyGURL(), type, &stored_info);
+      EXPECT_FALSE(stored_info.primary_pattern.MatchesAllHosts());
+    }
+#endif
 
     auto filter_builder = content::BrowsingDataFilterBuilder::Create(
         content::BrowsingDataFilterBuilder::Mode::kPreserve);

@@ -17,6 +17,7 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
 #include "chrome/browser/profiles/profile.h"
@@ -382,7 +383,13 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorUserAgentFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url_b));
   EXPECT_EQ(last_requested_http_user_agent(), unfarbled_ua);
   auto off_ua_b2 = EvalJs(contents(), kUserAgentScript);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so b.com stays at
+  // maximum. (The default level above does not farble the user agent.)
+  EXPECT_EQ(max_ua_b.ExtractString(), off_ua_b2);
+#else
   EXPECT_EQ(off_ua_b.ExtractString(), off_ua_b2);
+#endif
 }
 
 // Tests results of farbling user agent in iframes

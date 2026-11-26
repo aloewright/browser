@@ -89,6 +89,9 @@ class BravePrefProvider : public PrefProvider, public Observer {
   void DiscardObsoletePreferences();
   void MigrateShieldsSettings(bool incognito);
   void EnsureNoWildcardEntries(ContentSettingsType content_type);
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  void RemoveKoWeakeningRules(ContentSettingsType content_type);
+#endif
   void MigrateShieldsSettingsFromResourceIds();
   void MigrateShieldsSettingsFromResourceIdsForOneType(
       const std::string& preference_path,

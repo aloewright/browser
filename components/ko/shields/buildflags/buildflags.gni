@@ -1,0 +1,27 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+declare_args() {
+  # HTTPS base URL of a signed K-O filter list channel, e.g.
+  # "https://lists.example.com/k-o". The browser fetches manifest.json,
+  # manifest.json.sig and the listed files from it. Empty disables the channel.
+  # Set it in local args.gn only; never commit it.
+  ko_filter_lists_url = ""
+
+  # ed25519 public key (64 hex chars) that signs the channel manifest.
+  ko_filter_lists_pubkey = ""
+
+  # Also prevents per-site Shields exceptions (shields down, ads allowed,
+  # HTTPS upgrade relaxed, fingerprinting allowed).
+  ko_shields_strict_enforcement = false
+}
+
+assert(!ko_shields_strict_enforcement || is_ko,
+       "ko_shields_strict_enforcement requires is_ko")
+assert(ko_filter_lists_url == "" || is_ko, "ko_filter_lists_url requires is_ko")
+assert(ko_filter_lists_url == "" || ko_filter_lists_pubkey != "",
+       "ko_filter_lists_url requires ko_filter_lists_pubkey")

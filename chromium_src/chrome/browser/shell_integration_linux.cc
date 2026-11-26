@@ -26,7 +26,9 @@ bool IsAnyBraveBrowserDefaultBrowser() {
 
   // Only match the current brand's desktop file prefix so that Brave Origin
   // doesn't consider regular Brave as "another channel" and vice versa.
-#if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
+#if defined(KO_BUILD)
+  return browser.starts_with("k-o");
+#elif BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   return browser.find("brave-origin") != std::string::npos;
 #else
   return browser.find("brave-browser") != std::string::npos;

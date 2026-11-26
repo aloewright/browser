@@ -11,6 +11,7 @@
 # So we define our values in a scope here, then use forward_variables_from(...)
 # in upstream's .gni file to apply the changes from this scope.
 
+import("//brave/build/ko/branding.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//build/config/chrome_build.gni")
 import("//build/util/branding.gni")
@@ -43,6 +44,8 @@ brave_updater_branding = {
   # installation with Brave Browser.
   if (is_brave_origin_branded) {
     mac_browser_bundle_identifier = "com.brave.Browser.origin"
+  } else if (is_ko_branded) {
+    mac_browser_bundle_identifier = ko_bundle_id
   } else {
     mac_browser_bundle_identifier = "com.brave.Browser"
   }

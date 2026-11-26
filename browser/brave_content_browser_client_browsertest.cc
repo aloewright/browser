@@ -55,6 +55,25 @@
 #include "brave/components/windows_recall/windows_recall.h"
 #endif
 
+namespace {
+
+// chrome:// pages are shown as ko:// in K-O, which also accepts ko:// input.
+#if defined(KO_BUILD)
+constexpr char kDisplayScheme[] = "ko://";
+#else
+constexpr char kDisplayScheme[] = "brave://";
+#endif
+
+std::vector<std::string> AliasSchemes() {
+  std::vector<std::string> schemes{"brave://", "chrome://"};
+#if defined(KO_BUILD)
+  schemes.push_back("ko://");
+#endif
+  return schemes;
+}
+
+}  // namespace
+
 class BraveContentBrowserClientTest : public InProcessBrowserTest {
  public:
   void SetUp() override {
@@ -110,10 +129,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadChromeURL) {
       kWelcomeHost,
   };
 
-  std::vector<std::string> schemes{
-      "brave://",
-      "chrome://",
-  };
+  std::vector<std::string> schemes = AliasSchemes();
 
   for (const std::string& page : pages) {
     for (const std::string& scheme : schemes) {
@@ -125,7 +141,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadChromeURL) {
 
       EXPECT_EQ(base::UTF16ToUTF8(
                     LocationBarModel::From(browser())->GetFormattedFullURL()),
-                ("brave://" + page));
+                (kDisplayScheme + page));
       EXPECT_EQ(contents->GetController()
                     .GetLastCommittedEntry()
                     ->GetVirtualURL()
@@ -143,10 +159,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadCustomBravePages) {
       "welcome",
   };
 
-  std::vector<std::string> schemes{
-      "brave://",
-      "chrome://",
-  };
+  std::vector<std::string> schemes = AliasSchemes();
 
   for (const std::string& page : pages) {
     for (const std::string& scheme : schemes) {
@@ -158,7 +171,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadCustomBravePages) {
 
       EXPECT_EQ(base::UTF16ToUTF8(
                     LocationBarModel::From(browser())->GetFormattedFullURL()),
-                ("brave://" + page));
+                (kDisplayScheme + page));
       EXPECT_EQ(contents->GetController()
                     .GetLastCommittedEntry()
                     ->GetVirtualURL()
@@ -172,10 +185,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadCustomBravePages) {
 }
 
 IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadAboutHost) {
-  std::vector<std::string> schemes{
-      "chrome://",
-      "brave://",
-  };
+  std::vector<std::string> schemes = AliasSchemes();
 
   for (const std::string& scheme : schemes) {
     content::WebContents* contents =
@@ -186,7 +196,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadAboutHost) {
 
     EXPECT_EQ(base::UTF16ToUTF8(
                   LocationBarModel::From(browser())->GetFormattedFullURL()),
-              "brave://about");
+              base::StrCat({kDisplayScheme, "about"}));
     EXPECT_EQ(contents->GetController()
                   .GetLastCommittedEntry()
                   ->GetVirtualURL()
@@ -198,10 +208,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, CanLoadAboutHost) {
   }
 }
 IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, RewriteChromeSync) {
-  std::vector<std::string> schemes{
-      "brave://",
-      "chrome://",
-  };
+  std::vector<std::string> schemes = AliasSchemes();
 
   for (const std::string& scheme : schemes) {
     content::WebContents* contents =
@@ -212,7 +219,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, RewriteChromeSync) {
 
     EXPECT_EQ(base::UTF16ToUTF8(
                   LocationBarModel::From(browser())->GetFormattedFullURL()),
-              "brave://sync");
+              base::StrCat({kDisplayScheme, "sync"}));
     EXPECT_EQ(
         contents->GetController().GetLastCommittedEntry()->GetVirtualURL(),
         GURL("chrome://sync"));
@@ -222,10 +229,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, RewriteChromeSync) {
 }
 
 IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, RewriteAdblock) {
-  std::vector<std::string> schemes{
-      "brave://",
-      "chrome://",
-  };
+  std::vector<std::string> schemes = AliasSchemes();
 
   for (const std::string& scheme : schemes) {
     content::WebContents* contents =
@@ -234,7 +238,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentBrowserClientTest, RewriteAdblock) {
                                     GURL("chrome://settings/shields/filters"));
     EXPECT_EQ(base::UTF16ToUTF8(
                   LocationBarModel::From(browser())->GetFormattedFullURL()),
-              "brave://settings/shields/filters");
+              base::StrCat({kDisplayScheme, "settings/shields/filters"}));
     EXPECT_EQ(LocationBarModel::From(browser())->GetURL(),
               GURL("chrome://settings/shields/filters"));
     EXPECT_EQ(

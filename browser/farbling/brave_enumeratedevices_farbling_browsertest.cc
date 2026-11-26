@@ -12,6 +12,7 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
 #include "chrome/browser/profiles/profile.h"
@@ -122,7 +123,13 @@ IN_PROC_BROWSER_TEST_F(BraveEnumerateDevicesFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   std::string balanced_value =
       content::EvalJs(contents(), kEnumerateDevicesScript).ExtractString();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so `real_value` was
+  // shuffled too.
+  EXPECT_EQ(balanced_value, real_value);
+#else
   EXPECT_NE(balanced_value, real_value);
+#endif
 
   // Farbling level: maximum
   // same as farbling level: balanced

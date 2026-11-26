@@ -1,0 +1,3 @@
+@@||cloudflareaccess.com^$document
+@@||cloudflareaccess.com^
+@@/cdn-cgi/access/$1p

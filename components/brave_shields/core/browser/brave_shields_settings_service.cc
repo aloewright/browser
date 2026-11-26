@@ -12,6 +12,7 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_shields/core/common/pref_names.h"
 #include "brave/components/content_settings/core/common/content_settings_util.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/content_settings/core/common/content_settings.h"
 #include "components/content_settings/core/common/content_settings_pattern.h"
@@ -105,6 +106,12 @@ bool BraveShieldsSettingsService::IsBraveShieldsEnabled(const GURL& url) {
 }
 
 bool BraveShieldsSettingsService::IsBraveShieldsManaged(const GURL& url) {
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds don't allow relaxing Shields per site.
+  if (url.SchemeIsHTTPOrHTTPS()) {
+    return true;
+  }
+#endif
   content_settings::SettingInfo info;
   host_content_settings_map_->GetWebsiteSetting(
       url, url, ContentSettingsType::BRAVE_SHIELDS, &info);

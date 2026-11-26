@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "base/check.h"
@@ -40,6 +41,8 @@
 #include "brave/components/debounce/core/browser/debounce_component_installer.h"
 #include "brave/components/debounce/core/common/features.h"
 #include "brave/components/https_upgrade_exceptions/browser/https_upgrade_exceptions_service.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/ntp_background_images_service.h"
 #include "brave/components/p3a/histograms_braveizer.h"
@@ -248,6 +251,14 @@ void BraveBrowserProcessImpl::Init() {
 
 void BraveBrowserProcessImpl::PreMainMessageLoopRun() {
   BrowserProcessImpl::PreMainMessageLoopRun();
+
+#if BUILDFLAG(IS_KO)
+  // The signed list channel is off unless ko_filter_lists_url is set; don't
+  // create AdBlockService ahead of its usual lazy start just to find that out.
+  if constexpr (!std::string_view(BUILDFLAG(KO_FILTER_LISTS_URL)).empty()) {
+    ad_block_service()->StartKoFilterListUpdater(shared_url_loader_factory());
+  }
+#endif
 
   // Upstream initializes network_time_tracker() at PreMainMessageLoopRun()
   // right above. We are ready to init NetworkTimeHelper now.

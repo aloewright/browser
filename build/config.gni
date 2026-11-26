@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/build/brave_channel.gni")
+import("//brave/build/ko/branding.gni")
 import("//brave/build/version.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//build/config/apple/symbols.gni")
@@ -74,6 +75,10 @@ if (is_brave_origin_branded) {
   _product_brand = "Origin"
   brave_dist_name = "brave-origin"
   brave_linux_package_name = "brave-origin"
+} else if (is_ko_branded) {
+  _product_brand = "Browser"
+  brave_dist_name = "k-o"
+  brave_linux_package_name = "k-o"
 } else {
   _product_brand = "Browser"
   brave_dist_name = "brave"
@@ -170,6 +175,15 @@ if (is_win) {
 
   brave_product_dir_name =
       "BraveSoftware/Brave-$_product_brand$brave_product_dir_name_suffix"
+  if (is_ko_branded) {
+    # ~/Library/Application Support/K-O/Browser: a subdirectory of the K-O
+    # data dir, next to the files ko-agentd keeps in its root.
+    brave_product_dir_name = "K-O/Browser$brave_product_dir_name_suffix"
+    assert(chrome_mac_bundle_id == ko_mac_bundle_id,
+           "chrome/app/theme/ko/BRANDING has MAC_BUNDLE_ID " +
+               "$chrome_mac_bundle_id, expected $ko_mac_bundle_id from " +
+               "ko_bundle_id; re-run pnpm run build to regenerate it")
+  }
 
   if (base_sparkle_update_url == "") {
     base_sparkle_update_url =

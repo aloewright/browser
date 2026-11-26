@@ -10,6 +10,7 @@
 
 #include "base/feature_list.h"
 #include "base/no_destructor.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/skus/browser/skus_service_impl.h"
 #include "brave/components/skus/browser/skus_utils.h"
 #include "brave/components/skus/common/features.h"
@@ -60,6 +61,11 @@ SkusServiceFactory::~SkusServiceFactory() = default;
 std::unique_ptr<KeyedService>
 SkusServiceFactory::BuildServiceInstanceForBrowserContext(
     content::BrowserContext* context) const {
+#if BUILDFLAG(IS_KO)
+  // K-O has no Brave subscriptions: never talk to the SKU backend, even if
+  // the feature is forced on from the command line.
+  return nullptr;
+#else
   // Return null if feature is disabled
   if (!base::FeatureList::IsEnabled(skus::features::kSkusFeature)) {
     return nullptr;
@@ -75,6 +81,7 @@ SkusServiceFactory::BuildServiceInstanceForBrowserContext(
       g_browser_process->local_state(),
       context->GetDefaultStoragePartition()
           ->GetURLLoaderFactoryForBrowserProcess());
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void SkusServiceFactory::RegisterProfilePrefs(

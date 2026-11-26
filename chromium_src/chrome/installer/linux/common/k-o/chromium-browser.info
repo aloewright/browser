@@ -1,0 +1,34 @@
+# Copyright (c) 2009 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file provides common configuration information for building
+# chromium-browser packages for various platforms.
+
+# Base name of the package.
+PACKAGE="k-o"
+
+# Filename of the main executable (for generating launcher scripts, etc.)
+PROGNAME=brave
+
+# Base directory for package installation.
+INSTALLDIR=/opt/k-o
+
+# Directory for device policy enrollments.
+ENROLLMENTDIR=/etc/k-o/policies/enrollment
+
+# Display string for desktop menu/icon.
+MENUNAME="K-O"
+
+# Brief package description.
+SHORTDESC="K-O personal web browser"
+
+# Detailed package description.
+FULLDESC="A personal browser built on Brave's Shields, with local AI workspaces."
+
+# Package maintainer information. Placeholders: K-O is not published.
+MAINTNAME="K-O"
+MAINTMAIL="noreply@example.com"
+PRODUCTURL="https://example.com/"
+
+RDN="com.ko.browser"

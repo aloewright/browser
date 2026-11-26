@@ -1,0 +1,25 @@
+{
+  "allowed_cidrs": ["100.64.0.0/10"],
+  "machines": [
+    {
+      "id": "studio",
+      "name": "Studio Mac",
+      "host": "100.64.0.10",
+      "port": 5900,
+      "kind": "macos-screen-sharing"
+    },
+    {
+      "id": "laptop",
+      "name": "Laptop",
+      "host": "laptop.netbird.example",
+      "kind": "macos-screen-sharing"
+    },
+    {
+      "id": "build-box",
+      "name": "Build box",
+      "host": "100.64.0.20",
+      "port": 5901,
+      "kind": "vnc"
+    }
+  ]
+}

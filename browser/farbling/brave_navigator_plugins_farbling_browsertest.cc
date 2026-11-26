@@ -13,6 +13,8 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
@@ -25,6 +27,10 @@
 #include "content/public/test/browser_test_utils.h"
 #include "net/dns/mock_host_resolver.h"
 
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
+
 using brave_shields::ControlType;
 
 namespace {
@@ -34,9 +40,11 @@ constexpr char kNavigatorPdfViewerEnabledCrashTest[] =
     "navigator.pdfViewerEnabled == navigator.pdfViewerEnabled";
 constexpr char kGetPluginsAsStringScript[] =
     "Array.from(navigator.plugins).map(p => p.name).join(',');";
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)  // Unreachable in strict K-O.
 constexpr char kExpectedPluginsNamesOff[] =
     "PDF Viewer,Chrome PDF Viewer,Chromium PDF Viewer,Microsoft Edge PDF "
     "Viewer,WebKit built-in PDF";
+#endif
 constexpr char kExpectedPluginsNamesBalanced[] =
     "4cOuf2jw,Microsoft Edge PDF Viewer,Chromium PDF Viewer,PDF "
     "Viewer,HqVxgvf,Online PDF Viewer,WebKit built-in PDF";
@@ -65,6 +73,13 @@ class BraveNavigatorPluginsFarblingBrowserTest : public InProcessBrowserTest {
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
 
     top_level_page_url_ = embedded_test_server()->GetURL("a.com", "/");
     farbling_url_ = embedded_test_server()->GetURL("a.com", "/simple.html");
@@ -126,7 +141,13 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorPluginsFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   int balanced_length =
       content::EvalJs(contents(), kPluginsLengthScript).ExtractInt();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so `off_length`
+  // already counted the 2 fake plugins.
+  EXPECT_EQ(balanced_length, off_length);
+#else
   EXPECT_EQ(balanced_length, off_length + 2);
+#endif
 
   // Farbling level: maximum
   // navigator.plugins should contain no real plugins, only 2 fake ones
@@ -167,7 +188,11 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorPluginsFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   int off_length2 =
       content::EvalJs(contents(), kPluginsLengthScript).ExtractInt();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  EXPECT_EQ(off_length, off_length2 + 2);
+#else
   EXPECT_EQ(off_length, off_length2);
+#endif
 }
 
 // Tests that names of built-in plugins get farbled by default
@@ -179,9 +204,16 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorPluginsFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   int off_length =
       content::EvalJs(contents(), kPluginsLengthScript).ExtractInt();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off.
+  EXPECT_EQ(off_length, 7);
+  EXPECT_EQ(content::EvalJs(contents(), kGetPluginsAsStringScript),
+            kExpectedPluginsNamesBalanced);
+#else
   EXPECT_EQ(off_length, 5);
   EXPECT_EQ(content::EvalJs(contents(), kGetPluginsAsStringScript),
             kExpectedPluginsNamesOff);
+#endif
 
   // Farbling level: balanced (default)
   SetFingerprintingDefault();
@@ -206,7 +238,14 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorPluginsFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   int off_length =
       content::EvalJs(contents(), kPluginsLengthScript).ExtractInt();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off.
+  EXPECT_EQ(off_length, 7);
+  EXPECT_EQ(content::EvalJs(contents(), kGetPluginsAsStringScript),
+            kExpectedPluginsNamesBalanced);
+#else
   EXPECT_EQ(off_length, 5);
   EXPECT_EQ(content::EvalJs(contents(), kGetPluginsAsStringScript),
             kExpectedPluginsNamesOff);
+#endif
 }

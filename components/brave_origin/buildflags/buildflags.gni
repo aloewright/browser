@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/brave_debloat/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 
 declare_args() {
   is_brave_origin_branded = false
@@ -13,3 +14,5 @@ assert(!(is_brave_origin_branded && is_android),
        "Brave Origin branding is not supported on Android")
 assert(!(is_brave_origin_branded && is_ios),
        "Brave Origin branding is not supported on iOS")
+assert(!(is_brave_origin_branded && is_ko),
+       "K-O has no Brave Origin purchase/activation flow")

@@ -27,6 +27,12 @@
 #include "extensions/common/mojom/manifest.mojom.h"
 #include "ui/base/resource/resource_bundle.h"
 
+#if BUILDFLAG(IS_KO)
+#include "base/files/file_path.h"
+#include "base/logging.h"
+#include "brave/components/ko/bundled_extensions/ko_bundled_extensions.h"
+#endif
+
 #if BUILDFLAG(ENABLE_WEB_DISCOVERY_NATIVE)
 #include "brave/components/web_discovery/common/features.h"
 #endif
@@ -52,7 +58,24 @@ void BraveComponentLoader::AddDefaultComponentExtensions(
     bool skip_session_components) {
   ComponentLoader::AddDefaultComponentExtensions(skip_session_components);
   UpdateBraveExtension();
+#if BUILDFLAG(IS_KO)
+  AddKoBundledExtensions();
+#endif
 }
+
+#if BUILDFLAG(IS_KO)
+void BraveComponentLoader::AddKoBundledExtensions() {
+  for (const auto& extension : ko::kBundledExtensions) {
+    // Files are in <resources>/ko_extensions/<dir>; the build gave the
+    // manifest a fixed "key", so the ID matches `extension.id`.
+    const auto id = Add(extension.manifest,
+                        base::FilePath(FILE_PATH_LITERAL("ko_extensions"))
+                            .AppendASCII(extension.dir));
+    LOG_IF(ERROR, id != extension.id)
+        << "Bundled extension " << extension.dir << " got an unexpected ID";
+  }
+}
+#endif  // BUILDFLAG(IS_KO)
 
 bool BraveComponentLoader::UseBraveExtensionBackgroundPage() {
 #if BUILDFLAG(ENABLE_WEB_DISCOVERY)

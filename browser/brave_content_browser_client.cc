@@ -85,6 +85,7 @@
 #include "brave/components/global_privacy_control/global_privacy_control_utils.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_throttle.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_util.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/mojom/ntp_background_images.mojom.h"
 #include "brave/components/password_strength_meter/password_strength_meter.mojom.h"
@@ -252,6 +253,13 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #include "brave/components/containers/core/common/features.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
 #endif
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+#include "brave/browser/containers/ko_container_proxy_hooks.h"
+#endif
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_workspace/ko_workspace_ui.h"
+#include "brave/components/ko/workspace/common/ko_workspace.mojom.h"
+#endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/browser/traffic_control/traffic_control_navigation_throttle.h"
 #include "brave/browser/traffic_control/traffic_control_service_factory.h"
@@ -356,12 +364,21 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #include "brave/components/brave_origin/mojom/brave_origin_startup.mojom.h"
 #endif
 
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_machines/ko_machines_ui.h"
+#include "brave/components/ko/machines/common/ko_machines.mojom.h"
+#endif
+
 #if BUILDFLAG(IS_WIN)
 #include "brave/components/windows_recall/windows_recall.h"
 #endif
 
 #if BUILDFLAG(ENABLE_OMAHA4)
 #include "brave/browser/brave_browser_main_extra_parts_p3a.h"
+#endif
+
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.h"
 #endif
 
 #if BUILDFLAG(ENABLE_EMAIL_ALIASES)
@@ -507,12 +524,17 @@ void MaybeBindBraveVpnImpl(
 void MaybeBindSkusSdkImpl(
     content::RenderFrameHost* const frame_host,
     mojo::PendingReceiver<skus::mojom::SkusService> receiver) {
+#if BUILDFLAG(IS_KO)
+  // Kept registered so a stray request can't kill the renderer, but inert:
+  // dropping the receiver disconnects the caller.
+#else
   const GURL& frame_host_url = frame_host->GetLastCommittedURL();
   if (!skus::IsSafeOrigin(frame_host_url)) {
     return;
   }
   auto* context = frame_host->GetBrowserContext();
   skus::SkusServiceFactory::BindForContext(context, std::move(receiver));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 #if !BUILDFLAG(IS_ANDROID)
@@ -584,6 +606,10 @@ BraveContentBrowserClient::CreateBrowserMainParts(bool is_integration_test) {
 #if BUILDFLAG(ENABLE_OMAHA4)
   chrome_main_parts->AddParts(
       std::make_unique<BraveBrowserMainExtraPartsP3A>());
+#endif
+#if BUILDFLAG(IS_KO)
+  chrome_main_parts->AddParts(
+      std::make_unique<ko::KOTelemetryMainExtraParts>());
 #endif
   return main_parts;
 }
@@ -692,6 +718,11 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
         .Add<containers::mojom::ContainersSettingsHandler>();
   }
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  // Only chrome://ko-workspace may create containers and capture tabs.
+  registry.ForWebUI<KoWorkspaceUI>().Add<ko_workspace::mojom::PageHandler>();
+#endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
   if (base::FeatureList::IsEnabled(
           traffic_control::features::kTrafficControl)) {
@@ -732,6 +763,13 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
       .Add<brave_origin::mojom::BraveOriginStartupHandler>();
 #endif
 
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  // Only chrome://ko-machines may open machine sockets.
+  registry.ForWebUI<KOMachinesUI>()
+      .Add<ko_machines::mojom::MachinesHandler>()
+      .Add<ko_machines::mojom::KOMachineBridge>();
+#endif
+
 #if BUILDFLAG(ENABLE_AI_CHAT)
   if (ai_chat::features::IsAIChatEnabled()) {
     registry.ForWebUI<AIChatUI>()
@@ -753,9 +791,11 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
 #endif  // BUILDFLAG(ENABLE_BRAVE_REWARDS)
 #endif  // BUILDFLAG(ENABLE_BRAVE_ADS)
 
+#if !BUILDFLAG(IS_KO)
   if (base::FeatureList::IsEnabled(skus::features::kSkusFeature)) {
     registry.ForWebUI<SkusInternalsUI>().Add<skus::mojom::SkusInternals>();
   }
+#endif
 
 #if BUILDFLAG(ENABLE_BRAVE_REWARDS)
   registry.ForWebUI<brave_rewards::RewardsPageUI>()
@@ -1312,6 +1352,13 @@ void BraveContentBrowserClient::WillCreateURLLoaderFactory(
     network::mojom::URLLoaderFactoryOverridePtr* factory_override,
     scoped_refptr<base::SequencedTaskRunner> navigation_response_task_runner,
     bool is_for_network_service) {
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+  if (type == URLLoaderFactoryType::kPrefetch &&
+      containers::MaybeBlockKoContainerPrefetch(frame, factory_builder)) {
+    return;
+  }
+#endif  // BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+
   // TODO(iefremov): Skip proxying for certain requests?
   base::OnceCallback<void(bool)> set_bypass_redirect_checks;
   if (base::FeatureList::IsEnabled(features::kBraveRequestInfoUniquePtr)) {
@@ -1499,7 +1546,7 @@ void BraveContentBrowserClient::MaybeHideReferrer(
 
 bool BraveContentBrowserClient::IsHandledURL(const GURL& url) {
   // Keep the brave:// alias out of the external-protocol permission fallback.
-  return url.SchemeIs(content::kBraveUIScheme) ||
+  return content::IsBraveUIAliasScheme(url.scheme()) ||
          ChromeContentBrowserClient::IsHandledURL(url);
 }
 
@@ -1533,7 +1580,7 @@ bool BraveContentBrowserClient::HandleURLOverrideRewrite(
   //
   // Scope of schema is intentionally narrower than content::HasWebUIScheme(url)
   // which also allows both `chrome-untrusted` and `chrome-devtools`.
-  if (!url->SchemeIs(content::kBraveUIScheme) &&
+  if (!content::IsBraveUIAliasScheme(url->scheme()) &&
       !url->SchemeIs(content::kChromeUIScheme)) {
     return false;
   }
@@ -1817,6 +1864,48 @@ bool BraveContentBrowserClient::AllowSignedExchange(
   // exchanges.
   return false;
 }
+
+#if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
+void BraveContentBrowserClient::ConfigureNetworkContextParams(
+    content::BrowserContext* context,
+    bool in_memory,
+    const base::FilePath& relative_partition_path,
+    network::mojom::NetworkContextParams* network_context_params,
+    cert_verifier::mojom::CertVerifierCreationParams*
+        cert_verifier_creation_params) {
+  ChromeContentBrowserClient::ConfigureNetworkContextParams(
+      context, in_memory, relative_partition_path, network_context_params,
+      cert_verifier_creation_params);
+  containers::ConfigureKoContainerNetworkContext(
+      context, relative_partition_path, network_context_params);
+}
+
+std::unique_ptr<content::LoginDelegate>
+BraveContentBrowserClient::CreateLoginDelegate(
+    const net::AuthChallengeInfo& auth_info,
+    content::WebContents* web_contents,
+    content::BrowserContext* browser_context,
+    const content::GlobalRequestID& request_id,
+    bool is_request_for_primary_main_frame_navigation,
+    bool is_request_for_navigation,
+    const GURL& url,
+    scoped_refptr<net::HttpResponseHeaders> response_headers,
+    bool first_auth_attempt,
+    bool do_not_prompt_for_login,
+    content::GuestPageHolder* guest,
+    content::LoginDelegate::LoginAuthRequiredCallback auth_required_callback) {
+  if (auto delegate = containers::MaybeCreateKoContainerProxyLoginDelegate(
+          auth_info, web_contents, request_id, first_auth_attempt,
+          auth_required_callback)) {
+    return delegate;
+  }
+  return ChromeContentBrowserClient::CreateLoginDelegate(
+      auth_info, web_contents, browser_context, request_id,
+      is_request_for_primary_main_frame_navigation, is_request_for_navigation,
+      url, std::move(response_headers), first_auth_attempt,
+      do_not_prompt_for_login, guest, std::move(auth_required_callback));
+}
+#endif  // BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
 
 #if !BUILDFLAG(IS_ANDROID)
 content::HidDelegate* BraveContentBrowserClient::GetHidDelegate() {

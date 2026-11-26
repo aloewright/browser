@@ -479,6 +479,8 @@ IN_PROC_BROWSER_TEST_F(EphemeralStorage1pBrowserTest,
   EXPECT_EQ("", site_a_tab_values.iframe_2.cookies);
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(
     EphemeralStorage1pBrowserTest,
     DisabledShieldsAllowsPersistentCookiesFor1PesHostsIn3pFrames) {
@@ -525,6 +527,7 @@ IN_PROC_BROWSER_TEST_F(
   EXPECT_EQ("name=bcom_simple", site_a_tab_values.iframe_1.cookies);
   EXPECT_EQ("name=bcom_simple", site_a_tab_values.iframe_2.cookies);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(EphemeralStorage1pBrowserTest,
                        UseEphemeralStorageAfterReload) {

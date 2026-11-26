@@ -14,6 +14,10 @@
 #include "brave/components/brave_extension/grit/brave_extension.h"
 #endif  // BUILDFLAG(ENABLE_EXTENSIONS)
 
+#if defined(KO_BUILD) && BUILDFLAG(ENABLE_EXTENSIONS)
+#include "brave/components/ko/bundled_extensions/ko_bundled_extensions.h"
+#endif
+
 namespace extensions {
 
 namespace {
@@ -26,6 +30,15 @@ bool IsComponentExtensionAllowlistedBraveImpl(const std::string& extension_id) {
       return true;
     }
   }
+
+#if defined(KO_BUILD) && BUILDFLAG(ENABLE_EXTENSIONS)
+  // K-O: extensions from the ko_bundled_extension_dirs GN arg.
+  for (const auto& extension : ko::kBundledExtensions) {
+    if (extension_id == extension.id) {
+      return true;
+    }
+  }
+#endif
 
   return false;
 }

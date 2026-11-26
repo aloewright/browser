@@ -25,6 +25,7 @@
 #include "brave/components/brave_vpn/common/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/features.h"
 #include "brave/components/ntp_background_images/browser/ntp_custom_images_source.h"
 #include "chrome/browser/browser_process.h"
@@ -264,8 +265,8 @@ void NewTabPageInitializer::AddLoadTimeValues() {
                       ai_chat::features::IsAIChatAgentProfileEnabled());
   source_->AddBoolean("isAIChatAgentProfile", profile->IsAIChatAgent());
   source_->AddBoolean("isConversationShareEnabled",
-                      base::FeatureList::IsEnabled(
-                          ai_chat::features::kAIChatConversationShare));
+                      ai_chat::features::IsConversationShareEnabled());
+  source_->AddBoolean("isPremiumAvailable", !BUILDFLAG(IS_KO));
   source_->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));

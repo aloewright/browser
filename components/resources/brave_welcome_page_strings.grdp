@@ -145,9 +145,16 @@
     Select the features you would like displayed by default in the main toolbar. You can always show or hide these later in Settings.
   </message>
 
+  <if expr="not is_ko">
   <message name="IDS_WELCOME_PAGE_PRODUCT_LEO_AI_TITLE" desc="Title of the Leo AI product card" formatter_data="webui=BraveWelcomePage">
     Leo AI
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_WELCOME_PAGE_PRODUCT_LEO_AI_TITLE" desc="Title of the Leo AI product card" formatter_data="webui=BraveWelcomePage">
+    K-O Assistant
+  </message>
+  </if>
 
   <message name="IDS_WELCOME_PAGE_PRODUCT_LEO_AI_DESCRIPTION" desc="Description of the Leo AI product card" formatter_data="webui=BraveWelcomePage">
     The smart AI assistant built right into your browser. Ask questions, summarize pages, create new content, and more.

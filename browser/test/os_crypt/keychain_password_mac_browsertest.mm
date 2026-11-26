@@ -19,8 +19,13 @@ struct TestParams {
 constexpr TestParams kTestVectors[] = {
     {
         nullptr,
+#if defined(KO_BUILD)
+        "K-O Safe Storage",
+        "K-O",
+#else
         "Brave Safe Storage",
         "Brave",
+#endif
     },
     {
         "import-brave",

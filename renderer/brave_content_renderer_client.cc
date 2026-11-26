@@ -18,6 +18,7 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_vpn/common/buildflags/buildflags.h"
 #include "brave/components/cosmetic_filters/renderer/cosmetic_filters_js_render_frame_observer.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/misc_metrics/renderer/web3_metrics_render_frame_observer.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/script_injector/renderer/script_injector_render_frame_observer.h"
@@ -226,7 +227,9 @@ void BraveContentRendererClient::RenderFrameCreated(
         render_frame, content::ISOLATED_WORLD_ID_GLOBAL);
   }
 
-  if (base::FeatureList::IsEnabled(skus::features::kSkusFeature) &&
+  // K-O: no SKU JS API on account.brave.com.
+  if (!BUILDFLAG(IS_KO) &&
+      base::FeatureList::IsEnabled(skus::features::kSkusFeature) &&
       !process_state::IsIncognitoProcess()) {
     skus::SkusRenderFrameObserver::Create(render_frame);
   }

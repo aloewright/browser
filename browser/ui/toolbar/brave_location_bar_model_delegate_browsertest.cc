@@ -6,12 +6,16 @@
 #include "brave/browser/ui/toolbar/brave_location_bar_model_delegate.h"
 
 #include "base/test/scoped_feature_list.h"
+#include "base/values.h"
 #include "brave/browser/brave_shields/brave_shields_tab_helper.h"
 #include "brave/browser/ui/page_info/features.h"
 #include "brave/components/vector_icons/vector_icons.h"
+#include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_location_bar_model_delegate.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
+#include "components/prefs/pref_service.h"
 #include "content/public/test/browser_test.h"
 #include "net/dns/mock_host_resolver.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
@@ -47,6 +51,12 @@ class BraveLocationBarModelDelegateBrowserTest : public InProcessBrowserTest {
     host_resolver()->AddRule("*", "127.0.0.1");
     ASSERT_TRUE(embedded_https_test_server().Start());
     ASSERT_TRUE(embedded_test_server()->Start());
+#if defined(KO_BUILD)
+    // K-O upgrades http:// navigations strictly (HTTP interstitial on
+    // failure); example.com is also served over plain HTTP here.
+    browser()->GetProfile()->GetPrefs()->SetList(
+        prefs::kHttpAllowlist, base::ListValue().Append("example.com"));
+#endif
 
     delegate_ = std::make_unique<MockBraveLocationBarModelDelegate>(
         browser()->tab_strip_model());
@@ -137,6 +147,8 @@ IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
   EXPECT_EQ(icon, &kLeoShieldDoneIcon);
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
                        ReturnsShieldDisabledIconWhenShieldsDisabled) {
   NavigateToHTTPS();
@@ -150,3 +162,4 @@ IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
   const gfx::VectorIcon* icon = delegate_->GetVectorIconOverride();
   EXPECT_EQ(icon, &kLeoShieldDisableFilledIcon);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)

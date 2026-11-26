@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/ai_chat/core/common/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//build/buildflag_header.gni")
 import("//pdf/features.gni")
@@ -68,6 +69,7 @@ static_library("ai_chat") {
     "//brave/components/ai_chat/core/common/buildflags",
     "//brave/components/ai_chat/core/common/mojom",
     "//brave/components/constants",
+    "//brave/components/ko/buildflags",
     "//brave/components/resources:static_resources_grit",
     "//brave/components/resources:strings_grit",
     "//brave/components/script_injector/common/mojom",
@@ -376,7 +378,6 @@ source_set("browser_tests") {
     sources = [
       "//chrome/browser/renderer_context_menu/render_view_context_menu_browsertest_util.cc",
       "//chrome/browser/renderer_context_menu/render_view_context_menu_browsertest_util.h",
-      "ai_chat_brave_search_throttle_browsertest.cc",
       "ai_chat_browsertests.cc",
       "ai_chat_conversation_entries_browsertest.cc",
       "ai_chat_conversation_task_browsertest.cc",
@@ -395,6 +396,11 @@ source_set("browser_tests") {
       "web_mcp_browsertest.cc",
       "workspace_associated_content_browsertest.cc",
     ]
+
+    if (!is_ko) {
+      # K-O has no Brave Search deep links.
+      sources += [ "ai_chat_brave_search_throttle_browsertest.cc" ]
+    }
 
     if (enable_pdf) {
       sources += [ "pdf_text_extractor_browsertest.cc" ]
@@ -415,6 +421,7 @@ source_set("browser_tests") {
       "//brave/components/ai_chat/core/common/buildflags",
       "//brave/components/ai_chat/core/common/mojom",
       "//brave/components/constants",
+      "//brave/components/ko/buildflags",
       "//brave/components/l10n/common:test_support",
       "//brave/components/resources:strings_grit",
       "//brave/components/sidebar/browser",

@@ -15,6 +15,8 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
@@ -27,6 +29,10 @@
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
 #include "net/dns/mock_host_resolver.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -61,6 +67,13 @@ class BraveNavigatorHardwareConcurrencyFarblingBrowserTest
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
 
     top_level_page_url_ = embedded_test_server()->GetURL("a.com", "/");
     farbling_url_ = embedded_test_server()->GetURL("a.com", "/simple.html");
@@ -146,7 +159,14 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorHardwareConcurrencyFarblingBrowserTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), farbling_url()));
   int real_value2 =
       content::EvalJs(contents(), kHardwareConcurrencyScript).ExtractInt();
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so `real_value` was
+  // farbled too.
+  EXPECT_EQ(real_value, fake_value);
+  ASSERT_LE(real_value, real_value2);
+#else
   ASSERT_GE(real_value, real_value2);
+#endif
 }
 
 IN_PROC_BROWSER_TEST_F(BraveNavigatorHardwareConcurrencyFarblingBrowserTest,
@@ -209,5 +229,12 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorHardwareConcurrencyFarblingBrowserTest,
   int real_value2;
   base::StringToInt(content::EvalJs(contents(), kTitleScript).ExtractString(),
                     &real_value2);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so `real_value` was
+  // farbled too.
+  EXPECT_EQ(real_value, fake_value);
+  ASSERT_LE(real_value, real_value2);
+#else
   ASSERT_GE(real_value, real_value2);
+#endif
 }

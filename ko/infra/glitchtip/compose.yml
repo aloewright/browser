@@ -1,0 +1,83 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# Self-hosted GlitchTip for K-O crash reports and ko-agentd errors.
+#   doppler run --project ko-infra --config prd -- docker compose up -d
+# Published only on the host's NetBird IP; TLS is terminated by the private
+# reverse proxy. See ko/docs/infra.md.
+name: ko-glitchtip
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '20m'
+    max-file: '3'
+
+x-hardening: &hardening
+  restart: unless-stopped
+  logging: *logging
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:17.11-alpine@sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:?set in Doppler}
+    # Partitioned tables need more locks than the default.
+    command: ['postgres', '-c', 'max_locks_per_transaction=512']
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U glitchtip -d glitchtip']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    <<: *hardening
+    image: valkey/valkey:8.1.11-alpine@sha256:2602ace2be6569bc2bbb06f873776516ab9089821525be34f4305c67eb9db02a
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    networks: [internal]
+
+  web:
+    <<: *hardening
+    image: glitchtip/glitchtip:7.0.0@sha256:c245745b4179667da3aebd73fb8d4f1fd918f7d68ba07d1fd73ea688933b6e01
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD:?}@postgres:5432/glitchtip
+      VALKEY_URL: redis://valkey:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set in Doppler}
+      # Public URL behind the reverse proxy, e.g. https://glitchtip.example.com
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:?set in Doppler}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_FROM_EMAIL:?set in Doppler}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      ENABLE_USER_REGISTRATION: 'false'
+      ENABLE_ORGANIZATION_CREATION: 'false'
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_MAX_EVENT_LIFE_DAYS:-90}
+    ports:
+      # NetBird IP of this host (or 127.0.0.1 when the proxy is local).
+      - '${KO_BIND_IP:?set in Doppler}:${GLITCHTIP_PORT:-8000}:8000'
+    volumes:
+      - uploads:/code/uploads
+    networks: [internal, egress]
+
+networks:
+  # No route out: postgres/valkey only talk to web.
+  internal:
+    internal: true
+  egress: {}
+
+volumes:
+  pg-data: {}
+  uploads: {}

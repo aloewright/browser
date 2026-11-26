@@ -944,6 +944,12 @@
       <if expr="enable_psst">
         <part file="psst_ui_strings.grdp" />
       </if>
+      <if expr="is_ko and not is_android">
+        <part file="ko_machines_strings.grdp" />
+      </if>
+      <if expr="is_ko and not is_android">
+        <part file="ko_workspace_strings.grdp" />
+      </if>
     </messages>
   </release>
 </grit>

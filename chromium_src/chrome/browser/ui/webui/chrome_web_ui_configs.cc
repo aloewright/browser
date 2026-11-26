@@ -13,6 +13,7 @@
 #include "brave/components/brave_rewards/core/buildflags/buildflags.h"
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
 #include "brave/components/speedreader/common/buildflags/buildflags.h"
 #include "content/public/browser/webui_config_map.h"
@@ -81,6 +82,11 @@
 
 #if BUILDFLAG(ENABLE_PSST)
 #include "brave/browser/ui/webui/psst/brave_psst_dialog_ui.h"
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_machines/ko_machines_ui.h"
+#include "brave/browser/ui/webui/ko_workspace/ko_workspace_ui.h"
 #endif
 
 namespace {
@@ -184,5 +190,10 @@ void RegisterChromeWebUIConfigs() {
 
 #if BUILDFLAG(ENABLE_PSST)
   map.AddWebUIConfig(std::make_unique<psst::BravePsstDialogUIConfig>());
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  map.AddWebUIConfig(std::make_unique<KOMachinesUIConfig>());
+  map.AddWebUIConfig(std::make_unique<KoWorkspaceUIConfig>());
 #endif
 }

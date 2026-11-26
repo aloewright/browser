@@ -8,6 +8,7 @@ import("//brave/components/brave_news/common/buildflags/buildflags.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//brave/components/brave_vpn/common/buildflags/buildflags.gni")
 import("//brave/components/containers/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
 import("//brave/components/traffic_control/buildflags/buildflags.gni")
@@ -23,6 +24,7 @@ brave_browser_ui_webui_configs_deps = [
   "//brave/components/brave_shields/content/browser",
   "//brave/components/brave_vpn/common/buildflags",
   "//brave/components/containers/buildflags",
+  "//brave/components/ko/buildflags",
   "//brave/components/playlist/core/common/buildflags",
 ]
 
@@ -72,4 +74,11 @@ if (enable_traffic_control) {
 
 if (enable_psst) {
   brave_browser_ui_webui_configs_deps += [ "//brave/browser/ui/webui/psst" ]
+}
+
+if (is_ko && !is_android) {
+  brave_browser_ui_webui_configs_deps += [
+    "//brave/browser/ui/webui/ko_machines",
+    "//brave/components/ko/workspace/common:mojom",
+  ]
 }

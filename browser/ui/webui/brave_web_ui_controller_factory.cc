@@ -21,6 +21,7 @@
 #include "brave/components/brave_rewards/core/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/skus/common/features.h"
 #include "brave/components/tor/buildflags/buildflags.h"
@@ -195,7 +196,7 @@ WebUIFactoryFunction GetWebUIFactoryFunction(WebUI* web_ui,
 #if BUILDFLAG(ENABLE_BRAVE_REWARDS)
       url.host() == kRewardsPageHost || url.host() == kRewardsInternalsHost ||
 #endif
-      (url.host() == kSkusInternalsHost &&
+      (url.host() == kSkusInternalsHost && !BUILDFLAG(IS_KO) &&
        base::FeatureList::IsEnabled(skus::features::kSkusFeature))) {
     return &NewWebUI;
   }

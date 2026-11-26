@@ -6,6 +6,9 @@
 #ifndef BRAVE_COMPONENTS_BRAVE_SHIELDS_CORE_BROWSER_AD_BLOCK_DEFAULT_RESOURCE_PROVIDER_H_
 #define BRAVE_COMPONENTS_BRAVE_SHIELDS_CORE_BROWSER_AD_BLOCK_DEFAULT_RESOURCE_PROVIDER_H_
 
+#include <optional>
+#include <string>
+
 #include "base/functional/callback.h"
 #include "brave/components/brave_shields/core/browser/ad_block_resource_provider.h"
 
@@ -37,12 +40,19 @@ class AdBlockDefaultResourceProvider : public AdBlockResourceProvider {
   void LoadResources(
       base::OnceCallback<void(AdblockResourceStorageBox)>) override;
 
+  // Supplies resources JSON while the component is missing (K-O's embedded
+  // or channel snapshot).
+  using FallbackLoader = base::RepeatingCallback<void(
+      base::OnceCallback<void(std::optional<std::string>)>)>;
+  void SetFallbackLoader(FallbackLoader loader);
+
  private:
   friend class ::AdBlockServiceTest;
 
   void OnComponentReady(const base::FilePath&);
 
   base::FilePath component_path_;
+  FallbackLoader fallback_loader_;
 
   base::WeakPtrFactory<AdBlockDefaultResourceProvider> weak_factory_{this};
 };

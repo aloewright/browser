@@ -1,0 +1,54 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+# K-O self-hosted telemetry targets. Set them in your local, uncommitted
+# args.gn only; empty disables that channel. See ko/docs/telemetry.md.
+declare_args() {
+  # Sentry-compatible minidump endpoint of a self-hosted GlitchTip, e.g.
+  # "https://glitchtip.example.com/api/1/minidump/?sentry_key=<public key>".
+  ko_crash_upload_url = ""
+
+  # Self-hosted PostHog base URL, e.g. "https://posthog.example.com".
+  ko_posthog_host = ""
+
+  # PostHog project API key (the public "phc_..." capture key).
+  ko_posthog_project_key = ""
+}
+
+# Values are embedded in C++ string literals and must be https.
+foreach(_v,
+        [
+          ko_crash_upload_url,
+          ko_posthog_host,
+          ko_posthog_project_key,
+        ]) {
+  assert(string_replace(string_replace(_v, "\"", ""), "\\", "") == _v,
+         "K-O telemetry GN args must not contain quotes or backslashes")
+}
+foreach(_url,
+        [
+          ko_crash_upload_url,
+          ko_posthog_host,
+        ]) {
+  if (_url != "") {
+    _parts = []  # GN refuses to overwrite a nonempty list.
+    _parts = string_split(_url, "://")
+    assert(_parts[0] == "https", "K-O telemetry URLs must start with https://")
+  }
+}
+assert((ko_posthog_host == "") == (ko_posthog_project_key == ""),
+       "Set both ko_posthog_host and ko_posthog_project_key, or neither")
+
+# Android uploads minidumps from Java to a hardcoded Brave URL
+# (MinidumpUploader.java patch), so a K-O endpoint would turn on uploads to
+# Brave instead.
+assert(!is_android || ko_crash_upload_url == "",
+       "ko_crash_upload_url is not supported on Android")
+
+ko_crash_reporting_configured = is_ko && ko_crash_upload_url != ""
+ko_analytics_configured =
+    is_ko && ko_posthog_host != "" && ko_posthog_project_key != ""

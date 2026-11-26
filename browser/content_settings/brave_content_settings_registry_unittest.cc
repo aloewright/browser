@@ -204,12 +204,32 @@ TEST_F(BraveContentSettingsRegistryTest, GetInitialDefaultSetting) {
     const auto initial_value =
         brave_shields::CosmeticFilteringSetting::FromValue(
             ws_info->initial_default_value());
+#if !defined(KO_BUILD)
     EXPECT_EQ(brave_shields::ControlType::BLOCK_THIRD_PARTY, initial_value);
+#else
+    // K-O: aggressive blocking (first-party too) by default.
+    EXPECT_EQ(brave_shields::ControlType::BLOCK, initial_value);
+#endif
     EXPECT_EQ(brave_shields::ControlType::BLOCK_THIRD_PARTY,
               brave_shields::CosmeticFilteringSetting::kDefaultValue);
+#if !defined(KO_BUILD)
     EXPECT_EQ(ws_info->initial_default_value(),
               brave_shields::CosmeticFilteringSetting::DefaultValue());
+#else
+    EXPECT_EQ(ws_info->initial_default_value(),
+              brave_shields::CosmeticFilteringSetting::ToValue(
+                  brave_shields::ControlType::BLOCK));
+#endif
   }
+
+#if defined(KO_BUILD)
+  {
+    SCOPED_TRACE("Content setting: BRAVE_HTTPS_UPGRADE");
+    info = registry()->Get(ContentSettingsType::BRAVE_HTTPS_UPGRADE);
+    // K-O: strict HTTPS upgrades by default.
+    EXPECT_EQ(CONTENT_SETTING_BLOCK, info->GetInitialDefaultSetting());
+  }
+#endif
 
   // {
   //   SCOPED_TRACE("Content setting: BRAVE_COOKIES");

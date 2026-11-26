@@ -13,6 +13,7 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/extensions/extension_browsertest.h"
@@ -132,7 +133,13 @@ IN_PROC_BROWSER_TEST_F(BraveDeviceMemoryFarblingBrowserTest,
   // Farbling level: off
   AllowFingerprinting(domain1);
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url1));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off. d.test's farbled
+  // value happens to be the real one, so its checks below still hold.
+  EXPECT_EQ(8192, EvalJs(contents(), kDeviceMemoryScript));
+#else
   EXPECT_EQ(true_value, EvalJs(contents(), kDeviceMemoryScript));
+#endif
   AllowFingerprinting(domain2);
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url2));
   EXPECT_EQ(true_value, EvalJs(contents(), kDeviceMemoryScript));

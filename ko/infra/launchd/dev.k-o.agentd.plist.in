@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2026 The Brave Authors. All rights reserved.
+     This Source Code Form is subject to the terms of the Mozilla Public
+     License, v. 2.0. If a copy of the MPL was not distributed with this file,
+     You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<!-- User LaunchAgent for ko-agentd. install.sh replaces @HOME@ and @BIN@. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.k-o.agentd</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@BIN@</string>
+    <string>--log-format</string>
+    <string>json</string>
+    <string>serve</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Where the official claude / codex CLIs are installed. -->
+    <key>PATH</key>
+    <string>@HOME@/.local/bin:@HOME@/.claude/local:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>KO_AGENTD_LOG</key>
+    <string>info,hyper=warn,reqwest=warn,rustls=warn,h2=warn</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <!-- Restart on crashes, not after a clean `launchctl bootout`. -->
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ExitTimeOut</key>
+  <integer>20</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>Core</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>@HOME@/Library/Logs/K-O/agentd.log</string>
+  <key>StandardErrorPath</key>
+  <string>@HOME@/Library/Logs/K-O/agentd.log</string>
+</dict>
+</plist>

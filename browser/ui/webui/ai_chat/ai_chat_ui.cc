@@ -31,6 +31,7 @@
 #include "brave/components/ai_chat/core/common/pref_names.h"
 #include "brave/components/ai_chat/resources/grit/ai_chat_ui_generated_map.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/version_info/version_info.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
 #include "chrome/browser/history/history_service_factory.h"
@@ -49,6 +50,11 @@
 #include "ui/base/l10n/l10n_util.h"
 #include "ui/webui/mojo_web_ui_controller.h"
 #include "ui/webui/webui_util.h"
+
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/ko/telemetry/ko_telemetry.h"
+#include "brave/components/ko/telemetry/ko_analytics_event.h"
+#endif
 
 #if !BUILDFLAG(IS_ANDROID)
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
@@ -84,6 +90,9 @@ AIChatUI::AIChatUI(content::WebUI* web_ui)
     : ui::MojoWebUIController(web_ui), profile_(Profile::FromWebUI(web_ui)) {
   CHECK(profile_);
   DCHECK(profile_->IsRegularProfile());
+#if BUILDFLAG(IS_KO)
+  ko::RecordFeatureUsed(ko::analytics::Feature::kAssistant);
+#endif
 
   // Create a URLDataSource and add resources.
   content::WebUIDataSource* source = content::WebUIDataSource::CreateAndAdd(
@@ -105,8 +114,9 @@ AIChatUI::AIChatUI(content::WebUI* web_ui)
                      ai_chat::features::IsAIChatAgentProfileEnabled());
   source->AddBoolean("isAIChatAgentProfile", profile_->IsAIChatAgent());
   source->AddBoolean("isConversationShareEnabled",
-                     base::FeatureList::IsEnabled(
-                         ai_chat::features::kAIChatConversationShare));
+                     ai_chat::features::IsConversationShareEnabled());
+  // K-O has no Brave premium to upsell.
+  source->AddBoolean("isPremiumAvailable", !BUILDFLAG(IS_KO));
   source->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));

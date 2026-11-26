@@ -13,6 +13,7 @@
 #include "brave/browser/brave_content_browser_client.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "brave/components/webcompat/core/common/features.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -287,6 +288,13 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorUsbFarblingBrowserTest,
   // grant permission.
   UseFakeChooser();
 
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse turning fingerprinting off, so the serial number
+  // is farbled already.
+  EXPECT_EQ("7Co7GLs9e2bVSRQn", EvalJs(web_contents(), kRequestDeviceScript));
+  EXPECT_EQ(content::ListValueOf("7Co7GLs9e2bVSRQn"),
+            EvalJs(web_contents(), kGetDevicesScript));
+#else
   // Request the device configuration and check its serial number. This
   // should be the actual serial number we assigned when we created the device.
   EXPECT_EQ(kTestDeviceSerialNumber,
@@ -296,6 +304,7 @@ IN_PROC_BROWSER_TEST_F(BraveNavigatorUsbFarblingBrowserTest,
   // the actual serial number we assigned when we created the device.
   EXPECT_EQ(content::ListValueOf(kTestDeviceSerialNumber),
             EvalJs(web_contents(), kGetDevicesScript));
+#endif
 
   // Reload with farbling at default.
   SetFingerprintingDefault(domain_b);

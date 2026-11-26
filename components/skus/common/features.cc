@@ -5,10 +5,21 @@
 
 #include "brave/components/skus/common/features.h"
 
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 
 namespace skus::features {
 
-BASE_FEATURE(kSkusFeature, base::FEATURE_ENABLED_BY_DEFAULT);
+namespace {
+// K-O has no Brave subscriptions; the service is also compiled inert there.
+constexpr base::FeatureState kSkusFeatureDefault =
+#if BUILDFLAG(IS_KO)
+    base::FEATURE_DISABLED_BY_DEFAULT;
+#else
+    base::FEATURE_ENABLED_BY_DEFAULT;
+#endif
+}  // namespace
+
+BASE_FEATURE(kSkusFeature, kSkusFeatureDefault);
 
 }  // namespace skus::features

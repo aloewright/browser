@@ -515,7 +515,7 @@ AIChatUntrustedConversationUI::AIChatUntrustedConversationUI(
       "script-src 'self' chrome-untrusted://resources;");
 
   std::string rich_search_widgets_url;
-  if (base::FeatureList::IsEnabled(ai_chat::features::kRichSearchWidgets)) {
+  if (ai_chat::features::IsRichSearchWidgetsEnabled()) {
     rich_search_widgets_url =
         base::StrCat({" ", ai_chat::features::kRichSearchWidgetsOrigin.Get(),
                       "/embed.html"});
@@ -527,15 +527,16 @@ AIChatUntrustedConversationUI::AIChatUntrustedConversationUI(
 
   // If the feature is not enabled don't specify an origin for loading the rich
   // search widgets.
-  source->AddString(
-      "richSearchWidgetsOrigin",
-      base::FeatureList::IsEnabled(ai_chat::features::kRichSearchWidgets)
-          ? ai_chat::features::kRichSearchWidgetsOrigin.Get()
-          : "");
+  source->AddString("richSearchWidgetsOrigin",
+                    ai_chat::features::IsRichSearchWidgetsEnabled()
+                        ? ai_chat::features::kRichSearchWidgetsOrigin.Get()
+                        : "");
 
   // Note: For the current usages of this API there is no difference between the
-  // premium and non-premium API host.
-  source->AddString("apiHost", ai_chat::GetEndpointUrl(false, "").spec());
+  // premium and non-premium API host. Only the rich search widgets use it.
+  source->AddString("apiHost", ai_chat::features::IsRichSearchWidgetsEnabled()
+                                   ? ai_chat::GetEndpointUrl(false, "").spec()
+                                   : "");
 
   source->OverrideContentSecurityPolicy(
       network::mojom::CSPDirectiveName::StyleSrc,

@@ -12,11 +12,11 @@
 #include "base/strings/strcat.h"
 #include "brave/brave_domains/service_domains.h"
 #include "brave/browser/ai_chat/ai_chat_service_factory.h"
-#include "brave/browser/skus/skus_service_factory.h"
 #include "brave/components/ai_chat/core/browser/ai_chat_service.h"
 #include "brave/components/ai_chat/core/browser/constants.h"
 #include "brave/components/ai_chat/core/browser/model_validator.h"
 #include "brave/components/ai_chat/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/net/base/url_util.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/profile.h"
@@ -28,6 +28,12 @@
 #if BUILDFLAG(IS_ANDROID)
 #include "chrome/android/chrome_jni_headers/BraveLeoMojomHelper_jni.h"
 #include "content/public/browser/android/browser_context_handle.h"
+#endif
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
+#else
+#include "brave/browser/skus/skus_service_factory.h"
 #endif
 
 namespace ai_chat {
@@ -42,7 +48,19 @@ std::vector<mojom::ModelPtr> GetCustomModelsFromService(
   std::vector<mojom::ModelPtr> models_copy;
   for (auto& model : models) {
     if (model->options->is_custom_model_options()) {
+#if BUILDFLAG(IS_KO)
+      // agentd's models are built in, not user-editable; leaving them out
+      // keeps indices aligned with the custom models pref. Keys stay in the
+      // browser process; an empty key on save keeps the stored one.
+      if (ko::IsAgentdModelKey(model->key)) {
+        continue;
+      }
+      mojom::ModelPtr copy = model->Clone();
+      copy->options->get_custom_model_options()->api_key.clear();
+      models_copy.push_back(std::move(copy));
+#else
       models_copy.push_back(model->Clone());
+#endif
     }
   }
 
@@ -53,11 +71,16 @@ std::vector<mojom::ModelPtr> GetCustomModelsFromService(
 
 AIChatSettingsHelper::AIChatSettingsHelper(content::BrowserContext* context) {
   // TODO(petemill): Just use AIChatService to get premium status
+#if BUILDFLAG(IS_KO)
+  auto skus_service_getter = base::BindRepeating(
+      [] { return mojo::PendingRemote<skus::mojom::SkusService>(); });
+#else
   auto skus_service_getter = base::BindRepeating(
       [](content::BrowserContext* context) {
         return skus::SkusServiceFactory::GetForContext(context);
       },
       context);
+#endif
   profile_ = Profile::FromBrowserContext(context);
   pref_service_ = profile_->GetPrefs();
   model_service_ = ModelServiceFactory::GetForBrowserContext(context);

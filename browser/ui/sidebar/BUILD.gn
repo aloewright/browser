@@ -91,6 +91,13 @@ source_set("sidebar_impl") {
     "//ui/base",
   ]
 
+  # Unconditional: gn check sees includes inside #if BUILDFLAG(IS_KO) too.
+  deps += [
+    "//brave/components/ko/buildflags",
+    "//brave/components/resources:strings_grit",
+    "//url",
+  ]
+
   if (enable_ai_chat) {
     deps += [ "//brave/components/ai_chat/core/browser" ]
   }

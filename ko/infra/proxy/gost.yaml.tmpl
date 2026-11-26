@@ -1,0 +1,66 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# gost v3 config template, rendered by `doppler run --mount-template` into a
+# tmpfs file at start (see ko-proxy.service). Values come from Doppler;
+# nothing secret is stored on disk.
+#
+# Clients (K-O containers) connect over NetBird with their own credentials;
+# gost forwards through Bright Data's super proxy with the Bright Data
+# credentials, which never leave this peer.
+services:
+  - name: ko-socks5
+    addr: {{tojson .KO_PROXY_SOCKS_ADDR}}
+    admission: netbird-only
+    handler:
+      type: socks5
+      chain: brightdata
+      auth:
+        username: {{tojson .KO_PROXY_USER}}
+        password: {{tojson .KO_PROXY_PASSWORD}}
+    listener:
+      type: tcp
+  - name: ko-http
+    addr: {{tojson .KO_PROXY_HTTP_ADDR}}
+    admission: netbird-only
+    handler:
+      type: http
+      chain: brightdata
+      auth:
+        username: {{tojson .KO_PROXY_USER}}
+        password: {{tojson .KO_PROXY_PASSWORD}}
+    listener:
+      type: tcp
+
+admissions:
+  - name: netbird-only
+    whitelist: true
+    matchers:
+      - {{tojson .KO_PROXY_ALLOWED_CIDR}}
+
+chains:
+  - name: brightdata
+    hops:
+      - name: brightdata-super
+        nodes:
+          - name: brd
+            addr: {{tojson .BRD_PROXY_ADDR}}
+            connector:
+              type: http
+              auth:
+                username: {{tojson .BRD_USERNAME}}
+                password: {{tojson .BRD_PASSWORD}}
+            dialer:
+              # "tls" keeps the Bright Data credentials off the wire; use
+              # "tcp" only if the endpoint rejects TLS (see infra.md).
+              type: {{tojson .BRD_PROXY_DIALER}}
+              tls:
+                secure: true
+                serverName: {{tojson .BRD_PROXY_TLS_SERVER_NAME}}
+
+log:
+  level: warn
+  format: json
+  output: stderr

@@ -22,7 +22,7 @@
         <structure type="chrome_scaled_image" name="IDR_PLAYLIST_DEFAULT_THUMBNAIL" file="brave/playlist_default_thumbnail.png" />
       </if>
 
-      <if expr="not is_linux and not is_android and not is_brave_origin_branded">
+      <if expr="not is_linux and not is_android and not is_brave_origin_branded and not is_ko_branded">
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_BETA" file="brave/product_logo_32_beta.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_CANARY" file="brave/product_logo_32_nightly.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="brave/product_logo_32_dev.png" />
@@ -34,7 +34,7 @@
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="brave_origin/product_logo_32_dev.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEVELOPMENT" file="brave_origin/product_logo_32_development.png" />
       </if>
-      <if expr="is_linux and not is_brave_origin_branded">
+      <if expr="is_linux and not is_brave_origin_branded and not is_ko_branded">
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_BETA" file="brave/linux/product_logo_32_beta.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_CANARY" file="brave/linux/product_logo_32_nightly.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="brave/linux/product_logo_32_dev.png" />
@@ -45,6 +45,18 @@
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_CANARY" file="brave_origin/linux/product_logo_32_nightly.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="brave_origin/linux/product_logo_32_dev.png" />
         <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEVELOPMENT" file="brave_origin/linux/product_logo_32_development.png" />
+      </if>
+      <if expr="not is_linux and not is_android and is_ko_branded">
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_BETA" file="ko/product_logo_32_beta.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_CANARY" file="ko/product_logo_32_nightly.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="ko/product_logo_32_dev.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEVELOPMENT" file="ko/product_logo_32_development.png" />
+      </if>
+      <if expr="is_linux and is_ko_branded">
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_BETA" file="ko/linux/product_logo_32_beta.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_CANARY" file="ko/linux/product_logo_32_nightly.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEV" file="ko/linux/product_logo_32_dev.png" />
+        <structure type="chrome_scaled_image" name="IDR_PRODUCT_LOGO_32_DEVELOPMENT" file="ko/linux/product_logo_32_development.png" />
       </if>
 
       <if expr="toolkit_views">

@@ -25,6 +25,7 @@
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/api_request_helper/api_request_helper.h"
 #include "brave/components/api_request_helper/mock_api_request_helper.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_strings.h"
 #include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "net/base/net_errors.h"
@@ -872,5 +873,139 @@ INSTANTIATE_TEST_SUITE_P(
         R"({"choices": [{"message": {"content": {"nested": "invalid"}}}]})",
         // Valid JSON with missing fields
         R"({"choices": [{"index": 0}]})"));
+
+#if BUILDFLAG(IS_KO)
+// agentd streams a failure after the first chunk as
+// data: {"error": {...}} then data: [DONE], on a 200 response.
+class OAIAPIStreamErrorTest : public OAIAPIUnitTest {
+ protected:
+  // Feeds |chunks| (JSON, or anything else for a non-JSON line such as
+  // [DONE]) then completes with |status| and an empty body.
+  void RunStream(std::vector<std::string> chunks, int status = 200) {
+    EXPECT_CALL(*client_->GetMockAPIRequestHelper(),
+                RequestSSE(_, _, _, _, _, _, _, _))
+        .WillOnce([chunks, status](auto, auto, auto, auto,
+                                   DataReceivedCallback data_received_callback,
+                                   ResultCallback result_callback, auto, auto) {
+          for (const std::string& chunk : chunks) {
+            auto value = base::JSONReader::Read(chunk, base::JSON_PARSE_RFC);
+            if (value) {
+              data_received_callback.Run(base::ok(std::move(*value)));
+            } else {
+              data_received_callback.Run(base::unexpected("not json"));
+            }
+          }
+          std::move(result_callback)
+              .Run(api_request_helper::APIRequestResult(status, base::Value(),
+                                                        {}, net::OK, GURL()));
+          return Ticket();
+        });
+
+    auto options = mojom::ModelOptions::NewCustomModelOptions(
+        mojom::CustomModelOptions::New("claude-code/sonnet", 0, 0, 0, "",
+                                       GURL("https://test.com"),
+                                       "test_api_key"));
+    client_->PerformRequest(
+        *options, std::vector<OAIMessage>(), std::nullopt,
+        base::BindRepeating(&MockCallbacks::OnDataReceived,
+                            base::Unretained(&mock_callbacks_)),
+        base::BindOnce(&MockCallbacks::OnCompleted,
+                       base::Unretained(&mock_callbacks_)));
+  }
+
+  static std::string Chunk(std::string_view content) {
+    return absl::StrFormat(
+        R"({"object":"chat.completion.chunk","choices":[{"index":0,)"
+        R"("delta":{"content":"%s"}}]})",
+        content);
+  }
+
+  static void ExpectStreamError(GenerationResult result,
+                                std::string_view error_type) {
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().api_error, mojom::APIError::ConnectionIssue);
+    ASSERT_TRUE(result.error().details);
+    EXPECT_EQ(result.error().details->status_code, 200);
+    EXPECT_EQ(result.error().details->error_type, error_type);
+  }
+
+  testing::StrictMock<MockCallbacks> mock_callbacks_;
+};
+
+TEST_F(OAIAPIStreamErrorTest, ErrorChunkMidStreamEndsWithError) {
+  Sequence seq;
+  EXPECT_CALL(mock_callbacks_, OnDataReceived(_))
+      .InSequence(seq)
+      .WillOnce([](EngineConsumer::GenerationResultData data) {
+        ASSERT_TRUE(data.event && data.event->is_completion_event());
+        EXPECT_EQ(data.event->get_completion_event()->completion, "Hello");
+      });
+  // Exactly one completion, and it is the error.
+  EXPECT_CALL(mock_callbacks_, OnCompleted(_))
+      .InSequence(seq)
+      .WillOnce([](GenerationResult result) {
+        ExpectStreamError(std::move(result), "provider_error");
+      });
+
+  RunStream({Chunk("Hello"),
+             R"({"error":{"message":"usage limit reached",)"
+             R"("type":"provider_error"}})",
+             // Nothing after the error reaches the conversation.
+             Chunk(" ignored"), "[DONE]"});
+  testing::Mock::VerifyAndClearExpectations(&mock_callbacks_);
+}
+
+TEST_F(OAIAPIStreamErrorTest, ErrorChunkBeforeAnyContent) {
+  EXPECT_CALL(mock_callbacks_, OnDataReceived(_)).Times(0);
+  EXPECT_CALL(mock_callbacks_, OnCompleted(_))
+      .WillOnce([](GenerationResult result) {
+        ExpectStreamError(std::move(result), "provider_error");
+      });
+  RunStream({R"({"error":{"message":"stream ended early",)"
+             R"("type":"provider_error"}})",
+             "[DONE]"});
+  testing::Mock::VerifyAndClearExpectations(&mock_callbacks_);
+}
+
+TEST_F(OAIAPIStreamErrorTest, UntypedOrOddErrorTypesGetGenericCode) {
+  for (const char* chunk :
+       {R"({"error":"upstream failed"})", R"({"error":{"message":"x"}})",
+        R"({"error":{"type":"bad type with spaces"}})",
+        R"({"error":{"type":7}})"}) {
+    SCOPED_TRACE(chunk);
+    EXPECT_CALL(mock_callbacks_, OnDataReceived(_)).Times(0);
+    EXPECT_CALL(mock_callbacks_, OnCompleted(_))
+        .WillOnce([](GenerationResult result) {
+          ExpectStreamError(std::move(result), "stream_error");
+        });
+    RunStream({chunk, "[DONE]"});
+    testing::Mock::VerifyAndClearExpectations(&mock_callbacks_);
+    testing::Mock::VerifyAndClearExpectations(
+        client_->GetMockAPIRequestHelper());
+  }
+}
+
+TEST_F(OAIAPIStreamErrorTest, NullOrEmptyErrorIsNotAFailure) {
+  EXPECT_CALL(mock_callbacks_, OnDataReceived(_)).Times(2);
+  EXPECT_CALL(mock_callbacks_, OnCompleted(_))
+      .WillOnce(
+          [](GenerationResult result) { EXPECT_TRUE(result.has_value()); });
+  RunStream(
+      {R"({"error":null,"choices":[{"index":0,"delta":{"content":"a"}}]})",
+       R"({"error":"","choices":[{"index":0,"delta":{"content":"b"}}]})",
+       "[DONE]"});
+  testing::Mock::VerifyAndClearExpectations(&mock_callbacks_);
+}
+
+TEST_F(OAIAPIStreamErrorTest, HttpErrorWinsOverStreamError) {
+  EXPECT_CALL(mock_callbacks_, OnCompleted(_))
+      .WillOnce([](GenerationResult result) {
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error().api_error, mojom::APIError::RateLimitReached);
+      });
+  RunStream({R"({"error":{"type":"provider_error"}})"}, 429);
+  testing::Mock::VerifyAndClearExpectations(&mock_callbacks_);
+}
+#endif  // BUILDFLAG(IS_KO)
 
 }  // namespace ai_chat

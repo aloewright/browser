@@ -42,6 +42,7 @@ import("//brave/components/commander/common/buildflags/buildflags.gni")
 import("//brave/components/containers/buildflags/buildflags.gni")
 import("//brave/components/email_aliases/buildflags/buildflags.gni")
 import("//brave/components/ipfs/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
@@ -228,6 +229,8 @@ brave_chrome_browser_deps = [
   "//brave/components/image_metadata_stripper/common",
   "//brave/components/ipfs",
   "//brave/components/ipfs/buildflags",
+  "//brave/components/ko/buildflags",
+  "//brave/components/ko/shields/buildflags",
   "//brave/components/l10n/common",
   "//brave/components/local_ai/buildflags",
   "//brave/components/ntp_background_images/browser",
@@ -502,6 +505,17 @@ if (is_brave_origin_branded) {
   ]
 }
 
+if (is_ko && !is_android) {
+  # ko_machines_ui.cc records feature_used through //chrome/browser.
+  brave_chrome_browser_allow_circular_includes_from +=
+      [ "//brave/browser/ui/webui/ko_machines" ]
+  brave_chrome_browser_deps += [
+    "//brave/browser/ui/webui/ko_machines",
+    "//brave/components/ko/machines/common:mojom",
+    "//brave/components/ko/machines/core",
+  ]
+}
+
 if (enable_ai_chat) {
   brave_chrome_browser_deps += [
     "//brave/browser/ai_chat",
@@ -521,6 +535,13 @@ if (enable_ai_chat) {
 if (enable_ai_chat && is_android) {
   brave_chrome_browser_sources += brave_browser_ai_chat_android_sources
   brave_chrome_browser_deps += brave_browser_ai_chat_android_deps
+}
+
+if (is_ko && !is_android) {
+  brave_chrome_browser_deps += [
+    "//brave/components/ko/workspace/common:mojom",
+    "//brave/components/ko/workspace/core",
+  ]
 }
 
 if (enable_containers) {
@@ -590,6 +611,20 @@ if (enable_sparkle) {
     "//brave/browser/mac/su_updater.h",
   ]
   brave_chrome_framework_contents += [ "Frameworks" ]
+}
+
+# Unconditional for gn check; the code is guarded by BUILDFLAG(IS_KO).
+brave_chrome_browser_deps += [
+  "//brave/components/ko/telemetry:analytics",
+  "//brave/components/ko/telemetry:crash_buildflags",
+]
+
+if (is_ko) {
+  brave_chrome_browser_sources += [
+    "//brave/browser/ko/telemetry/ko_telemetry.h",
+    "//brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.cc",
+    "//brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.h",
+  ]
 }
 
 if (enable_omaha4) {

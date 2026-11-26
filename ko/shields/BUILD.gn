@@ -1,0 +1,27 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+import("//brave/resources/brave_grit.gni")
+
+assert(is_ko)
+
+# Embedded filter list snapshot; regenerate with update_lists.py.
+brave_grit("resources") {
+  source = "ko_shields_resources.grd"
+
+  # The grd uses compress="brotli"; grit fails without the brotli binary.
+  use_brotli = true
+  outputs = [
+    "grit/ko_shields_resources.h",
+    "ko_shields_resources.pak",
+  ]
+}
+
+# id -> IDR table generated alongside the grd.
+source_set("embedded_lists") {
+  sources = [ "ko_embedded_lists.inc" ]
+  public_deps = [ ":resources" ]
+}

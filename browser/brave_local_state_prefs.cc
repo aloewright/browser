@@ -29,6 +29,7 @@
 #include "brave/components/brave_vpn/common/buildflags/buildflags.h"
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/l10n/common/prefs.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/misc_metrics/general_browser_usage.h"
@@ -73,6 +74,10 @@
 
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_ANDROID)
 #include "brave/browser/day_zero_browser_ui_expt/day_zero_browser_ui_expt_manager.h"
+#endif
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/ko/telemetry/ko_analytics_prefs.h"
 #endif
 
 #if BUILDFLAG(ENABLE_LOCAL_AI)
@@ -183,6 +188,9 @@ void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   brave_stats::RegisterLocalStatePrefs(registry);
 #endif
   brave_origin::RegisterLocalStatePrefs(registry);
+#if BUILDFLAG(IS_KO)
+  ko::analytics::RegisterLocalStatePrefs(registry);
+#endif
 #if BUILDFLAG(ENABLE_LOCAL_AI)
   local_ai::prefs::RegisterLocalStatePrefs(registry);
 #endif

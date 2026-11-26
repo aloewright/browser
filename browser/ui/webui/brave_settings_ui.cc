@@ -47,6 +47,9 @@
 #include "brave/components/commands/common/commands.mojom.h"
 #include "brave/components/commands/common/features.h"
 #include "brave/components/email_aliases/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/telemetry/analytics_buildflags.h"
+#include "brave/components/ko/telemetry/crash_buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/psst/buildflags/buildflags.h"
 #include "brave/components/search_engines/brave_prepopulated_engines.h"
@@ -124,6 +127,10 @@
 #if BUILDFLAG(ENABLE_CONTAINERS)
 #include "brave/components/containers/core/browser/containers_settings_handler.h"
 #include "brave/components/containers/core/common/features.h"
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/containers/ko_container_proxy_service.h"
+#include "brave/browser/containers/ko_container_proxy_service_factory.h"
+#endif
 #endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/components/traffic_control/core/browser/traffic_control_settings_handler.h"
@@ -342,10 +349,21 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
                           BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED));
   html_source->AddBoolean("isBraveDebloatedBuild",
                           BUILDFLAG(IS_BRAVE_DEBLOATED));
+  // K-O: which self-hosted telemetry toggles to show (never the endpoints).
+  html_source->AddBoolean("koCrashReportingAvailable",
+                          BUILDFLAG(KO_CRASH_REPORTING_CONFIGURED));
+  html_source->AddBoolean("koAnalyticsAvailable",
+                          BUILDFLAG(KO_ANALYTICS_CONFIGURED));
+  html_source->AddBoolean("isKOBuild", BUILDFLAG(IS_KO));
   html_source->AddBoolean("isBraveOriginPurchased",
                           brave_origin::IsBraveOriginPurchased());
   html_source->AddBoolean("isBraveOriginFeatureEnabled",
                           brave_origin::IsBraveOriginFeatureEnabled());
+#if BUILDFLAG(IS_KO)
+  // No Origin checkout in K-O.
+  html_source->AddString("braveOriginBuyUrl", "");
+  html_source->AddString("braveOriginRestoreUrl", "");
+#else
   // STAGING for unofficial builds; official builds always resolve to prod.
   html_source->AddString(
       "braveOriginBuyUrl",
@@ -361,6 +379,7 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
            brave_domains::GetServicesDomain(
                "account", brave_domains::ServicesEnvironment::STAGING),
            "/?intent=recover&product=origin&mtm_campaign=browser-settings"}));
+#endif  // BUILDFLAG(IS_KO)
   html_source->AddBoolean("isTreeTabsFlagEnabled",
                           base::FeatureList::IsEnabled(tabs::kBraveTreeTab));
   html_source->AddBoolean(
@@ -444,9 +463,18 @@ void BraveSettingsUI::BindInterface(
   if (!base::FeatureList::IsEnabled(containers::features::kContainers)) {
     return;
   }
+#if BUILDFLAG(IS_KO)
+  // K-O: proxies are stored by the per-profile service, never in the list.
+  auto handler = std::make_unique<containers::ContainersSettingsHandler>(
+      user_prefs::UserPrefs::Get(
+          web_ui()->GetWebContents()->GetBrowserContext()),
+      KoContainerProxyServiceFactory::GetForProfile(
+          Profile::FromWebUI(web_ui())));
+#else
   auto handler = std::make_unique<containers::ContainersSettingsHandler>(
       user_prefs::UserPrefs::Get(
           web_ui()->GetWebContents()->GetBrowserContext()));
+#endif  // BUILDFLAG(IS_KO)
   MakeOwnedReceiver(std::move(handler), std::move(pending_receiver));
 }
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)

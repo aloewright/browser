@@ -19,6 +19,7 @@
 #include "brave/components/brave_news/common/buildflags/buildflags.h"
 #include "brave/components/brave_talk/buildflags/buildflags.h"
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/sidebar/browser/constants.h"
 #include "brave/components/sidebar/browser/pref_names.h"
@@ -444,7 +445,9 @@ TEST(SidebarItemTest, SidebarItemValidation) {
 }
 
 TEST(SidebarFeaturesTest, DefaultTest) {
-  EXPECT_FALSE(base::FeatureList::IsEnabled(features::kSidebarWebPanel));
+  // K-O uses web panels for its workspace.
+  EXPECT_EQ(base::FeatureList::IsEnabled(features::kSidebarWebPanel),
+            static_cast<bool>(BUILDFLAG(IS_KO)));
 }
 
 TEST_F(SidebarServiceTest, UpdateItem) {
