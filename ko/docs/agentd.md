@@ -168,9 +168,11 @@ an unknown field, a value out of range, or `tools`/`vision = true` on
 a model id is accepted (chat, runs, workspace `default_model`). The browser
 sends `claude-code/default` before it has listed models. A model actually
 named `default` in `models` takes precedence. The aliases are not listed in
-`/v1/models`. If the provider is not configured or is disabled, the request
-fails with 404 `model_not_found` and a message naming the provider. HTTP
-providers have no alias, since `default` could be a real upstream model.
+`/v1/models`. A workspace stores the resolved id, so its `default_model`
+reads back as, for example, `claude-code/sonnet`. If the provider is not
+configured or is disabled, the request fails with 404 `model_not_found` and
+a message naming the provider. HTTP providers have no alias, since `default`
+could be a real upstream model.
 
 `POST /v1/chat/completions` follows the OpenAI API. With `stream: true` it
 answers with SSE `data:` chunks and a final `data: [DONE]`.
@@ -207,7 +209,7 @@ answers with SSE `data:` chunks and a final `data: [DONE]`.
 | POST | `/v1/workspaces/{id}/artifacts` | `{name, mime_type?, tags?, content_text \| content_base64}` → 201 |
 | GET | `/v1/workspaces/{id}/artifacts/{aid}` | Metadata + `content_base64`. `?raw=true` returns `application/octet-stream` as an attachment, with the stored type in `X-Ko-Mime-Type`. |
 | DELETE | `/v1/workspaces/{id}/artifacts/{aid}` | 204 |
-| GET | `/v1/workspaces/{id}/agents` | Configured models (`kind` cli/http, `supports_mcp`, `default`) and the deployed Cloudflare agent |
+| GET | `/v1/workspaces/{id}/agents` | Configured models (`kind` cli/http, `supports_mcp`, `default` when it is the workspace's `default_model`) and the deployed Cloudflare agent |
 
 `Workspace` is `{id, name, container_id, tags, default_model, mcp_servers,
 cloudflare_agent, created_at, updated_at}`. Timestamps are RFC 3339, and ids

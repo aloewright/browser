@@ -53,14 +53,16 @@ pub struct ListQuery {
     tag: Option<String>,
 }
 
-async fn validate(st: &AppState, w: &Workspace) -> ApiResult<()> {
+/// Also stores `default_model` as the resolved id, so an alias such as
+/// "claude-code/default" reads back as a listed model and `agents` can flag it.
+async fn validate(st: &AppState, w: &mut Workspace) -> ApiResult<()> {
     check_text("name", &w.name, 200)?;
     if let Some(c) = &w.container_id {
         check_text("container_id", c, 200)?;
     }
     check_tags(&w.tags)?;
-    if let Some(m) = &w.default_model {
-        crate::providers::resolve(&st.core.cfg, m)?;
+    if let Some(m) = &mut w.default_model {
+        *m = crate::providers::resolve(&st.core.cfg, m)?.id();
     }
     if w.mcp_servers.len() > 32 {
         return Err(ApiError::bad_request("at most 32 MCP servers"));
@@ -88,7 +90,7 @@ pub async fn create(
     ApiJson(b): ApiJson<CreateBody>,
 ) -> ApiResult<impl IntoResponse> {
     let now = crate::util::now_ms();
-    let w = Workspace {
+    let mut w = Workspace {
         id: crate::util::new_id(),
         name: b.name.trim().to_owned(),
         container_id: b.container_id,
@@ -99,7 +101,7 @@ pub async fn create(
         created_at: now,
         updated_at: now,
     };
-    validate(&st, &w).await?;
+    validate(&st, &mut w).await?;
     let w2 = w.clone();
     st.core
         .db
@@ -134,7 +136,7 @@ pub async fn patch(
         w.mcp_servers = m;
     }
     w.updated_at = crate::util::now_ms();
-    validate(&st, &w).await?;
+    validate(&st, &mut w).await?;
     let w2 = w.clone();
     st.core
         .db

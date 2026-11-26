@@ -152,6 +152,63 @@ async fn workspace_crud() {
     env.stop().await;
 }
 
+/// A "<cli>/default" alias is stored as the model it resolves to, so the
+/// workspace and its agents list agree on a listed id.
+#[tokio::test]
+async fn workspace_default_alias_is_stored_resolved() {
+    let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
+    let defaults = |a: &serde_json::Value| -> Vec<String> {
+        a["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|m| m["default"] == true)
+            .map(|m| m["id"].as_str().unwrap().to_owned())
+            .collect()
+    };
+
+    let (s, w) = env
+        .post(
+            "/v1/workspaces",
+            json!({"name": "x", "default_model": "claude-code/default"}),
+        )
+        .await;
+    assert_eq!(s, 201, "{w}");
+    assert_eq!(w["default_model"], "claude-code/sonnet");
+    let id = w["id"].as_str().unwrap().to_owned();
+    let (_, g) = env.get(&format!("/v1/workspaces/{id}")).await;
+    assert_eq!(g["default_model"], "claude-code/sonnet");
+    let (s, a) = env.get(&format!("/v1/workspaces/{id}/agents")).await;
+    assert_eq!(s, 200);
+    assert_eq!(defaults(&a), ["claude-code/sonnet"]);
+
+    let (s, p) = env
+        .send(
+            Method::PATCH,
+            &format!("/v1/workspaces/{id}"),
+            Some(json!({"default_model": "codex/default"})),
+        )
+        .await;
+    assert_eq!(s, 200, "{p}");
+    assert_eq!(p["default_model"], "codex/gpt-5-codex");
+    let (_, a) = env.get(&format!("/v1/workspaces/{id}/agents")).await;
+    assert_eq!(defaults(&a), ["codex/gpt-5-codex"]);
+
+    // HTTP providers have no alias; a rejected PATCH changes nothing.
+    let (s, e) = env
+        .send(
+            Method::PATCH,
+            &format!("/v1/workspaces/{id}"),
+            Some(json!({"default_model": "nanogpt/default"})),
+        )
+        .await;
+    assert_eq!(s, 404, "{e}");
+    assert_eq!(e["error"]["type"], "model_not_found");
+    let (_, g) = env.get(&format!("/v1/workspaces/{id}")).await;
+    assert_eq!(g["default_model"], "codex/gpt-5-codex");
+    env.stop().await;
+}
+
 #[tokio::test]
 async fn artifacts_are_encrypted_at_rest() {
     let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
