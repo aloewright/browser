@@ -9,6 +9,7 @@ import Button from '@brave/leo/react/button'
 import Icon from '@brave/leo/react/icon'
 import ProgressRing from '@brave/leo/react/progressRing'
 import Toggle from '@brave/leo/react/toggle'
+import Tooltip from '@brave/leo/react/tooltip'
 import RFB from '../../../../../third_party/novnc/core/rfb.js'
 import { formatLocale, getLocale } from '$web-common/locale'
 import { ConnectResult, Machine, connectToMachine, getHandler } from '../api'
@@ -313,17 +314,18 @@ export function Viewer(props: { machineId: string }) {
               {getLocale(S.KO_MACHINES_SEND_CLIPBOARD)}
             </Button>
           )}
-          <Button
-            kind='plain-faint'
-            size='small'
-            fab
-            title={getLocale(S.KO_MACHINES_FULL_SCREEN)}
-            aria-label={getLocale(S.KO_MACHINES_FULL_SCREEN)}
-            isDisabled={!connected}
-            onClick={goFullScreen}
-          >
-            <Icon name='fullscreen-on' />
-          </Button>
+          <Tooltip text={getLocale(S.KO_MACHINES_FULL_SCREEN)}>
+            <Button
+              kind='plain-faint'
+              size='small'
+              fab
+              aria-label={getLocale(S.KO_MACHINES_FULL_SCREEN)}
+              isDisabled={!connected}
+              onClick={goFullScreen}
+            >
+              <Icon name='fullscreen-on' />
+            </Button>
+          </Tooltip>
           {connected || status === 'connecting' ? (
             <Button
               kind='outline'

@@ -8,6 +8,7 @@ import Alert from '@brave/leo/react/alert'
 import Button from '@brave/leo/react/button'
 import Dialog from '@brave/leo/react/dialog'
 import Icon from '@brave/leo/react/icon'
+import Tooltip from '@brave/leo/react/tooltip'
 import { formatLocale, getLocale } from '$web-common/locale'
 import {
   ImportStatus,
@@ -76,24 +77,26 @@ function MachineRow(props: {
         )}
       </div>
       <div className='actions'>
-        <Button
-          kind='plain-faint'
-          fab
-          title={getLocale(S.KO_MACHINES_EDIT)}
-          aria-label={getLocale(S.KO_MACHINES_EDIT)}
-          onClick={props.onEdit}
-        >
-          <Icon name='edit-pencil' />
-        </Button>
-        <Button
-          kind='plain-faint'
-          fab
-          title={getLocale(S.KO_MACHINES_REMOVE)}
-          aria-label={getLocale(S.KO_MACHINES_REMOVE)}
-          onClick={props.onRemove}
-        >
-          <Icon name='trash' />
-        </Button>
+        <Tooltip text={getLocale(S.KO_MACHINES_EDIT)}>
+          <Button
+            kind='plain-faint'
+            fab
+            aria-label={getLocale(S.KO_MACHINES_EDIT)}
+            onClick={props.onEdit}
+          >
+            <Icon name='edit-pencil' />
+          </Button>
+        </Tooltip>
+        <Tooltip text={getLocale(S.KO_MACHINES_REMOVE)}>
+          <Button
+            kind='plain-faint'
+            fab
+            aria-label={getLocale(S.KO_MACHINES_REMOVE)}
+            onClick={props.onRemove}
+          >
+            <Icon name='trash' />
+          </Button>
+        </Tooltip>
         <Button onClick={() => openDesktop(machine.id)}>
           <div slot='icon-before'>
             <Icon name='launch' />

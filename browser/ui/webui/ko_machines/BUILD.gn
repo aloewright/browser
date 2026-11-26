@@ -16,6 +16,7 @@ source_set("ko_machines") {
   public_deps = [
     "//brave/components/ko/machines/common:mojom",
     "//content/public/browser",
+    "//content/public/common",
     "//mojo/public/cpp/bindings",
     "//ui/webui",
   ]
