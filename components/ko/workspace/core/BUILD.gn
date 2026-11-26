@@ -17,6 +17,7 @@ static_library("core") {
 
   public_deps = [
     "//base",
+    "//brave/components/ko/common:agentd_config",
     "//url",
   ]
 

@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -21,6 +22,7 @@
 #include "base/test/test_future.h"
 #include "base/test/values_test_util.h"
 #include "brave/components/ai_chat/core/common/constants.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "build/build_config.h"
 #include "net/http/http_status_code.h"
 #include "services/network/public/cpp/resource_request.h"
@@ -33,7 +35,8 @@ namespace ai_chat::ko {
 
 namespace {
 
-constexpr char kToken[] = "test-token-0123456789abcdef";
+// Placeholder in agentd's format (43 base64url characters), not a real token.
+constexpr char kToken[] = "test_token_not_a_real_secret_0123456789-ABC";
 
 AgentdModelInfo MakeInfo(std::string id, bool tools) {
   AgentdModelInfo info;
@@ -44,9 +47,19 @@ AgentdModelInfo MakeInfo(std::string id, bool tools) {
 
 }  // namespace
 
-TEST(KOAgentdModelsTest, UrlsAreLoopbackOnly) {
+// GetAgentdPort() is process-wide; start and end every test without it.
+class KOAgentdModelsTest : public testing::Test {
+ protected:
+  void SetUp() override { ResetAgentdPortForTesting(); }
+  void TearDown() override { ResetAgentdPortForTesting(); }
+};
+
+TEST_F(KOAgentdModelsTest, UrlsAreLoopbackOnly) {
+  EXPECT_EQ(GetAgentdPort(), ::ko::kAgentdDefaultPort);
   EXPECT_EQ(GetAgentdUrl(kAgentdModelsPath).spec(),
             "http://127.0.0.1:47821/v1/models");
+  EXPECT_EQ(GetAgentdUrl(kAgentdModelsPath, 48123).spec(),
+            "http://127.0.0.1:48123/v1/models");
   EXPECT_TRUE(IsAgentdEndpoint(GetAgentdUrl(kAgentdChatCompletionsPath)));
   EXPECT_FALSE(
       IsAgentdEndpoint(GURL("http://localhost:47821/v1/chat/completions")));
@@ -55,89 +68,33 @@ TEST(KOAgentdModelsTest, UrlsAreLoopbackOnly) {
   EXPECT_FALSE(IsAgentdEndpoint(GURL("http://example.com:47821/v1/models")));
 }
 
-TEST(KOAgentdModelsTest, PortSwitch) {
+TEST_F(KOAgentdModelsTest, PortSwitch) {
   base::test::ScopedCommandLine command_line;
   command_line.GetProcessCommandLine()->AppendSwitchASCII(kAgentdPortSwitch,
                                                           "50000");
   EXPECT_EQ(GetAgentdPort(), 50000);
   EXPECT_EQ(GetAgentdUrl(kAgentdModelsPath).spec(),
             "http://127.0.0.1:50000/v1/models");
+  EXPECT_TRUE(IsAgentdEndpoint(GURL("http://127.0.0.1:50000/v1/models")));
 }
 
-TEST(KOAgentdModelsTest, InvalidPortSwitchIsIgnored) {
+TEST_F(KOAgentdModelsTest, InvalidPortSwitchIsIgnored) {
   for (const char* value : {"0", "70000", "abc", "-1", ""}) {
     base::test::ScopedCommandLine command_line;
     command_line.GetProcessCommandLine()->AppendSwitchASCII(kAgentdPortSwitch,
                                                             value);
-    EXPECT_EQ(GetAgentdPort(), kAgentdDefaultPort) << value;
+    EXPECT_EQ(GetAgentdPort(), ::ko::kAgentdDefaultPort) << value;
   }
 }
 
-TEST(KOAgentdModelsTest, ModelKeys) {
+TEST_F(KOAgentdModelsTest, ModelKeys) {
   EXPECT_TRUE(IsAgentdModelKey(kChatAutomaticModelKey));
   EXPECT_TRUE(IsAgentdModelKey("ko-agentd:codex/gpt-5"));
   EXPECT_FALSE(IsAgentdModelKey("custom:1a2b3c4d"));
   EXPECT_FALSE(IsAgentdModelKey("chat-claude-sonnet"));
 }
 
-TEST(KOAgentdModelsTest, TokenValidation) {
-  EXPECT_TRUE(IsValidAgentdToken(kToken));
-  EXPECT_TRUE(IsValidAgentdToken("AbCdEfGhIjKlMnOp_-.~+/="));
-  EXPECT_FALSE(IsValidAgentdToken(""));
-  EXPECT_FALSE(IsValidAgentdToken("short"));
-  EXPECT_FALSE(IsValidAgentdToken("has space 0123456789"));
-  EXPECT_FALSE(IsValidAgentdToken("header\r\ninjection0123"));
-  EXPECT_FALSE(IsValidAgentdToken(std::string(513, 'a')));
-}
-
-#if BUILDFLAG(IS_POSIX)
-class KOAgentdTokenFileTest : public testing::Test {
- protected:
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
-
-  base::FilePath token_path() const {
-    return temp_dir_.GetPath().Append(kAgentdTokenFileName);
-  }
-
-  void WriteToken(std::string_view contents, int mode) {
-    ASSERT_TRUE(base::WriteFile(token_path(), contents));
-    ASSERT_TRUE(base::SetPosixFilePermissions(token_path(), mode));
-  }
-
-  base::ScopedTempDir temp_dir_;
-};
-
-TEST_F(KOAgentdTokenFileTest, ReadsOwnerOnlyToken) {
-  WriteToken(std::string(kToken) + "\n", 0600);
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), kToken);
-}
-
-TEST_F(KOAgentdTokenFileTest, RejectsGroupOrOtherAccess) {
-  WriteToken(kToken, 0640);
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-  WriteToken(kToken, 0604);
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-}
-
-TEST_F(KOAgentdTokenFileTest, RejectsSymlink) {
-  const base::FilePath target = temp_dir_.GetPath().Append("real");
-  ASSERT_TRUE(base::WriteFile(target, kToken));
-  ASSERT_TRUE(base::SetPosixFilePermissions(target, 0600));
-  ASSERT_TRUE(base::CreateSymbolicLink(target, token_path()));
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-}
-
-TEST_F(KOAgentdTokenFileTest, RejectsMissingMalformedOrOversized) {
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-  EXPECT_EQ(ReadAgentdToken(base::FilePath()), std::nullopt);
-  WriteToken("not a token", 0600);
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-  WriteToken(std::string(4096, 'a'), 0600);
-  EXPECT_EQ(ReadAgentdToken(temp_dir_.GetPath()), std::nullopt);
-}
-#endif  // BUILDFLAG(IS_POSIX)
-
-TEST(KOAgentdModelsTest, ParsesModelList) {
+TEST_F(KOAgentdModelsTest, ParsesModelList) {
   std::optional<std::vector<AgentdModelInfo>> models =
       ParseAgentdModels(base::test::ParseJson(R"({
         "object": "list",
@@ -171,10 +128,11 @@ TEST(KOAgentdModelsTest, ParsesModelList) {
   // Control characters drop the name; too small a context is ignored.
   EXPECT_EQ((*models)[2].id, "nanogpt/x");
   EXPECT_EQ((*models)[2].display_name, "");
+  EXPECT_TRUE((*models)[2].tools);
   EXPECT_EQ((*models)[2].context_size, kAgentdDefaultContextSize);
 }
 
-TEST(KOAgentdModelsTest, RejectsWrongShape) {
+TEST_F(KOAgentdModelsTest, RejectsWrongShape) {
   EXPECT_EQ(ParseAgentdModels(base::test::ParseJson("[]")), std::nullopt);
   EXPECT_EQ(ParseAgentdModels(base::test::ParseJson(R"({"data": {}})")),
             std::nullopt);
@@ -184,10 +142,10 @@ TEST(KOAgentdModelsTest, RejectsWrongShape) {
   EXPECT_TRUE(empty->empty());
 }
 
-TEST(KOAgentdModelsTest, BuildModelsLeadsWithAutomatic) {
+TEST_F(KOAgentdModelsTest, BuildModelsLeadsWithAutomatic) {
   std::vector<mojom::ModelPtr> models = BuildAgentdModels(
       {MakeInfo("nanogpt/gpt-5-mini", true), MakeInfo("codex/gpt-5", false)},
-      kToken);
+      kToken, 48123);
   ASSERT_EQ(models.size(), 3u);
 
   EXPECT_EQ(models[0]->key, kChatAutomaticModelKey);
@@ -195,7 +153,8 @@ TEST(KOAgentdModelsTest, BuildModelsLeadsWithAutomatic) {
   ASSERT_TRUE(models[0]->options->is_custom_model_options());
   const auto& default_opts = models[0]->options->get_custom_model_options();
   EXPECT_EQ(default_opts->model_request_name, "nanogpt/gpt-5-mini");
-  EXPECT_EQ(default_opts->endpoint, GetAgentdUrl(kAgentdChatCompletionsPath));
+  EXPECT_EQ(default_opts->endpoint,
+            GURL("http://127.0.0.1:48123/v1/chat/completions"));
   EXPECT_EQ(default_opts->api_key, kToken);
   EXPECT_GT(default_opts->max_associated_content_length, 0u);
 
@@ -210,10 +169,13 @@ TEST(KOAgentdModelsTest, BuildModelsLeadsWithAutomatic) {
   EXPECT_EQ(models[2]->key, "ko-agentd:codex/gpt-5");
   EXPECT_FALSE(models[2]->supports_tools);
   EXPECT_TRUE(models[2]->supported_capabilities.empty());
+  EXPECT_EQ(models[2]->options->get_custom_model_options()->endpoint,
+            GURL("http://127.0.0.1:48123/v1/chat/completions"));
 }
 
-TEST(KOAgentdModelsTest, BuildModelsWithoutAgentdKeepsDefault) {
-  std::vector<mojom::ModelPtr> models = BuildAgentdModels({}, std::string());
+TEST_F(KOAgentdModelsTest, BuildModelsWithoutAgentdKeepsDefault) {
+  std::vector<mojom::ModelPtr> models =
+      BuildAgentdModels({}, std::string(), ::ko::kAgentdDefaultPort);
   ASSERT_EQ(models.size(), 1u);
   EXPECT_EQ(models[0]->key, kChatAutomaticModelKey);
   EXPECT_EQ(models[0]->options->get_custom_model_options()->model_request_name,
@@ -221,7 +183,7 @@ TEST(KOAgentdModelsTest, BuildModelsWithoutAgentdKeepsDefault) {
   EXPECT_TRUE(models[0]->options->get_custom_model_options()->api_key.empty());
 }
 
-TEST(KOAgentdModelsTest, CacheRoundTrip) {
+TEST_F(KOAgentdModelsTest, CacheRoundTrip) {
   AgentdModelInfo info = MakeInfo("codex/gpt-5", false);
   info.display_name = "Codex";
   info.vision = true;
@@ -238,19 +200,39 @@ TEST(KOAgentdModelsTest, CacheRoundTrip) {
 class KOAgentdModelsFetcherTest : public testing::Test {
  protected:
   void SetUp() override {
+    ResetAgentdPortForTesting();
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     shared_factory_ =
         base::MakeRefCounted<network::WeakWrapperSharedURLLoaderFactory>(
             &url_loader_factory_);
   }
 
-  void WriteToken() {
-    const base::FilePath path =
-        temp_dir_.GetPath().Append(kAgentdTokenFileName);
-    ASSERT_TRUE(base::WriteFile(path, kToken));
+  void TearDown() override { ResetAgentdPortForTesting(); }
+
+  void WriteFile(const char* name, std::string_view contents, int mode) {
+    const base::FilePath path = temp_dir_.GetPath().AppendASCII(name);
+    ASSERT_TRUE(base::WriteFile(path, contents));
 #if BUILDFLAG(IS_POSIX)
-    ASSERT_TRUE(base::SetPosixFilePermissions(path, 0600));
+    ASSERT_TRUE(base::SetPosixFilePermissions(path, mode));
 #endif
+  }
+
+  void WriteToken() {
+    WriteFile(::ko::kAgentdTokenFileName, std::string(kToken) + "\n", 0600);
+  }
+
+  void WritePort(std::string_view port, int mode = 0600) {
+    WriteFile(::ko::kAgentdPortFileName, port, mode);
+  }
+
+  // Records every request URL; models requests on |port| get |body|.
+  void ServeModels(uint16_t port, std::string_view body) {
+    url_loader_factory_.SetInterceptor(base::BindLambdaForTesting(
+        [&](const network::ResourceRequest& request) {
+          requested_urls_.push_back(request.url);
+        }));
+    url_loader_factory_.AddResponse(
+        GetAgentdUrl(kAgentdModelsPath, port).spec(), std::string(body));
   }
 
   AgentdFetchResult Fetch() {
@@ -264,6 +246,7 @@ class KOAgentdModelsFetcherTest : public testing::Test {
   network::TestURLLoaderFactory url_loader_factory_;
   scoped_refptr<network::SharedURLLoaderFactory> shared_factory_;
   base::ScopedTempDir temp_dir_;
+  std::vector<GURL> requested_urls_;
 };
 
 #if BUILDFLAG(IS_POSIX)
@@ -281,6 +264,7 @@ TEST_F(KOAgentdModelsFetcherTest, SendsTokenAndParsesModels) {
 
   AgentdFetchResult result = Fetch();
   EXPECT_EQ(result.token, kToken);
+  EXPECT_EQ(result.port, ::ko::kAgentdDefaultPort);
   ASSERT_TRUE(result.models);
   ASSERT_EQ(result.models->size(), 1u);
   EXPECT_EQ(result.models->front().id, "codex/gpt-5");
@@ -295,6 +279,95 @@ TEST_F(KOAgentdModelsFetcherTest, ErrorKeepsTokenWithoutModels) {
   AgentdFetchResult result = Fetch();
   EXPECT_EQ(result.token, kToken);
   EXPECT_FALSE(result.models);
+}
+
+TEST_F(KOAgentdModelsFetcherTest, UsesPortFromPortFile) {
+  WriteToken();
+  WritePort("48123\n");
+  ServeModels(48123, R"({"data": [{"id": "nanogpt/x"}]})");
+
+  AgentdFetchResult result = Fetch();
+  EXPECT_EQ(result.token, kToken);
+  EXPECT_EQ(result.port, 48123);
+  ASSERT_TRUE(result.models);
+  EXPECT_EQ(result.models->size(), 1u);
+  EXPECT_EQ(requested_urls_,
+            std::vector<GURL>{GURL("http://127.0.0.1:48123/v1/models")});
+
+  // Chat endpoints built from now on, and the fail-closed check, follow it.
+  EXPECT_EQ(GetAgentdPort(), 48123);
+  EXPECT_EQ(GetAgentdUrl(kAgentdChatCompletionsPath).spec(),
+            "http://127.0.0.1:48123/v1/chat/completions");
+  EXPECT_TRUE(
+      IsAgentdEndpoint(GURL("http://127.0.0.1:48123/v1/chat/completions")));
+  EXPECT_FALSE(
+      IsAgentdEndpoint(GURL("http://127.0.0.1:48124/v1/chat/completions")));
+  // Models built before the port file was read point at the default port.
+  EXPECT_TRUE(
+      IsAgentdEndpoint(GURL("http://127.0.0.1:47821/v1/chat/completions")));
+}
+
+TEST_F(KOAgentdModelsFetcherTest, PortSwitchWinsOverPortFile) {
+  base::test::ScopedCommandLine command_line;
+  command_line.GetProcessCommandLine()->AppendSwitchASCII(kAgentdPortSwitch,
+                                                          "50000");
+  WriteToken();
+  WritePort("48123");
+  ServeModels(50000, R"({"data": []})");
+
+  AgentdFetchResult result = Fetch();
+  EXPECT_EQ(result.port, 50000);
+  EXPECT_TRUE(result.models);
+  EXPECT_EQ(requested_urls_,
+            std::vector<GURL>{GURL("http://127.0.0.1:50000/v1/models")});
+  EXPECT_EQ(GetAgentdPort(), 50000);
+}
+
+TEST_F(KOAgentdModelsFetcherTest, IgnoresPortFileOthersCanWrite) {
+  WriteToken();
+  WritePort("48123", 0666);
+  ServeModels(::ko::kAgentdDefaultPort, R"({"data": []})");
+
+  AgentdFetchResult result = Fetch();
+  EXPECT_EQ(result.port, ::ko::kAgentdDefaultPort);
+  EXPECT_EQ(requested_urls_,
+            std::vector<GURL>{GURL("http://127.0.0.1:47821/v1/models")});
+  EXPECT_EQ(GetAgentdPort(), ::ko::kAgentdDefaultPort);
+}
+
+TEST_F(KOAgentdModelsFetcherTest, PortFileWithoutTokenSendsNothing) {
+  WritePort("48123");
+  ServeModels(48123, R"({"data": []})");
+  AgentdFetchResult result = Fetch();
+  EXPECT_FALSE(result.token);
+  EXPECT_FALSE(result.models);
+  EXPECT_EQ(result.port, 48123);
+  EXPECT_TRUE(requested_urls_.empty());
+  EXPECT_EQ(GetAgentdPort(), 48123);
+}
+
+TEST_F(KOAgentdModelsFetcherTest, RefusesTokensNotInAgentdFormat) {
+  ServeModels(::ko::kAgentdDefaultPort, R"({"data": []})");
+  // Characters outside base64url, or the wrong length, are not agentd's.
+  for (const std::string& bad :
+       {std::string(42, 'a') + "+", std::string(42, 'a') + "/",
+        std::string(42, 'a') + "=", std::string(32, 'a'),
+        std::string(256, 'a')}) {
+    SCOPED_TRACE(bad);
+    WriteFile(::ko::kAgentdTokenFileName, bad, 0600);
+    AgentdFetchResult result = Fetch();
+    EXPECT_FALSE(result.token);
+    EXPECT_FALSE(result.models);
+  }
+  EXPECT_TRUE(requested_urls_.empty());
+}
+
+TEST_F(KOAgentdModelsFetcherTest, RefusesTokenOthersCanRead) {
+  WriteFile(::ko::kAgentdTokenFileName, kToken, 0644);
+  ServeModels(::ko::kAgentdDefaultPort, R"({"data": []})");
+  AgentdFetchResult result = Fetch();
+  EXPECT_FALSE(result.token);
+  EXPECT_TRUE(requested_urls_.empty());
 }
 #endif  // BUILDFLAG(IS_POSIX)
 

@@ -139,6 +139,7 @@ static_library("browser") {
   public_deps = [
     "//base",
     "//brave/components/ko/buildflags",
+    "//brave/components/ko/common:agentd_config",
     "//components/os_crypt/async/common",
     "//components/sync/model",
   ]

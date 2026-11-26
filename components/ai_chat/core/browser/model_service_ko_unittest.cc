@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/memory/scoped_refptr.h"
+#include "base/test/bind.h"
 #include "base/test/run_until.h"
 #include "base/test/task_environment.h"
 #include "brave/components/ai_chat/core/browser/engine/engine_consumer.h"
@@ -21,11 +23,13 @@
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/ai_chat/core/common/pref_names.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "build/build_config.h"
 #include "components/os_crypt/async/browser/os_crypt_async.h"
 #include "components/os_crypt/async/browser/test_utils.h"
 #include "components/prefs/testing_pref_service.h"
 #include "services/network/public/cpp/network_context_getter.h"
+#include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/weak_wrapper_shared_url_loader_factory.h"
 #include "services/network/test/test_url_loader_factory.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -42,7 +46,8 @@ namespace ai_chat {
 
 namespace {
 
-constexpr char kToken[] = "test-token-0123456789abcdef";
+// Placeholder in agentd's format (43 base64url characters), not a real token.
+constexpr char kToken[] = "test_token_not_a_real_secret_0123456789-ABC";
 constexpr char kDefaultModelKeyPref[] = "brave.ai_chat.default_model_key";
 
 mojom::ModelPtr MakeCustomModel(std::string api_key, bool supports_tools) {
@@ -65,6 +70,7 @@ mojom::ModelPtr MakeCustomModel(std::string api_key, bool supports_tools) {
 class ModelServiceKOTest : public testing::Test {
  protected:
   void SetUp() override {
+    ko::ResetAgentdPortForTesting();
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
 #if BUILDFLAG(IS_MAC)
     app_data_override_.emplace(base::DIR_APP_DATA, temp_dir_.GetPath());
@@ -84,14 +90,21 @@ class ModelServiceKOTest : public testing::Test {
             &url_loader_factory_);
   }
 
-  void TearDown() override { service_.reset(); }
+  void TearDown() override {
+    service_.reset();
+    ko::ResetAgentdPortForTesting();
+  }
 
-  void WriteToken() {
-    const base::FilePath path = data_dir_.Append(ko::kAgentdTokenFileName);
-    ASSERT_TRUE(base::WriteFile(path, kToken));
+  void WritePrivateFile(const char* name, std::string_view contents) {
+    const base::FilePath path = data_dir_.AppendASCII(name);
+    ASSERT_TRUE(base::WriteFile(path, contents));
 #if BUILDFLAG(IS_POSIX)
     ASSERT_TRUE(base::SetPosixFilePermissions(path, 0600));
 #endif
+  }
+
+  void WriteToken() {
+    WritePrivateFile(::ko::kAgentdTokenFileName, std::string(kToken) + "\n");
   }
 
   ModelService* CreateService() {
@@ -172,6 +185,41 @@ TEST_F(ModelServiceKOTest, LoadsAgentdModelsWithToken) {
   EXPECT_EQ(cache.DebugString().find(kToken), std::string::npos);
   // agentd models aren't user custom models.
   EXPECT_TRUE(service->GetCustomModels().empty());
+}
+
+TEST_F(ModelServiceKOTest, FollowsAgentdPortFile) {
+  WriteToken();
+  WritePrivateFile(::ko::kAgentdPortFileName, "48123\n");
+  std::vector<GURL> requested;
+  url_loader_factory_.SetInterceptor(
+      base::BindLambdaForTesting([&](const network::ResourceRequest& request) {
+        requested.push_back(request.url);
+      }));
+  url_loader_factory_.AddResponse(
+      "http://127.0.0.1:48123/v1/models",
+      R"({"data": [{"id": "nanogpt/gpt-5-mini"}]})");
+
+  ModelService* service = CreateService();
+  ASSERT_TRUE(base::test::RunUntil([&] {
+    return service->GetModel("ko-agentd:nanogpt/gpt-5-mini") != nullptr;
+  }));
+
+  // Nothing went to the default port, where another listener could be.
+  EXPECT_EQ(requested,
+            std::vector<GURL>{GURL("http://127.0.0.1:48123/v1/models")});
+  for (const char* key :
+       {kChatAutomaticModelKey, "ko-agentd:nanogpt/gpt-5-mini"}) {
+    SCOPED_TRACE(key);
+    const mojom::Model* model = service->GetModel(key);
+    ASSERT_TRUE(model);
+    const auto& opts = model->options->get_custom_model_options();
+    EXPECT_EQ(opts->endpoint,
+              GURL("http://127.0.0.1:48123/v1/chat/completions"));
+    EXPECT_EQ(opts->api_key, kToken);
+    EXPECT_TRUE(ko::IsAgentdEndpoint(opts->endpoint));
+  }
+  EXPECT_TRUE(
+      service->GetModel("ko-agentd:nanogpt/gpt-5-mini")->supports_tools);
 }
 
 TEST_F(ModelServiceKOTest, CachedModelsResolveBeforeAgentdAnswers) {

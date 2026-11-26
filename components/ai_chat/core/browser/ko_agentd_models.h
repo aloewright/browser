@@ -22,6 +22,7 @@
 #include "base/values.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "url/gurl.h"
 
 static_assert(BUILDFLAG(IS_KO));
@@ -38,12 +39,12 @@ class SharedURLLoaderFactory;
 // K-O's built-in model source: the local ko-agentd daemon, which exposes an
 // OpenAI-compatible API on 127.0.0.1 and keeps provider keys in the Keychain.
 // The browser only ever holds agentd's per-install bearer token, in memory.
+// agentd's token and port files are read with ::ko::ReadAgentdConfig().
 namespace ai_chat::ko {
 
-inline constexpr uint16_t kAgentdDefaultPort = 47821;
-// Overrides the agentd port. The host is always 127.0.0.1.
+// Developer override for the agentd port; wins over agentd.port. The host is
+// always 127.0.0.1.
 inline constexpr char kAgentdPortSwitch[] = "ko-agentd-port";
-inline constexpr char kAgentdTokenFileName[] = "agentd.token";
 inline constexpr char kAgentdChatCompletionsPath[] = "/v1/chat/completions";
 inline constexpr char kAgentdModelsPath[] = "/v1/models";
 
@@ -81,18 +82,18 @@ struct AgentdModelInfo {
 // ~/.local/share/k-o. Empty on other platforms or if it can't be resolved.
 base::FilePath GetDataDir();
 
+// A valid --ko-agentd-port, else the port the last AgentdModelsFetcher read
+// (agentd.port, or ::ko::kAgentdDefaultPort without one). Safe to call on
+// any sequence.
 uint16_t GetAgentdPort();
 // http://127.0.0.1:<port><path>. |path| must start with '/'.
+GURL GetAgentdUrl(std::string_view path, uint16_t port);
 GURL GetAgentdUrl(std::string_view path);
+// True for http://127.0.0.1 at GetAgentdPort() or ::ko::kAgentdDefaultPort,
+// where agentd models built before agentd.port was read point.
 bool IsAgentdEndpoint(const GURL& url);
 // True for kChatAutomaticModelKey and kAgentdModelKeyPrefix keys.
 bool IsAgentdModelKey(std::string_view key);
-
-bool IsValidAgentdToken(std::string_view token);
-// Reads <data_dir>/agentd.token. Returns nullopt unless it is a regular file
-// owned by the current user with no group/other access and holds a valid
-// token. Blocking.
-std::optional<std::string> ReadAgentdToken(const base::FilePath& data_dir);
 
 // Parses an OpenAI-style {"data": [{"id": ...}]} listing. Invalid entries are
 // skipped; nullopt if the shape is wrong.
@@ -103,10 +104,11 @@ base::ListValue AgentdModelsToCache(const std::vector<AgentdModelInfo>& models);
 std::vector<AgentdModelInfo> AgentdModelsFromCache(const base::ListValue& list);
 
 // The always-present default model followed by one model per |models| entry,
-// all pointing at agentd with |token| as API key.
+// all pointing at agentd on |port| with |token| as API key.
 std::vector<mojom::ModelPtr> BuildAgentdModels(
     const std::vector<AgentdModelInfo>& models,
-    const std::string& token);
+    const std::string& token,
+    uint16_t port);
 
 struct AgentdFetchResult {
   AgentdFetchResult();
@@ -115,11 +117,14 @@ struct AgentdFetchResult {
   ~AgentdFetchResult();
 
   std::optional<std::string> token;
+  // Where |token| and |models| came from; also GetAgentdPort() from now on.
+  uint16_t port = ::ko::kAgentdDefaultPort;
   // nullopt if agentd could not be reached or answered badly.
   std::optional<std::vector<AgentdModelInfo>> models;
 };
 
-// Reads the token, then lists agentd's models with it.
+// Reads the token and port files in one blocking task, then lists agentd's
+// models on that port with that token.
 class AgentdModelsFetcher {
  public:
   using Result = AgentdFetchResult;
@@ -132,19 +137,25 @@ class AgentdModelsFetcher {
   AgentdModelsFetcher& operator=(const AgentdModelsFetcher&) = delete;
   ~AgentdModelsFetcher();
 
-  // Drops any fetch in progress without running its callback.
+  // Drops any fetch in progress without running its callback. Publishes the
+  // port it used as GetAgentdPort() just before running |callback|.
   void Fetch(FetchCallback callback);
 
  private:
-  void OnTokenRead(FetchCallback callback, std::optional<std::string> token);
+  void OnConfigRead(FetchCallback callback, ::ko::AgentdConfig config);
   void OnModelsResponse(FetchCallback callback,
                         std::string token,
+                        uint16_t port,
                         api_request_helper::APIRequestResult result);
 
   base::FilePath data_dir_;
   std::unique_ptr<api_request_helper::APIRequestHelper> api_request_helper_;
   base::WeakPtrFactory<AgentdModelsFetcher> weak_ptr_factory_{this};
 };
+
+// Forgets the port published by Fetch(), so GetAgentdPort() is the override or
+// ::ko::kAgentdDefaultPort again.
+void ResetAgentdPortForTesting();
 
 }  // namespace ai_chat::ko
 

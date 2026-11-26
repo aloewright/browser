@@ -12,8 +12,8 @@ Origin builds); `enable_local_ai` stays off. Everything below is under
 
 Only two places:
 
-1. **ko-agentd** on `http://127.0.0.1:47821` (see the agentd docs). This is
-   the default.
+1. **ko-agentd** on `http://127.0.0.1:<port>`, where the port comes from
+   `agentd.port` (default 47821; see the agentd docs). This is the default.
 2. **Custom models** the user adds in Settings > K-O Assistant, including the
    Cloudflare AI Gateway and NanoGPT presets. These go straight to the
    provider over HTTPS, not through agentd.
@@ -41,13 +41,15 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
   listed model, or `claude-code/default` before agentd has answered.
 - One `ko-agentd:<id>` model per entry of agentd's `GET /v1/models`
   (`claude-code/*`, `codex/*`, `cf-gateway/*`, `nanogpt/*`, ...).
-- All of them use `http://127.0.0.1:<port>/v1/chat/completions`, tool support
-  on (unless agentd lists `tools: false`), and the `CONTENT_AGENT`
-  capability, so Leo's tools (content agent tools in the agent profile, tab
-  management) are offered on them. They only run if the model answers with
-  OpenAI `tool_calls`: agentd passes those through for HTTP providers, but
-  its CLI-backed `claude-code/*` and `codex/*` models currently drop the
-  `tools` field, so agentd should list those with `tools: false`.
+- All of them use `http://127.0.0.1:<port>/v1/chat/completions` (see
+  [Port](#port)).
+- Tool support is on (unless agentd lists `tools: false`), with the
+  `CONTENT_AGENT` capability, so Leo's tools (content agent tools in the
+  agent profile, tab management) are offered on them. They only run if the
+  model answers with OpenAI `tool_calls`: agentd passes those through for
+  HTTP providers, but its CLI-backed `claude-code/*` and `codex/*` models
+  currently drop the `tools` field, so agentd should list those with
+  `tools: false`.
 
 The list is fetched when the model service starts, retried with backoff
 (15 s to 10 min) while agentd is down, and refreshed every 15 min. The last
@@ -70,10 +72,13 @@ match `[A-Za-z0-9._:/@+-]{1,200}`; at most 200 models are used.
 
 - Read on every fetch from `<data>/agentd.token`: macOS
   `~/Library/Application Support/K-O`, Linux `$XDG_DATA_HOME/k-o` (fallback
-  `~/.local/share/k-o`).
+  `~/.local/share/k-o`). The Assistant and chrome://ko-workspace share one
+  reader, `ko::ReadAgentdConfig()` in `components/ko/common/agentd_config.h`.
 - Rejected (fail closed) unless it is a regular file, not a symlink, owned by
-  the current user, with no group or other permission bits, at most 514
-  bytes, holding 16-512 characters of `[A-Za-z0-9._~+/=-]`.
+  the current user, with no group or other permission bits, at most 1024
+  bytes, holding exactly agentd's format: 43 base64url characters
+  (`[A-Za-z0-9_-]`, 32 bytes unpadded), with optional surrounding
+  whitespace.
 - Held in memory only, as the API key of the agentd models. It is never
   written to prefs, and the browser strips every API key from models sent to
   WebUI pages (chat, conversation frame, settings).
@@ -82,8 +87,18 @@ match `[A-Za-z0-9._:/@+-]{1,200}`; at most 200 models are used.
 
 ### Port
 
-Default 47821, host always `127.0.0.1`. Override with the command-line
-switch `--ko-agentd-port=<port>` to match agentd's own override.
+Host always `127.0.0.1`. The port is read from `<data>/agentd.port` in the
+same blocking task as the token, with the same file checks (a port file
+others can write could point the token at another listener). Without a
+valid private port file it is 47821. `--ko-agentd-port=<port>` is a
+developer override that wins over the file.
+
+That port is used for `/v1/models` and for every agentd model's chat
+endpoint, and is published process-wide (an atomic, safe on any sequence)
+for `ko::GetAgentdUrl()` and `ko::IsAgentdEndpoint()`. The fail-closed
+check (no token, no request) matches the current port and 47821, where
+models built before the first read point. When agentd moves, the next fetch
+(retry or 15 min refresh) rebuilds the models on the new port.
 
 ### Notes for agentd
 
@@ -94,9 +109,10 @@ switch `--ko-agentd-port=<port>` to match agentd's own override.
   leaves 127.0.0.1.
 - Please accept `claude-code/default` as an alias for the default Claude Code
   model; it is only used before the first `/v1/models` answer.
-- Another local user could bind the port while agentd is down and receive
-  the token and prompts. On a single-user Mac that user can't read the token
-  file anyway; if that matters, keep agentd running (launchd).
+- Another local user could bind 47821 while agentd is down (its port file
+  is removed on shutdown) and receive the token and prompts. On a
+  single-user Mac that user can't read the token file anyway; if that
+  matters, keep agentd running (launchd).
 
 ## Custom models and presets
 
@@ -150,9 +166,11 @@ debloat/macos/apply-policies.sh --ko
 
 ## Tests
 
-- New: `ko_agentd_models_unittest.cc` (token file checks, parsing, URLs,
-  fetcher) and `model_service_ko_unittest.cc` (no Leo models, agentd
-  default, keys kept out of pages and prefs, migration).
+- New: `components/ko/common/agentd_config_unittest.cc` (token and port
+  file checks, token format), `ko_agentd_models_unittest.cc` (parsing,
+  URLs, port-file discovery, fetcher) and `model_service_ko_unittest.cc`
+  (no Leo models, agentd default, port file, keys kept out of pages and
+  prefs, migration).
 - Left out of K-O builds because they test Leo, premium or Brave's servers:
   `model_service_unittest`, `conversation_handler_unittest`,
   `ai_chat_service_unittest`, `ai_chat_credential_manager_unittest`,

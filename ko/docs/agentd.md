@@ -281,11 +281,17 @@ drains connections (10 s) and removes the socket and port file.
 
 ## Browser integration
 
+The browser reads `agentd.token` and `agentd.port` with one shared reader
+(`ko::ReadAgentdConfig()`, `components/ko/common/agentd_config.h`). Both must
+be regular files owned by the user with no group or other access. The token
+must be exactly what agentd writes: 43 base64url characters, optionally
+followed by a newline. Without a valid port file the browser uses 47821.
+
 WebUI pages get the base URL (`http://127.0.0.1:<port>`) and the token from
-C++ through `loadTimeData`. C++ reads `agentd.token` when the page loads. It
-can read `agentd.port` to find a non-default port. Use `fetch` with
-`Authorization`, including for SSE (`EventSource` cannot set headers). Never
-put the token in a URL.
+C++ through `loadTimeData`, read when the page loads. The Assistant reads
+both on every model fetch and sends `/v1/models` and chat requests to that
+port. Use `fetch` with `Authorization`, including for SSE (`EventSource`
+cannot set headers). Never put the token in a URL.
 
 ## macOS service
 

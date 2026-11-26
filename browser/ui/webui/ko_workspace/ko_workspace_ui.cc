@@ -28,6 +28,7 @@
 #include "brave/browser/ui/sidebar/sidebar_utils.h"
 #include "brave/browser/ui/sidebar/sidebar_web_panel_controller.h"
 #include "brave/components/containers/buildflags/buildflags.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "brave/components/ko/telemetry/ko_analytics_event.h"
 #include "brave/components/ko/workspace/browser/ko_workspace_handler.h"
 #include "brave/components/ko/workspace/core/agentd_config.h"
@@ -80,7 +81,7 @@ constexpr char kAgentdScriptPath[] = "agentd.js";
 
 // Port used for the page's CSP. Updated whenever agentd.js is served; the page
 // reloads once if agentd moved to another port.
-uint16_t g_last_agentd_port = ko_workspace::kDefaultAgentdPort;
+uint16_t g_last_agentd_port = ko::kAgentdDefaultPort;
 
 std::string SanitizeForFileName(std::string_view host) {
   std::string out;
@@ -348,11 +349,10 @@ void HandleAgentdScript(const std::string& path,
                         content::WebUIDataSource::GotDataCallback callback) {
   base::ThreadPool::PostTaskAndReplyWithResult(
       FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_BLOCKING},
-      base::BindOnce(&ko_workspace::ReadAgentdConfig,
-                     ko_workspace::GetKoDataDir()),
+      base::BindOnce(&ko::ReadAgentdConfig, ko_workspace::GetKoDataDir()),
       base::BindOnce(
           [](content::WebUIDataSource::GotDataCallback callback,
-             ko_workspace::AgentdConfig config) {
+             ko::AgentdConfig config) {
             g_last_agentd_port = config.port;
             std::move(callback).Run(
                 base::MakeRefCounted<base::RefCountedString>(
