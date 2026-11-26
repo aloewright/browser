@@ -157,6 +157,7 @@ Install it:
 debloat/macos/apply-policies.sh               # validate with plutil -lint, then open
 debloat/macos/apply-policies.sh --no-open     # validate only
 debloat/macos/apply-policies.sh --bundle-id com.brave.Browser.beta
+debloat/macos/apply-policies.sh --ko          # K-O: keeps AI chat (the K-O Assistant) on
 ```
 
 The script registers the profile with macOS but does not install it. To
