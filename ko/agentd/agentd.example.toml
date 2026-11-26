@@ -1,0 +1,78 @@
+# Example <data>/agentd.toml (macOS: ~/Library/Application Support/K-O,
+# Linux: $XDG_DATA_HOME/k-o). Keep it 0600. It holds NO secrets: secrets are
+# Keychain items referenced by name; store them with
+#   ko-agentd secrets set <name>      (value read from stdin)
+# All hosts/ids below are placeholders.
+
+[server]
+port = 47821            # 127.0.0.1 only
+unix_socket = true      # <data>/agentd.sock (0600)
+request_timeout_secs = 60
+max_artifact_bytes = 33554432
+
+# [secrets]
+# backend = "keychain"  # macOS default; "file" is for Linux development only
+
+# [network]
+# proxy = "socks5h://100.64.0.10:1080"   # optional egress proxy
+
+[providers.claude-code]
+binary = "claude"       # official Claude Code CLI on PATH (subscription login)
+models = ["sonnet", "opus"]
+permission_mode = "acceptEdits"   # agent runs only
+allowed_tools = ["Read", "Grep", "Glob", "Edit", "Bash(git status:*)"]
+
+[providers.codex]
+binary = "codex"        # official Codex CLI on PATH (ChatGPT login)
+models = ["gpt-5-codex"]
+sandbox = "workspace-write"       # agent runs; chat always uses read-only
+
+[providers.cf-gateway]
+account_id = "0123456789abcdef0123456789abcdef"
+gateway = "my-gateway"
+models = ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4-5"]
+aig_token_secret = "cf-gateway-aig-token"   # cf-aig-authorization (optional)
+# Provider keys: secret "cf-gateway-key-<provider>" (optional with BYOK).
+
+[providers.nanogpt]
+models = ["chatgpt-4o-latest"]
+api_key_secret = "nanogpt-api-key"
+
+[mcp]
+allow_api_stdio_servers = false
+
+[mcp.servers.github]
+type = "stdio"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env_secrets = { GITHUB_PERSONAL_ACCESS_TOKEN = "mcp-github-token" }
+
+[mcp.servers.docs]
+type = "http"
+url = "https://mcp.example.com/mcp"
+bearer_secret = "mcp-docs-token"
+
+[workspaces]
+default_model = "claude-code/sonnet"
+
+[runs]
+max_concurrent = 2
+timeout_secs = 3600
+
+[cloudflare]
+account_id = "0123456789abcdef0123456789abcdef"
+api_token_secret = "cloudflare-api-token"
+access_team_domain = "example.cloudflareaccess.com"
+access_aud = "ReplaceWithAccessAudTag"   # Access application AUD tag
+ai_gateway_id = "my-gateway"
+aig_token_secret = "cf-gateway-aig-token"
+template_dir = "/path/to/brave-core/ko/cloudflare/agent-template"
+# url_template = "https://{script}.agents.example.com"
+
+# [telemetry.glitchtip]
+# dsn_secret = "glitchtip-dsn"     # https://<key>@glitchtip.example.com/<project>
+# environment = "production"
+
+# [telemetry.posthog]
+# host = "https://posthog.example.com"
+# project_key = "phc_placeholder"

@@ -727,6 +727,13 @@ project_key = "phc_placeholder"
     }
 
     #[test]
+    fn example_config_is_valid() {
+        let c = Config::from_toml(include_str!("../agentd.example.toml")).unwrap();
+        assert_eq!(crate::providers::list_models(&c).len(), 6);
+        assert!(c.cloudflare.template_dir.is_some());
+    }
+
+    #[test]
     fn defaults_when_empty() {
         let c = Config::from_toml("").unwrap();
         assert_eq!(c.server.port, crate::DEFAULT_PORT);
