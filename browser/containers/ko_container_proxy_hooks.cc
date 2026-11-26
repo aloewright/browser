@@ -30,6 +30,8 @@
 #include "mojo/public/cpp/bindings/remote.h"
 #include "net/base/auth.h"
 #include "net/base/net_errors.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
+#include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/self_deleting_url_loader_factory.h"
 #include "services/network/public/cpp/url_loader_completion_status.h"
 #include "services/network/public/cpp/url_loader_factory_builder.h"

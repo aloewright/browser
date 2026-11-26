@@ -33,6 +33,33 @@
 
 namespace sidebar {
 
+#if BUILDFLAG(IS_KO)
+namespace {
+
+// Set once the K-O workspace web panel was offered, so removing it sticks.
+constexpr char kKoWorkspaceItemAddedPref[] = "ko.workspace.sidebar_item_added";
+constexpr char kKoWorkspaceUrl[] = "chrome://ko-workspace/";
+
+void MaybeAddKoWorkspaceItem(Profile* profile, SidebarService& service) {
+  PrefService* prefs = profile->GetPrefs();
+  if (profile->IsOffTheRecord() || profile->IsGuestSession() ||
+      prefs->GetBoolean(kKoWorkspaceItemAddedPref)) {
+    return;
+  }
+  prefs->SetBoolean(kKoWorkspaceItemAddedPref, true);
+  const GURL url(kKoWorkspaceUrl);
+  if (std::ranges::any_of(service.items(), [&url](const SidebarItem& item) {
+        return item.url == url;
+      })) {
+    return;
+  }
+  service.AddItem(SidebarItem::CreateWebPanelItem(
+      url, l10n_util::GetStringUTF16(IDS_KO_WORKSPACE_TITLE)));
+}
+
+}  // namespace
+#endif  // BUILDFLAG(IS_KO)
+
 // static
 SidebarServiceFactory* SidebarServiceFactory::GetInstance() {
   static base::NoDestructor<SidebarServiceFactory> instance;
