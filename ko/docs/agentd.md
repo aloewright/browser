@@ -1,11 +1,11 @@
 # ko-agentd
 
-`ko-agentd` is the local daemon behind K-O's workspace and machine pages. It
-exposes model providers (Claude Code, Codex, Cloudflare AI Gateway, NanoGPT)
-through one OpenAI-compatible API. It also stores workspaces and encrypted
-artifacts, runs agents with MCP servers, and deploys per-workspace Cloudflare
-agents. It is a Rust (edition 2024) binary in `ko/agentd/`. It is not part of
-the GN build.
+`ko-agentd` is the local daemon behind `chrome://ko-workspace` and the K-O
+Assistant. It exposes model providers (Claude Code, Codex, Cloudflare AI
+Gateway, NanoGPT) through one OpenAI-compatible API. It also stores
+workspaces and encrypted artifacts, runs agents with MCP servers, and deploys
+per-workspace Cloudflare agents. It is a Rust (edition 2024) binary in
+`ko/agentd/`. It is not part of the GN build.
 
 ## Files
 
@@ -45,11 +45,14 @@ are loose. Core dumps are off.
 - **DNS rebinding.** TCP requests must carry exactly one `Host` header equal to
   `127.0.0.1:<port>` or `localhost:<port>`. An absolute-form target must name
   the same host. Anything else gets 403.
-- **Origin / CORS.** Only `chrome://ko-workspace` and `chrome://ko-machines` are
-  allowed. They get `Access-Control-Allow-Origin` (no credentials) and
-  `Access-Control-Expose-Headers: X-Ko-Mime-Type`, and preflight answers 204. Any other `Origin` (including `null`) gets 403 with no
-  CORS headers. A request without `Origin` but with `Sec-Fetch-Site` other
-  than `none` or `same-origin` also gets 403. This blocks `<img>`-style probes.
+- **Origin / CORS.** Only `chrome://ko-workspace` is allowed. It gets
+  `Access-Control-Allow-Origin` (no credentials) and
+  `Access-Control-Expose-Headers: X-Ko-Mime-Type`, and preflight answers 204.
+  Any other `Origin` (including `null` and `chrome://ko-machines`, which never
+  calls agentd) gets 403 with no CORS headers. The assistant calls from the
+  browser process and sends no `Origin`. A request without `Origin` but with
+  `Sec-Fetch-Site` other than `none` or `same-origin` also gets 403. This
+  blocks `<img>`-style probes.
 - **Response headers.** Every response carries `nosniff`, `no-store`,
   `no-referrer`, `CSP: default-src 'none'; sandbox`, `X-Frame-Options: DENY`
   and `Vary: Origin`.
@@ -125,6 +128,56 @@ ko-agentd doctor
 | `cf-gateway/<provider>/<model>` | `POST https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/compat/chat/completions` with model `<provider>/<model>` |
 | `nanogpt/<model>` | `POST https://nano-gpt.com/api/v1/chat/completions` |
 
+Each entry of a provider's `models` is 1-128 bytes of
+`[A-Za-z0-9._:/@\[\]-]` and does not start with `-`. The brackets allow
+Claude Code's 1M-context aliases such as `sonnet[1m]`.
+
+Models are listed by provider (Claude Code, Codex, AI Gateway, NanoGPT),
+each in its `models` order. The assistant uses the first one as its
+default. Each entry looks like this:
+
+```json
+{"id": "nanogpt/chatgpt-4o-latest", "object": "model", "created": 0, "owned_by": "nanogpt",
+ "display_name": "chatgpt-4o-latest (NanoGPT)",
+ "capabilities": {"vision": false, "tools": true}, "context_length": 128000}
+```
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| `display_name` | `<model> (<provider>)`, e.g. `sonnet (Claude Code)` | 1-100 bytes, no control characters |
+| `capabilities.tools` | `true` for HTTP providers | Always `false` for `claude-code/*` and `codex/*`: the CLIs run their own tools and never return `tool_calls` |
+| `capabilities.vision` | `false` | Always `false` for CLI providers (text only; image parts get 400) |
+| `context_length` | `128000` | 700 to 2000000 |
+
+To change them, add a `model_info` table to the provider, keyed by an entry
+of its `models` list. Every field is optional:
+
+```toml
+[providers.nanogpt]
+models = ["chatgpt-4o-latest"]
+
+[providers.nanogpt.model_info."chatgpt-4o-latest"]
+display_name = "GPT-4o (NanoGPT)"
+vision = true
+tools = true
+context_length = 128000
+```
+
+The daemon refuses to start on a `model_info` key that is not in `models`,
+an unknown field, a value out of range, or `tools`/`vision = true` on
+`claude-code` or `codex`.
+
+**Default aliases.** `claude-code/default` resolves to the first
+`claude-code` model and `codex/default` to the first `codex` model, wherever
+a model id is accepted (chat, runs, workspace `default_model`). The browser
+sends `claude-code/default` before it has listed models. A model actually
+named `default` in `models` takes precedence. The aliases are not listed in
+`/v1/models`. A workspace stores the resolved id, so its `default_model`
+reads back as, for example, `claude-code/sonnet`. If the provider is not
+configured or is disabled, the request fails with 404 `model_not_found` and
+a message naming the provider. HTTP providers have no alias, since `default`
+could be a real upstream model.
+
 `POST /v1/chat/completions` follows the OpenAI API. With `stream: true` it
 answers with SSE `data:` chunks and a final `data: [DONE]`.
 
@@ -160,7 +213,7 @@ answers with SSE `data:` chunks and a final `data: [DONE]`.
 | POST | `/v1/workspaces/{id}/artifacts` | `{name, mime_type?, tags?, content_text \| content_base64}` → 201 |
 | GET | `/v1/workspaces/{id}/artifacts/{aid}` | Metadata + `content_base64`. `?raw=true` returns `application/octet-stream` as an attachment, with the stored type in `X-Ko-Mime-Type`. |
 | DELETE | `/v1/workspaces/{id}/artifacts/{aid}` | 204 |
-| GET | `/v1/workspaces/{id}/agents` | Configured models (`kind` cli/http, `supports_mcp`, `default`) and the deployed Cloudflare agent |
+| GET | `/v1/workspaces/{id}/agents` | Configured models (`kind` cli/http, `supports_mcp`, `default` when it is the workspace's `default_model`) and the deployed Cloudflare agent |
 
 `Workspace` is `{id, name, container_id, tags, default_model, mcp_servers,
 cloudflare_agent, created_at, updated_at}`. Timestamps are RFC 3339, and ids

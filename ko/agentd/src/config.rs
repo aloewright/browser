@@ -105,6 +105,8 @@ pub struct ClaudeCodeConfig {
     pub allowed_tools: Vec<String>,
     /// Extra env var names passed through to the CLI (values never logged).
     pub pass_env: Vec<String>,
+    /// Per-model hints for /v1/models, keyed by an entry of `models`.
+    pub model_info: BTreeMap<String, ModelInfoConfig>,
 }
 
 impl Default for ClaudeCodeConfig {
@@ -117,6 +119,7 @@ impl Default for ClaudeCodeConfig {
             permission_mode: None,
             allowed_tools: vec![],
             pass_env: vec![],
+            model_info: BTreeMap::new(),
         }
     }
 }
@@ -133,6 +136,7 @@ pub struct CodexConfig {
     /// Pass --ephemeral (no rollout files on disk).
     pub ephemeral: bool,
     pub pass_env: Vec<String>,
+    pub model_info: BTreeMap<String, ModelInfoConfig>,
 }
 
 impl Default for CodexConfig {
@@ -145,6 +149,7 @@ impl Default for CodexConfig {
             sandbox: "read-only".into(),
             ephemeral: true,
             pass_env: vec![],
+            model_info: BTreeMap::new(),
         }
     }
 }
@@ -163,6 +168,8 @@ pub struct CfGatewayConfig {
     /// Provider keys are looked up as "<prefix><provider>" (optional with BYOK).
     pub provider_key_secret_prefix: String,
     pub timeout_secs: u64,
+    /// Keyed by an entry of `models` ("<provider>/<model>").
+    pub model_info: BTreeMap<String, ModelInfoConfig>,
 }
 
 impl Default for CfGatewayConfig {
@@ -176,6 +183,7 @@ impl Default for CfGatewayConfig {
             aig_token_secret: Some("cf-gateway-aig-token".into()),
             provider_key_secret_prefix: "cf-gateway-key-".into(),
             timeout_secs: 300,
+            model_info: BTreeMap::new(),
         }
     }
 }
@@ -188,6 +196,7 @@ pub struct NanoGptConfig {
     pub models: Vec<String>,
     pub api_key_secret: String,
     pub timeout_secs: u64,
+    pub model_info: BTreeMap<String, ModelInfoConfig>,
 }
 
 impl Default for NanoGptConfig {
@@ -198,8 +207,29 @@ impl Default for NanoGptConfig {
             models: vec![],
             api_key_secret: "nanogpt-api-key".into(),
             timeout_secs: 300,
+            model_info: BTreeMap::new(),
         }
     }
+}
+
+/// Context window bounds; the browser ignores values outside them.
+pub const MIN_CONTEXT_LENGTH: u32 = 700;
+pub const MAX_CONTEXT_LENGTH: u32 = 2_000_000;
+pub const DEFAULT_CONTEXT_LENGTH: u32 = 128_000;
+/// Longest display name the browser shows (bytes).
+pub const MAX_DISPLAY_NAME: usize = 100;
+
+/// Optional per-model overrides for `GET /v1/models`. Unset fields keep the
+/// provider defaults.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelInfoConfig {
+    pub display_name: Option<String>,
+    /// Accepts image input. CLI providers: text only.
+    pub vision: Option<bool>,
+    /// Returns OpenAI `tool_calls`. CLI providers never do.
+    pub tools: Option<bool>,
+    pub context_length: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -455,6 +485,42 @@ fn validate_models(provider: &str, models: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn validate_model_info(
+    provider: &str,
+    models: &[String],
+    info: &BTreeMap<String, ModelInfoConfig>,
+    cli: bool,
+) -> Result<()> {
+    for (m, i) in info {
+        let at = format!("providers.{provider}.model_info.{m:?}");
+        if !models.contains(m) {
+            bail!("{at}: not listed in providers.{provider}.models");
+        }
+        if let Some(n) = &i.display_name {
+            let t = n.trim();
+            if t.is_empty() || t.len() > MAX_DISPLAY_NAME || t.chars().any(char::is_control) {
+                bail!(
+                    "{at}: display_name must be 1..={MAX_DISPLAY_NAME} bytes without control characters"
+                );
+            }
+        }
+        if let Some(c) = i.context_length
+            && !(MIN_CONTEXT_LENGTH..=MAX_CONTEXT_LENGTH).contains(&c)
+        {
+            bail!(
+                "{at}: context_length must be between {MIN_CONTEXT_LENGTH} and {MAX_CONTEXT_LENGTH}"
+            );
+        }
+        if cli && i.tools == Some(true) {
+            bail!("{at}: tools must be false (CLI providers never return tool calls)");
+        }
+        if cli && i.vision == Some(true) {
+            bail!("{at}: vision must be false (CLI providers take text only)");
+        }
+    }
+    Ok(())
+}
+
 fn validate_binary(provider: &str, b: &str) -> Result<()> {
     if b.is_empty() || b.starts_with('-') || b.contains('\0') {
         bail!("providers.{provider}: invalid binary");
@@ -509,6 +575,7 @@ impl Config {
         if let Some(c) = &p.claude_code {
             validate_binary("claude-code", &c.binary)?;
             validate_models("claude-code", &c.models)?;
+            validate_model_info("claude-code", &c.models, &c.model_info, true)?;
             if let Some(m) = &c.permission_mode
                 && !matches!(
                     m.as_str(),
@@ -531,6 +598,7 @@ impl Config {
         if let Some(c) = &p.codex {
             validate_binary("codex", &c.binary)?;
             validate_models("codex", &c.models)?;
+            validate_model_info("codex", &c.models, &c.model_info, true)?;
             if !matches!(
                 c.sandbox.as_str(),
                 "read-only" | "workspace-write" | "danger-full-access"
@@ -545,6 +613,7 @@ impl Config {
         }
         if let Some(c) = &p.cf_gateway {
             validate_models("cf-gateway", &c.models)?;
+            validate_model_info("cf-gateway", &c.models, &c.model_info, false)?;
             for m in &c.models {
                 let (prov, model) = m.split_once('/').unwrap_or(("", ""));
                 if !valid_ident(prov, 64) || model.is_empty() {
@@ -571,6 +640,7 @@ impl Config {
         }
         if let Some(c) = &p.nanogpt {
             validate_models("nanogpt", &c.models)?;
+            validate_model_info("nanogpt", &c.models, &c.model_info, false)?;
             validate_upstream_url(&c.base_url, net).context("providers.nanogpt.base_url")?;
             if !valid_secret_name(&c.api_key_secret) {
                 bail!("providers.nanogpt: invalid api_key_secret");
@@ -729,7 +799,9 @@ project_key = "phc_placeholder"
     #[test]
     fn example_config_is_valid() {
         let c = Config::from_toml(include_str!("../agentd.example.toml")).unwrap();
-        assert_eq!(crate::providers::list_models(&c).len(), 6);
+        let models = crate::providers::list_models(&c);
+        assert_eq!(models.len(), 6);
+        assert!(models.iter().any(|m| m.capabilities.vision));
         assert!(c.cloudflare.template_dir.is_some());
     }
 
@@ -768,6 +840,89 @@ project_key = "phc_placeholder"
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn model_info_is_optional() {
+        // Configs from before model_info keep working.
+        let c = Config::from_toml("[providers.nanogpt]\nmodels=[\"a\"]").unwrap();
+        assert!(c.providers.nanogpt.unwrap().model_info.is_empty());
+        let c = Config::from_toml(
+            "[providers.nanogpt]\nmodels=[\"a\", \"b\"]\n\
+             model_info = { a = { vision = true, display_name = \"A\" }, b = { context_length = 32000 } }\n",
+        )
+        .unwrap();
+        let mi = c.providers.nanogpt.unwrap().model_info;
+        assert_eq!(mi["a"].vision, Some(true));
+        assert_eq!(mi["a"].display_name.as_deref(), Some("A"));
+        assert_eq!(mi["b"].context_length, Some(32000));
+        assert_eq!(mi["b"].tools, None);
+        let c = Config::from_toml(
+            "[providers.claude-code]\nmodels=[\"sonnet\"]\n\
+             [providers.claude-code.model_info.sonnet]\ntools=false\nvision=false\n\
+             display_name=\"Sonnet\"\ncontext_length=200000\n",
+        )
+        .unwrap();
+        assert_eq!(
+            c.providers.claude_code.unwrap().model_info["sonnet"].context_length,
+            Some(200_000)
+        );
+    }
+
+    #[test]
+    fn model_info_rejects_bad_values() {
+        let nano = |body: &str| {
+            Config::from_toml(&format!(
+                "[providers.nanogpt]\nmodels=[\"a\"]\n[providers.nanogpt.model_info.a]\n{body}"
+            ))
+            .map_err(|e| format!("{e:#}"))
+        };
+        assert!(nano("context_length = 700").is_ok());
+        assert!(nano("context_length = 2000000").is_ok());
+        for bad in [
+            "context_length = 0",
+            "context_length = 699",
+            "context_length = 2000001",
+            "context_length = -1",
+            "context_length = 1.5",
+            "display_name = \"\"",
+            "display_name = \"   \"",
+            "display_name = \"a\\u0007b\"",
+            "display_name = \"a\\nb\"",
+            "vision = \"yes\"",
+            "context_window = 8000",
+        ] {
+            assert!(nano(bad).is_err(), "{bad}");
+        }
+        let long = format!("display_name = \"{}\"", "x".repeat(101));
+        assert!(nano(&long).is_err());
+        assert!(nano(&format!("display_name = \"{}\"", "x".repeat(100))).is_ok());
+        let e = nano("context_length = 10").unwrap_err();
+        assert!(
+            e.contains("providers.nanogpt.model_info.\"a\"") && e.contains("between 700"),
+            "{e}"
+        );
+
+        // Keys must name a listed model.
+        let e = Config::from_toml(
+            "[providers.nanogpt]\nmodels=[\"a\"]\n[providers.nanogpt.model_info.typo]\nvision=true",
+        )
+        .unwrap_err();
+        assert!(format!("{e:#}").contains("not listed"), "{e:#}");
+
+        // CLI providers never return tool calls and take text only.
+        for (p, m) in [("claude-code", "sonnet"), ("codex", "gpt-5-codex")] {
+            for field in ["tools", "vision"] {
+                let e = Config::from_toml(&format!(
+                    "[providers.{p}]\nmodels=[\"{m}\"]\n[providers.{p}.model_info.{m:?}]\n{field}=true"
+                ))
+                .unwrap_err();
+                assert!(
+                    format!("{e:#}").contains(&format!("{field} must be false")),
+                    "{e:#}"
+                );
+            }
+        }
     }
 
     #[test]

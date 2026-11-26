@@ -108,11 +108,12 @@ async fn host_header_guard_blocks_dns_rebinding() {
 }
 
 #[tokio::test]
-async fn cors_only_for_ko_webui_origins() {
+async fn cors_only_for_ko_workspace_origin() {
     let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
     let p = env.port();
     let t = env.token.clone();
-    for origin in ["chrome://ko-workspace", "chrome://ko-machines"] {
+    {
+        let origin = "chrome://ko-workspace";
         let (s, head, _) = raw_tcp(
             p,
             &req(
@@ -155,6 +156,7 @@ async fn cors_only_for_ko_webui_origins() {
     for origin in [
         "https://evil.example",
         "chrome://settings",
+        "chrome://ko-machines",
         "null",
         "chrome://ko-workspace.evil",
     ] {

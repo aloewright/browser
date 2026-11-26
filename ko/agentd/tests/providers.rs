@@ -291,6 +291,78 @@ async fn claude_code_non_stream_and_errors() {
 }
 
 #[tokio::test]
+async fn cli_default_alias_uses_first_configured_model() {
+    let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
+    // The browser's fallback before it has listed models.
+    let (s, v) = env
+        .post(
+            "/v1/chat/completions",
+            json!({"model": "claude-code/default", "messages": [{"role": "user", "content": "hi"}]}),
+        )
+        .await;
+    assert_eq!(s, 200, "{v}");
+    assert_eq!(v["model"], "claude-code/sonnet");
+    let args = env.fake_file("claude.args");
+    let args: Vec<&str> = args.lines().collect();
+    assert_eq!(args[args.len() - 2..], ["--model", "sonnet"]);
+
+    let ev = env
+        .sse(
+            "/v1/chat/completions",
+            Some(json!({"model": "claude-code/default", "stream": true, "messages": [{"role": "user", "content": "hi"}]})),
+        )
+        .await;
+    assert_eq!(ev.last().unwrap().1, "[DONE]");
+    let first: Value = serde_json::from_str(&ev[0].1).unwrap();
+    assert_eq!(first["model"], "claude-code/sonnet");
+
+    let (s, v) = env
+        .post(
+            "/v1/chat/completions",
+            json!({"model": "codex/default", "messages": [{"role": "user", "content": "hi"}]}),
+        )
+        .await;
+    assert_eq!(s, 200, "{v}");
+    let args = env.fake_file("codex.args");
+    assert!(
+        args.lines()
+            .collect::<Vec<_>>()
+            .windows(2)
+            .any(|w| w == ["--model", "gpt-5-codex"]),
+        "{args}"
+    );
+
+    // Not listed.
+    let (_, m) = env.get("/v1/models").await;
+    assert!(!m.to_string().contains("/default"));
+
+    // Without claude-code the alias fails with a message naming it.
+    env.reconfigure(|c| {
+        c.replace(
+            "[providers.claude-code]\n",
+            "[providers.claude-code]\nenabled = false\n",
+        )
+    })
+    .await;
+    let (s, v) = env
+        .post(
+            "/v1/chat/completions",
+            json!({"model": "claude-code/default", "messages": [{"role": "user", "content": "hi"}]}),
+        )
+        .await;
+    assert_eq!(s, 404, "{v}");
+    assert_eq!(v["error"]["type"], "model_not_found");
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("claude-code provider"),
+        "{v}"
+    );
+    env.stop().await;
+}
+
+#[tokio::test]
 async fn codex_cli_chat() {
     let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
     let (s, v) = env

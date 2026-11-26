@@ -24,8 +24,10 @@ use crate::paths::{
     Paths, create_private_file_exclusive, read_private_file, write_private_file_atomic,
 };
 
-/// The only origins allowed to call the daemon from a browser.
-pub const ALLOWED_ORIGINS: [&str; 2] = ["chrome://ko-workspace", "chrome://ko-machines"];
+/// The only origin allowed to call the daemon from a browser. The assistant
+/// calls from the browser process (no Origin); chrome://ko-machines never
+/// calls agentd.
+pub const ALLOWED_ORIGINS: [&str; 1] = ["chrome://ko-workspace"];
 
 const ALLOW_METHODS: &str = "GET, POST, PATCH, DELETE, OPTIONS";
 const ALLOW_HEADERS: &str = "authorization, content-type, last-event-id";
@@ -311,7 +313,7 @@ mod tests {
     #[test]
     fn origins() {
         assert!(origin_allowed("chrome://ko-workspace"));
-        assert!(origin_allowed("chrome://ko-machines"));
+        assert!(!origin_allowed("chrome://ko-machines"));
         assert!(!origin_allowed("chrome://settings"));
         assert!(!origin_allowed("chrome://ko-workspace.evil"));
         assert!(!origin_allowed("https://example.com"));
