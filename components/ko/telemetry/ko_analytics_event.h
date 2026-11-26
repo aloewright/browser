@@ -43,6 +43,16 @@ SessionLengthBucket BucketForSessionLength(base::TimeDelta length);
 
 // Build-wide properties added to every event. Validated, never free text.
 struct CommonProperties {
+  CommonProperties();
+  CommonProperties(std::string app_version,
+                   std::string channel,
+                   std::string os);
+  CommonProperties(const CommonProperties&);
+  CommonProperties(CommonProperties&&);
+  CommonProperties& operator=(const CommonProperties&);
+  CommonProperties& operator=(CommonProperties&&);
+  ~CommonProperties();
+
   std::string app_version;  // Digits and dots only, e.g. "1.100.58".
   std::string channel;      // One of kAllowedChannels.
   std::string os;           // "mac", "linux" or "windows".

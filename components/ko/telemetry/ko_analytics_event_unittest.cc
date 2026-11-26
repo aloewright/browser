@@ -22,7 +22,7 @@ constexpr char kUuid[] = "8b5e3f5a-1c2d-4e6f-8a9b-0c1d2e3f4a5b";
 constexpr char kTimestamp[] = "2026-11-26T06:00:00Z";
 
 CommonProperties Common() {
-  return {.app_version = "1.100.58", .channel = "release", .os = "mac"};
+  return CommonProperties("1.100.58", "release", "mac");
 }
 
 base::DictValue Queued(std::string_view event, base::DictValue props) {

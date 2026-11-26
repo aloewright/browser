@@ -44,17 +44,18 @@ static_library("analytics") {
     "ko_analytics_service.h",
   ]
 
+  # Exposed by ko_analytics_service.h.
   public_deps = [
     ":analytics_buildflags",
     "//base",
+    "//components/prefs",
+    "//net",
+    "//url",
   ]
 
   deps = [
-    "//components/prefs",
-    "//net",
     "//services/network/public/cpp",
     "//services/network/public/mojom",
-    "//url",
   ]
 }
 

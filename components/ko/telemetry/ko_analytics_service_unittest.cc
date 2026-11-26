@@ -34,7 +34,7 @@ constexpr char kEndpoint[] = "https://posthog.example.com/batch/";
 constexpr char kKey[] = "phc_exampleKey123";
 
 CommonProperties Common() {
-  return {.app_version = "1.100.58", .channel = "release", .os = "linux"};
+  return CommonProperties("1.100.58", "release", "linux");
 }
 
 }  // namespace

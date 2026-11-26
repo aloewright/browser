@@ -35,6 +35,7 @@ foreach(_url,
           ko_posthog_host,
         ]) {
   if (_url != "") {
+    _parts = []  # GN refuses to overwrite a nonempty list.
     _parts = string_split(_url, "://")
     assert(_parts[0] == "https", "K-O telemetry URLs must start with https://")
   }

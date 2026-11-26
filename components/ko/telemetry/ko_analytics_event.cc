@@ -67,6 +67,20 @@ bool IsDigits(std::string_view s) {
 
 }  // namespace
 
+CommonProperties::CommonProperties() = default;
+CommonProperties::CommonProperties(std::string app_version,
+                                   std::string channel,
+                                   std::string os)
+    : app_version(std::move(app_version)),
+      channel(std::move(channel)),
+      os(std::move(os)) {}
+CommonProperties::CommonProperties(const CommonProperties&) = default;
+CommonProperties::CommonProperties(CommonProperties&&) = default;
+CommonProperties& CommonProperties::operator=(const CommonProperties&) =
+    default;
+CommonProperties& CommonProperties::operator=(CommonProperties&&) = default;
+CommonProperties::~CommonProperties() = default;
+
 std::string_view FeatureToString(Feature feature) {
   switch (feature) {
     case Feature::kWorkspace:
