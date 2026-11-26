@@ -66,7 +66,9 @@ does not generate secrets; those come from Doppler.
 `compose.ko.yml` overrides the upstream files:
 
 - Caddy is pinned. Upstream's `0.0.0.0:80/443` ports are replaced with
-  `${KO_BIND_IP}:8010` over plain HTTP (`auto_https off`).
+  `${KO_BIND_IP}:8010` over plain HTTP. The Caddyfile is built at compose
+  time, so `CADDY_HOST=http://:80` and `CADDY_TLS_BLOCK=auto_https off` live
+  in `versions.env` (upstream's `deploy-hobby` writes them to `.env`).
 - `OPT_OUT_CAPTURE=true`, so the instance sends no telemetry to PostHog.
 - ClickHouse gets a `backups` disk.
 
