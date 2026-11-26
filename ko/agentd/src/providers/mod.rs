@@ -206,24 +206,58 @@ pub fn list_models(cfg: &Config) -> Vec<ModelInfo> {
     out
 }
 
-/// Resolves an id to a configured, enabled model.
+/// "claude-code/default" and "codex/default" mean the first model configured
+/// for that provider. The browser sends the former before it has listed
+/// models. A configured model literally named "default" wins. Not listed.
+pub const DEFAULT_ALIAS: &str = "default";
+
+fn is_default_alias(r: &ModelRef) -> bool {
+    matches!(r, ModelRef::ClaudeCode { model } | ModelRef::Codex { model } if model == DEFAULT_ALIAS)
+}
+
+/// First model of an enabled CLI provider, for a "<provider>/default" alias.
+fn alias_target(cfg: &Config, r: &ModelRef) -> Option<ModelRef> {
+    let p = &cfg.providers;
+    match r {
+        ModelRef::ClaudeCode { .. } => {
+            let c = p.claude_code.as_ref().filter(|c| c.enabled)?;
+            let model = c.models.first()?.clone();
+            Some(ModelRef::ClaudeCode { model })
+        }
+        ModelRef::Codex { .. } => {
+            let c = p.codex.as_ref().filter(|c| c.enabled)?;
+            let model = c.models.first()?.clone();
+            Some(ModelRef::Codex { model })
+        }
+        _ => None,
+    }
+}
+
+/// Resolves an id (or a "<cli-provider>/default" alias) to a configured,
+/// enabled model.
 pub fn resolve(cfg: &Arc<Config>, id: &str) -> Result<ModelRef, ApiError> {
+    let not_found =
+        |m: String| ApiError::new(axum::http::StatusCode::NOT_FOUND, "model_not_found", m);
     let r = ModelRef::parse(id).ok_or_else(|| {
-        ApiError::new(
-            axum::http::StatusCode::NOT_FOUND,
-            "model_not_found",
-            format!("unknown model {:?}", crate::util::truncate(id, 200)),
-        )
+        not_found(format!(
+            "unknown model {:?}",
+            crate::util::truncate(id, 200)
+        ))
     })?;
     if list_models(cfg).iter().any(|m| m.id == r.id()) {
-        Ok(r)
-    } else {
-        Err(ApiError::new(
-            axum::http::StatusCode::NOT_FOUND,
-            "model_not_found",
-            format!("model {:?} is not configured", r.id()),
-        ))
+        return Ok(r);
     }
+    if is_default_alias(&r) {
+        let p = r.provider();
+        return alias_target(cfg, &r).ok_or_else(|| {
+            not_found(format!(
+                "model {:?} needs the {p} provider, which is not configured or is \
+                 disabled ([providers.{p}] in agentd.toml)",
+                r.id()
+            ))
+        });
+    }
+    Err(not_found(format!("model {:?} is not configured", r.id())))
 }
 
 /// A running generation. Keeps the private run dir alive until dropped.
@@ -398,6 +432,48 @@ models = ["gpt-5-codex"]
 [providers.nanogpt]
 models = ["chatgpt-4o-latest"]
 "#;
+
+    #[test]
+    fn default_alias_resolves_to_first_cli_model() {
+        let cfg = Arc::new(Config::from_toml(ALL).unwrap());
+        let r = resolve(&cfg, "claude-code/default").unwrap();
+        assert_eq!(r.id(), "claude-code/opus");
+        assert_eq!(
+            resolve(&cfg, "codex/default").unwrap().id(),
+            "codex/gpt-5-codex"
+        );
+        // HTTP providers have no alias; "default" could be an upstream id.
+        assert!(resolve(&cfg, "nanogpt/default").is_err());
+        // Never listed.
+        assert!(
+            list_models(&cfg)
+                .iter()
+                .all(|m| !m.id.ends_with("/default"))
+        );
+
+        // A configured model named "default" is used as is.
+        let lit = Arc::new(
+            Config::from_toml("[providers.claude-code]\nmodels=[\"sonnet\", \"default\"]").unwrap(),
+        );
+        assert_eq!(
+            resolve(&lit, "claude-code/default").unwrap().id(),
+            "claude-code/default"
+        );
+    }
+
+    #[test]
+    fn default_alias_names_the_missing_provider() {
+        for toml in [
+            "[providers.nanogpt]\nmodels=[\"x\"]",
+            "[providers.claude-code]\nenabled=false\nmodels=[\"sonnet\"]",
+        ] {
+            let cfg = Arc::new(Config::from_toml(toml).unwrap());
+            let e = resolve(&cfg, "claude-code/default").unwrap_err();
+            assert_eq!(e.status, axum::http::StatusCode::NOT_FOUND);
+            assert_eq!(e.kind, "model_not_found");
+            assert!(e.message.contains("claude-code provider"), "{}", e.message);
+        }
+    }
 
     #[test]
     fn model_info_defaults() {

@@ -92,8 +92,9 @@ switch `--ko-agentd-port=<port>` to match agentd's own override.
   `127.0.0.1:<port>`.
 - Redirects are never followed (requests fail instead), so the token never
   leaves 127.0.0.1.
-- Please accept `claude-code/default` as an alias for the default Claude Code
-  model; it is only used before the first `/v1/models` answer.
+- agentd resolves `claude-code/default` to its first configured Claude Code
+  model; it is only used before the first `/v1/models` answer. Without
+  Claude Code configured it answers 404 `model_not_found`.
 - Another local user could bind the port while agentd is down and receive
   the token and prompts. On a single-user Mac that user can't read the token
   file anyway; if that matters, keep agentd running (launchd).

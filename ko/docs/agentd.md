@@ -163,6 +163,15 @@ The daemon refuses to start on a `model_info` key that is not in `models`,
 an unknown field, a value out of range, or `tools`/`vision = true` on
 `claude-code` or `codex`.
 
+**Default aliases.** `claude-code/default` resolves to the first
+`claude-code` model and `codex/default` to the first `codex` model, wherever
+a model id is accepted (chat, runs, workspace `default_model`). The browser
+sends `claude-code/default` before it has listed models. A model actually
+named `default` in `models` takes precedence. The aliases are not listed in
+`/v1/models`. If the provider is not configured or is disabled, the request
+fails with 404 `model_not_found` and a message naming the provider. HTTP
+providers have no alias, since `default` could be a real upstream model.
+
 `POST /v1/chat/completions` follows the OpenAI API. With `stream: true` it
 answers with SSE `data:` chunks and a final `data: [DONE]`.
 
