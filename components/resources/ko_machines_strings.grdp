@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grit-part>
+  <!-- chrome://ko-machines list -->
+  <message name="IDS_KO_MACHINES_TITLE" desc="Title of the page that lists the user's machines" formatter_data="webui=KOMachines">
+    Machines
+  </message>
+  <message name="IDS_KO_MACHINES_DESCRIPTION" desc="Explains what the machines page does" formatter_data="webui=KOMachines">
+    Open the desktops of your machines in a tab. Connections only go to addresses in your allowed networks.
+  </message>
+  <message name="IDS_KO_MACHINES_ADD" desc="Button that opens the form to add a machine" formatter_data="webui=KOMachines">
+    Add machine
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT" desc="Button that reads machines.json from the K-O data folder" formatter_data="webui=KOMachines">
+    Import machines.json
+  </message>
+  <message name="IDS_KO_MACHINES_EMPTY" desc="Shown when no machines have been added" formatter_data="webui=KOMachines">
+    No machines yet. Add one, or put a machines.json file in the K-O data folder and import it.
+  </message>
+  <message name="IDS_KO_MACHINES_OPEN_DESKTOP" desc="Button that opens a machine's remote desktop in a new tab" formatter_data="webui=KOMachines">
+    Open desktop
+  </message>
+  <message name="IDS_KO_MACHINES_EDIT" desc="Button that edits a machine" formatter_data="webui=KOMachines">
+    Edit
+  </message>
+  <message name="IDS_KO_MACHINES_REMOVE" desc="Button that removes a machine" formatter_data="webui=KOMachines">
+    Remove
+  </message>
+  <message name="IDS_KO_MACHINES_PASSWORD_SAVED" desc="Label shown on a machine whose password is saved" formatter_data="webui=KOMachines">
+    Password saved
+  </message>
+  <message name="IDS_KO_MACHINES_KIND_SCREEN_SHARING" desc="Machine type: the macOS Screen Sharing service" formatter_data="webui=KOMachines">
+    macOS Screen Sharing
+  </message>
+  <message name="IDS_KO_MACHINES_KIND_VNC" desc="Machine type: a generic VNC server" formatter_data="webui=KOMachines">
+    VNC
+  </message>
+  <message name="IDS_KO_MACHINES_ALLOWED_NETWORKS" desc="Heading for the list of networks desktops may be opened in" formatter_data="webui=KOMachines">
+    Allowed networks
+  </message>
+  <message name="IDS_KO_MACHINES_ALLOWED_NETWORKS_HELP" desc="Explains the allowed networks and how to change them" formatter_data="webui=KOMachines">
+    Desktops can only be opened at these addresses. To change them, edit allowed_cidrs in machines.json and import it.
+  </message>
+  <message name="IDS_KO_MACHINES_IGNORED_NETWORKS" desc="Lists configured networks that are ignored because they are not private" formatter_data="webui=KOMachines">
+    Ignored because they are not private networks: <ph name="NETWORKS">$1<ex>0.0.0.0/0</ex></ph>
+  </message>
+  <message name="IDS_KO_MACHINES_NO_ALLOWED_NETWORKS" desc="Shown when no allowed network is set" formatter_data="webui=KOMachines">
+    No allowed networks are set, so no desktop can be opened.
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT_DONE" desc="Result of importing machines.json" formatter_data="webui=KOMachines">
+    Import finished. New machines: <ph name="COUNT">$1<ex>2</ex></ph>
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT_NETWORKS_UPDATED" desc="Shown after an import changed the allowed networks" formatter_data="webui=KOMachines">
+    The allowed networks were updated from the file.
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT_NOT_FOUND" desc="Import error: the file does not exist" formatter_data="webui=KOMachines">
+    machines.json was not found in the K-O data folder.
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT_INSECURE" desc="Import error: other users can change the file" formatter_data="webui=KOMachines">
+    machines.json was not imported because other users can change it. Make it writable only by you, for example with chmod 600.
+  </message>
+  <message name="IDS_KO_MACHINES_IMPORT_INVALID" desc="Import error: the file is not valid" formatter_data="webui=KOMachines">
+    machines.json could not be read. Check that it is valid JSON.
+  </message>
+
+  <!-- Add / edit / remove -->
+  <message name="IDS_KO_MACHINES_ADD_TITLE" desc="Title of the form that adds a machine" formatter_data="webui=KOMachines">
+    Add machine
+  </message>
+  <message name="IDS_KO_MACHINES_EDIT_TITLE" desc="Title of the form that edits a machine" formatter_data="webui=KOMachines">
+    Edit machine
+  </message>
+  <message name="IDS_KO_MACHINES_NAME_LABEL" desc="Label of the machine name field" formatter_data="webui=KOMachines">
+    Name
+  </message>
+  <message name="IDS_KO_MACHINES_HOST_LABEL" desc="Label of the machine host field" formatter_data="webui=KOMachines">
+    Host
+  </message>
+  <message name="IDS_KO_MACHINES_HOST_HELP" desc="Help for the machine host field" formatter_data="webui=KOMachines">
+    NetBird name or IP address, for example 100.64.0.10
+  </message>
+  <message name="IDS_KO_MACHINES_PORT_LABEL" desc="Label of the machine port field" formatter_data="webui=KOMachines">
+    Port
+  </message>
+  <message name="IDS_KO_MACHINES_KIND_LABEL" desc="Label of the machine type field" formatter_data="webui=KOMachines">
+    Type
+  </message>
+  <message name="IDS_KO_MACHINES_USERNAME_LABEL" desc="Label of the macOS account name field" formatter_data="webui=KOMachines">
+    macOS account name
+  </message>
+  <message name="IDS_KO_MACHINES_USERNAME_HELP" desc="Help for the macOS account name field" formatter_data="webui=KOMachines">
+    Leave empty if the Mac uses a VNC password.
+  </message>
+  <message name="IDS_KO_MACHINES_PASSWORD_LABEL" desc="Label of the password field" formatter_data="webui=KOMachines">
+    Password
+  </message>
+  <message name="IDS_KO_MACHINES_PASSWORD_HELP" desc="Help for the password field" formatter_data="webui=KOMachines">
+    Optional. Saved encrypted on this device. Leave empty to be asked when you connect.
+  </message>
+  <message name="IDS_KO_MACHINES_PASSWORD_KEEP_HELP" desc="Help for the password field when a password is already saved" formatter_data="webui=KOMachines">
+    Leave empty to keep the saved password.
+  </message>
+  <message name="IDS_KO_MACHINES_FORGET_PASSWORD" desc="Button that deletes a saved password" formatter_data="webui=KOMachines">
+    Forget saved password
+  </message>
+  <message name="IDS_KO_MACHINES_SAVE" desc="Button that saves a machine" formatter_data="webui=KOMachines">
+    Save
+  </message>
+  <message name="IDS_KO_MACHINES_CANCEL" desc="Button that closes a form without saving" formatter_data="webui=KOMachines">
+    Cancel
+  </message>
+  <message name="IDS_KO_MACHINES_REMOVE_TITLE" desc="Title of the dialog that confirms removing a machine" formatter_data="webui=KOMachines">
+    Remove <ph name="NAME">$1<ex>Studio Mac</ex></ph>?
+  </message>
+  <message name="IDS_KO_MACHINES_REMOVE_BODY" desc="Body of the dialog that confirms removing a machine" formatter_data="webui=KOMachines">
+    The machine and its saved password are deleted from this device.
+  </message>
+  <message name="IDS_KO_MACHINES_REMOVE_CONFIRM" desc="Button that removes the machine" formatter_data="webui=KOMachines">
+    Remove machine
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_NAME" desc="Form error: missing or invalid name" formatter_data="webui=KOMachines">
+    Enter a name.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_HOST" desc="Form error: invalid host" formatter_data="webui=KOMachines">
+    Enter a host name or IP address without a port or scheme.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_PORT" desc="Form error: invalid port" formatter_data="webui=KOMachines">
+    Enter a port from 1 to 65535.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_DUPLICATE" desc="Form error: same host and port as another machine" formatter_data="webui=KOMachines">
+    A machine with this host and port already exists.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_TOO_MANY" desc="Form error: machine limit reached" formatter_data="webui=KOMachines">
+    You can add up to 64 machines.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_CREDENTIALS" desc="Form error: the password is too long" formatter_data="webui=KOMachines">
+    The name or password is too long.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_ENCRYPTION" desc="Error: the password could not be encrypted" formatter_data="webui=KOMachines">
+    The password was not saved because encryption is unavailable on this device. Nothing was stored.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_NOT_FOUND" desc="Error: the machine was removed" formatter_data="webui=KOMachines">
+    This machine no longer exists.
+  </message>
+
+  <!-- Viewer -->
+  <message name="IDS_KO_MACHINES_BACK" desc="Link back to the list of machines" formatter_data="webui=KOMachines">
+    All machines
+  </message>
+  <message name="IDS_KO_MACHINES_CONNECTING" desc="Connection status: connecting" formatter_data="webui=KOMachines">
+    Connecting
+  </message>
+  <message name="IDS_KO_MACHINES_CONNECTED" desc="Connection status: connected" formatter_data="webui=KOMachines">
+    Connected
+  </message>
+  <message name="IDS_KO_MACHINES_DISCONNECTED" desc="Connection status: disconnected" formatter_data="webui=KOMachines">
+    Disconnected
+  </message>
+  <message name="IDS_KO_MACHINES_RECONNECT" desc="Button that connects again" formatter_data="webui=KOMachines">
+    Reconnect
+  </message>
+  <message name="IDS_KO_MACHINES_DISCONNECT" desc="Button that ends the remote desktop session" formatter_data="webui=KOMachines">
+    Disconnect
+  </message>
+  <message name="IDS_KO_MACHINES_VIEW_ONLY" desc="Toggle: watch the desktop without sending keyboard or mouse input" formatter_data="webui=KOMachines">
+    View only
+  </message>
+  <message name="IDS_KO_MACHINES_SCALE" desc="Toggle: scale the remote desktop to fit the window" formatter_data="webui=KOMachines">
+    Scale to window
+  </message>
+  <message name="IDS_KO_MACHINES_CLIPBOARD" desc="Toggle: share clipboard text with the remote machine. Off by default." formatter_data="webui=KOMachines">
+    Share clipboard
+  </message>
+  <message name="IDS_KO_MACHINES_SEND_CLIPBOARD" desc="Button that sends the local clipboard text to the remote machine" formatter_data="webui=KOMachines">
+    Send clipboard
+  </message>
+  <message name="IDS_KO_MACHINES_FULL_SCREEN" desc="Button that shows the remote desktop full screen" formatter_data="webui=KOMachines">
+    Full screen
+  </message>
+  <message name="IDS_KO_MACHINES_CREDENTIALS_TITLE" desc="Title of the sign-in dialog for a machine" formatter_data="webui=KOMachines">
+    Sign in to <ph name="NAME">$1<ex>Studio Mac</ex></ph>
+  </message>
+  <message name="IDS_KO_MACHINES_CREDENTIALS_BODY_ARD" desc="Explains which credentials macOS Screen Sharing needs" formatter_data="webui=KOMachines">
+    Enter the name and password of an account on this Mac.
+  </message>
+  <message name="IDS_KO_MACHINES_CREDENTIALS_BODY_VNC" desc="Explains which credentials a VNC server needs" formatter_data="webui=KOMachines">
+    Enter the VNC password.
+  </message>
+  <message name="IDS_KO_MACHINES_REMEMBER" desc="Toggle: save the password, encrypted, for next time" formatter_data="webui=KOMachines">
+    Save the password on this device, encrypted
+  </message>
+  <message name="IDS_KO_MACHINES_SIGN_IN" desc="Button that sends the credentials" formatter_data="webui=KOMachines">
+    Sign in
+  </message>
+  <message name="IDS_KO_MACHINES_AUTH_FAILED" desc="Error: the remote machine rejected the credentials" formatter_data="webui=KOMachines">
+    Sign-in failed. Check the name and password.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_UNKNOWN_MACHINE" desc="Error: the link names a machine that is not in the list" formatter_data="webui=KOMachines">
+    This machine is not in your list.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_NOT_ALLOWED" desc="Error: the machine's address is outside the allowed networks" formatter_data="webui=KOMachines">
+    The connection to <ph name="HOST">$1<ex>100.64.0.10</ex></ph> was blocked because the address is not in your allowed networks.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_NO_ALLOWLIST" desc="Error: no allowed networks are set" formatter_data="webui=KOMachines">
+    The connection was blocked because no allowed networks are set.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_RESOLVE" desc="Error: the machine's host name could not be resolved" formatter_data="webui=KOMachines">
+    <ph name="HOST">$1<ex>studio.netbird.example</ex></ph> could not be found. Check that NetBird is connected.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_CONNECT" desc="Error: the TCP connection failed" formatter_data="webui=KOMachines">
+    Could not connect to <ph name="HOST">$1<ex>100.64.0.10</ex></ph>. Check that Screen Sharing is on and NetBird is connected.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_TOO_MANY_CONNECTIONS" desc="Error: too many desktops are open from this page" formatter_data="webui=KOMachines">
+    Too many desktops are open in this tab. Close one and try again.
+  </message>
+  <message name="IDS_KO_MACHINES_ERROR_SERVER_VERIFICATION" desc="Error: the server uses an identity check that is not supported" formatter_data="webui=KOMachines">
+    This server asks to verify its identity, which is not supported yet. The connection was closed.
+  </message>
+  <message name="IDS_KO_MACHINES_CLIPBOARD_DENIED" desc="Error: the local clipboard could not be read" formatter_data="webui=KOMachines">
+    The clipboard could not be read.
+  </message>
+  <message name="IDS_KO_MACHINES_INVALID_LINK" desc="Error: the viewer link does not name a machine" formatter_data="webui=KOMachines">
+    This link does not name a machine.
+  </message>
+</grit-part>

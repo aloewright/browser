@@ -1,0 +1,101 @@
+// Copyright (c) 2026 The Brave Authors. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this file,
+// You can obtain one at https://mozilla.org/MPL/2.0/.
+
+// chrome://ko-machines. Bound only through that WebUI's interface broker.
+module ko_machines.mojom;
+
+enum MachineKind {
+  kScreenSharing,
+  kVnc,
+};
+
+struct Machine {
+  string id;
+  string name;
+  string host;
+  uint16 port;
+  MachineKind kind;
+  bool has_credentials;
+};
+
+struct MachineInput {
+  string name;
+  string host;
+  uint16 port;
+  MachineKind kind;
+};
+
+enum MachineError {
+  kNone,
+  kInvalidName,
+  kInvalidHost,
+  kInvalidPort,
+  kDuplicate,
+  kTooMany,
+  kNotFound,
+  kInvalidCredentials,
+  kEncryptionUnavailable,
+};
+
+enum ImportStatus {
+  kImported,
+  kNotFound,
+  kInsecureFile,
+  kInvalidFile,
+};
+
+enum ConnectResult {
+  kOk,
+  kUnknownMachine,
+  kNoAllowlist,
+  kResolveFailed,
+  kNotAllowed,
+  kConnectFailed,
+  kTooManyConnections,
+};
+
+interface MachinesPage {
+  // The machine list, credentials or allowlist changed.
+  OnMachinesChanged();
+};
+
+interface MachinesHandler {
+  SetPage(pending_remote<MachinesPage> page);
+
+  // `allowed_cidrs` are the usable allowlist entries; `rejected_cidrs` are
+  // configured entries that are ignored (malformed or public).
+  GetMachines() => (array<Machine> machines,
+                    array<string> allowed_cidrs,
+                    array<string> rejected_cidrs);
+  AddMachine(MachineInput input) => (MachineError error, string? id);
+  // Changing the host forgets the saved credentials.
+  UpdateMachine(string id, MachineInput input) => (MachineError error);
+  RemoveMachine(string id) => (bool removed);
+
+  // Stored OSCrypt-encrypted. `username` is for Apple Remote Desktop auth.
+  SetCredentials(string id, string? username, string password)
+      => (MachineError error);
+  ClearCredentials(string id) => ();
+  // For the viewer, when the server asks for credentials.
+  GetCredentials(string id) => (string? username, string? password);
+
+  // Re-reads machines.json from the K-O data dir: adds machines that are not
+  // present yet and replaces the allowlist if the file has one.
+  ImportFromFile() => (ImportStatus status, uint32 added,
+                       bool allowlist_updated);
+};
+
+// Held by the page for the life of a connection. Closing it closes the
+// TCP socket.
+interface MachineConnection {};
+
+interface KOMachineBridge {
+  // Resolves the machine's host and opens a TCP connection to it, but only to
+  // addresses inside the allowlist. The streams carry raw RFB bytes.
+  Connect(string machine_id, pending_receiver<MachineConnection> connection)
+      => (ConnectResult result,
+          handle<data_pipe_consumer>? receive_stream,
+          handle<data_pipe_producer>? send_stream);
+};

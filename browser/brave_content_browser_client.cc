@@ -357,6 +357,11 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #include "brave/components/brave_origin/mojom/brave_origin_startup.mojom.h"
 #endif
 
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_machines/ko_machines_ui.h"
+#include "brave/components/ko/machines/common/ko_machines.mojom.h"
+#endif
+
 #if BUILDFLAG(IS_WIN)
 #include "brave/components/windows_recall/windows_recall.h"
 #endif
@@ -744,6 +749,13 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
 #if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   registry.ForWebUI<BraveOriginStartupUI>()
       .Add<brave_origin::mojom::BraveOriginStartupHandler>();
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  // Only chrome://ko-machines may open machine sockets.
+  registry.ForWebUI<KOMachinesUI>()
+      .Add<ko_machines::mojom::MachinesHandler>()
+      .Add<ko_machines::mojom::KOMachineBridge>();
 #endif
 
 #if BUILDFLAG(ENABLE_AI_CHAT)

@@ -237,6 +237,7 @@ brave_grit("strings") {
     "enable_tor=$enable_tor",
     "enable_brave_vpn=$enable_brave_vpn",
     "enable_psst=$enable_psst",
+    "is_ko=$is_ko",
   ]
 
   if (translate_genders) {

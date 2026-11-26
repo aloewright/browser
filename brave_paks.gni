@@ -82,6 +82,9 @@ template("brave_extra_paks") {
       if (enable_brave_education) {
         sources += [ "$root_gen_dir/brave/brave_education_resources.pak" ]
       }
+      if (is_ko) {
+        sources += [ "$root_gen_dir/brave/components/ko/machines/resources/ko_machines_all.pak" ]
+      }
     }
 
     deps = [ "//brave/components/resources" ]
@@ -97,6 +100,9 @@ template("brave_extra_paks") {
       ]
       if (enable_brave_education) {
         deps += [ "//brave/browser/resources/brave_education:resources_grit" ]
+      }
+      if (is_ko) {
+        deps += [ "//brave/components/ko/machines/resources:ko_machines" ]
       }
     }
 

@@ -1,0 +1,35 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+assert(is_ko && !is_android)
+
+source_set("ko_machines") {
+  sources = [
+    "ko_machines_ui.cc",
+    "ko_machines_ui.h",
+  ]
+
+  public_deps = [
+    "//brave/components/ko/machines/common:mojom",
+    "//content/public/browser",
+    "//content/public/common",
+    "//mojo/public/cpp/bindings",
+    "//ui/webui",
+  ]
+
+  deps = [
+    "//base",
+    "//brave/components/ko/machines/browser",
+    "//brave/components/ko/machines/core",
+    "//brave/components/ko/machines/resources:pack_js_resources",
+    "//brave/components/ko/machines/resources:pack_static_resources",
+    "//brave/components/resources:strings_grit",
+    "//chrome/browser:browser_process",
+    "//chrome/browser/profiles:profile",
+    "//services/network/public/mojom",
+  ]
+}

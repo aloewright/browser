@@ -1,0 +1,54 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+assert(is_ko)
+
+static_library("core") {
+  sources = [
+    "address_allowlist.cc",
+    "address_allowlist.h",
+    "machine.cc",
+    "machine.h",
+    "machines_config.cc",
+    "machines_config.h",
+    "pref_names.h",
+    "prefs.cc",
+    "prefs.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//net",
+  ]
+
+  deps = [
+    "//components/prefs",
+    "//url",
+  ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [
+    "address_allowlist_unittest.cc",
+    "machine_unittest.cc",
+    "machines_config_unittest.cc",
+    "prefs_unittest.cc",
+  ]
+
+  deps = [
+    ":core",
+    "//base",
+    "//base/test:test_support",
+    "//build:buildflag_header_h",
+    "//components/prefs",
+    "//components/prefs:test_support",
+    "//net",
+    "//testing/gtest",
+  ]
+}

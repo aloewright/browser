@@ -265,6 +265,15 @@
     "META": {"sizes": {"includes": [10]}},
     "includes": [54190],
   },
+  # K-O machines (chrome://ko-machines). Generated during the build.
+  "<(SHARED_INTERMEDIATE_DIR)/brave/components/ko/machines/resources/ko_machines_static_resources.grd": {
+    "META": {"sizes": {"includes": [5]}},
+    "includes": [54400],
+  },
+  "<(SHARED_INTERMEDIATE_DIR)/brave/web-ui-ko_machines/ko_machines.grd": {
+    "META": {"sizes": {"includes": [40]}},
+    "includes": [54410],
+  },
   # K-O embedded filter lists (brave/ko/shields/update_lists.py).
   "brave/ko/shields/ko_shields_resources.grd": {
     "includes": [54700],

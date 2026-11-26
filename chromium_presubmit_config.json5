@@ -75,6 +75,7 @@
     "ios/third_party/",
     "third_party/boringtun/vendor/",
     "third_party/wasm/vendor/",
+    "third_party/novnc/",
   ],
 
   // Regex to match function names in the current presubmit stack trace. Matched

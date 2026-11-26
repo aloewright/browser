@@ -45,6 +45,7 @@
 #include "brave/components/email_aliases/buildflags/buildflags.h"
 #include "brave/components/global_privacy_control/pref_names.h"
 #include "brave/components/ipfs/ipfs_prefs.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/view_counter_service.h"
 #include "brave/components/ntp_background_images/buildflags/buildflags.h"
@@ -168,6 +169,10 @@ using extensions::FeatureSwitch;
 
 #if BUILDFLAG(ENABLE_PSST)
 #include "brave/components/psst/core/browser/pref_names.h"
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/components/ko/machines/core/prefs.h"
 #endif
 
 #if BUILDFLAG(ENABLE_BRAVE_WALLET)
@@ -525,6 +530,10 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
 
 #if BUILDFLAG(ENABLE_PSST)
   psst::RegisterProfilePrefs(registry);
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  ko_machines::RegisterProfilePrefs(registry);
 #endif
 
   // Brave Search
