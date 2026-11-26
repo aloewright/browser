@@ -869,6 +869,9 @@ TEST_F(BravePrefProviderTest, KoLockedShieldsDefaults) {
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(CONTENT_SETTING_DEFAULT,
             get(ContentSettingsType::BRAVE_HTTPS_UPGRADE));
+  // Also gone from the pref, so sync does not carry it back.
+  update.Refresh();
+  EXPECT_TRUE(update.GetSettingDirectly("*", "*").is_none());
   provider.ShutdownOnUIThread();
 }
 
