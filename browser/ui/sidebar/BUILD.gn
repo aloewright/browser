@@ -8,7 +8,6 @@ import("//brave/components/brave_news/common/buildflags/buildflags.gni")
 import("//brave/components/brave_origin/buildflags/buildflags.gni")
 import("//brave/components/brave_talk/buildflags/buildflags.gni")
 import("//brave/components/brave_wallet/common/buildflags/buildflags.gni")
-import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
 import("//brave/components/tor/buildflags/buildflags.gni")
 import("//build/config/ui.gni")
@@ -92,14 +91,12 @@ source_set("sidebar_impl") {
     "//ui/base",
   ]
 
-  # The buildflag header is included unconditionally.
-  deps += [ "//brave/components/ko/buildflags" ]
-  if (is_ko) {
-    deps += [
-      "//brave/components/resources:strings_grit",
-      "//url",
-    ]
-  }
+  # Unconditional: gn check sees includes inside #if BUILDFLAG(IS_KO) too.
+  deps += [
+    "//brave/components/ko/buildflags",
+    "//brave/components/resources:strings_grit",
+    "//url",
+  ]
 
   if (enable_ai_chat) {
     deps += [ "//brave/components/ai_chat/core/browser" ]
