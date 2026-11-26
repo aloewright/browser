@@ -194,12 +194,16 @@ def mono_svg():
 
 def dmg_background_svg():
     """602x320 Finder window backdrop; icons sit at (150,155) and (430,150)."""
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="602" height="320" viewBox="0 0 602 320">
-  <rect width="602" height="320" fill="#ECEDF0"/>
-  <rect x="24" y="24" width="554" height="272" rx="10" fill="#FFFFFF" stroke="#DADCE0"/>
-  <path d="M270 153 H310 M294 137 L310 153 L294 169" fill="none" stroke="#5F6368" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-'''
+    return '\n'.join([
+        '<svg xmlns="http://www.w3.org/2000/svg" width="602" height="320" '
+        'viewBox="0 0 602 320">',
+        '  <rect width="602" height="320" fill="#ECEDF0"/>',
+        '  <rect x="24" y="24" width="554" height="272" rx="10" '
+        'fill="#FFFFFF" stroke="#DADCE0"/>',
+        '  <path d="M270 153 H310 M294 137 L310 153 L294 169" fill="none" '
+        'stroke="#5F6368" stroke-width="3.5" stroke-linecap="round" '
+        'stroke-linejoin="round"/>', '</svg>', ''
+    ])
 
 
 def vector_icon(compact):
