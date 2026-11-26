@@ -6,6 +6,8 @@
 import("//brave/build/config.gni")
 import("//brave/components/ai_chat/core/common/buildflags/buildflags.gni")
 import("//brave/components/brave_vpn/common/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
+import("//brave/components/ko/bundled_extensions/bundled_extensions.gni")
 import("//brave/tools/crates/build_crate.gni")
 import("//build/config/locales.gni")
 import("//build/config/zip.gni")
@@ -364,6 +366,9 @@ if (is_android) {
 if (is_mac) {
   group("framework_bundle_data") {
     deps = [ "components/brave_extension/extension/brave_extension:brave_extension_framework_bundle_data" ]
+    if (is_ko && ko_bundled_extension_dirs != []) {
+      deps += [ "//brave/components/ko/bundled_extensions:framework_bundle_data" ]
+    }
   }
 
   if (enable_brave_vpn_v2_bundling) {
@@ -383,6 +388,9 @@ group("unpacked_resources") {
       deps = [
         "//brave/components/brave_extension/extension/brave_extension:locales",
       ]
+    }
+    if (is_ko && ko_bundled_extension_dirs != []) {
+      deps += [ "//brave/components/ko/bundled_extensions:unpacked_resources" ]
     }
   }
 }

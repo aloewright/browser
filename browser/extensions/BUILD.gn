@@ -12,6 +12,7 @@ import("//brave/components/brave_wallet/common/buildflags/buildflags.gni")
 import("//brave/components/brave_wayback_machine/buildflags/buildflags.gni")
 import("//brave/components/containers/buildflags/buildflags.gni")
 import("//brave/components/email_aliases/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
 import("//brave/components/psst/buildflags/buildflags.gni")
@@ -37,6 +38,8 @@ if (enable_extensions) {
       "brave_component_loader.h",
     ]
 
+    public_deps = [ "//brave/components/ko/buildflags" ]
+
     deps = [
       "//base",
       "//brave/components/brave_extension:static_resources",
@@ -50,6 +53,10 @@ if (enable_extensions) {
 
     if (enable_web_discovery_native) {
       deps += [ "//brave/components/web_discovery/common" ]
+    }
+
+    if (is_ko) {
+      deps += [ "//brave/components/ko/bundled_extensions" ]
     }
   }
 
