@@ -66,7 +66,10 @@ constexpr char kImageScript[] = R"(
 )";
 
 constexpr int kExpectedImageDataHashFarblingBalanced = 208;
+#if !defined(KO_SHIELDS_STRICT_BUILD)
+// Strict K-O builds can't turn farbling off.
 constexpr int kExpectedImageDataHashFarblingOff = 0;
+#endif
 
 constexpr char kEmptyCookie[] = "";
 
