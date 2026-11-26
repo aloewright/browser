@@ -3,11 +3,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import("//brave/components/ko/buildflags/buildflags.gni")
+
 source_set("browser_tests") {
   testonly = true
   defines = [ "HAS_OUT_OF_PROC_TEST_RUNNER" ]
 
-  sources = [ "js_skus_api_browsertest.cc" ]
+  # K-O compiles the SKU service out, so the JS API has nothing to call.
+  sources = []
+  if (!is_ko) {
+    sources += [ "js_skus_api_browsertest.cc" ]
+  }
 
   deps = [
     "//base/test:test_support",

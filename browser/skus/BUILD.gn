@@ -11,6 +11,7 @@ static_library("skus") {
 
   deps = [
     "//base",
+    "//brave/components/ko/buildflags",
     "//brave/components/skus/browser",
     "//brave/components/skus/common",
     "//brave/components/skus/common:mojom",

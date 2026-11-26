@@ -18,6 +18,7 @@
 #include "brave/components/brave_origin/brave_origin_utils.h"
 #include "brave/components/brave_origin/buildflags/buildflags.h"
 #include "brave/components/brave_origin/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/skus/browser/pref_names.h"
 #include "components/policy/core/common/policy_map.h"
 #include "components/policy/core/common/policy_namespace.h"
@@ -68,7 +69,7 @@ BraveOriginService::BraveOriginService(
   CHECK(profile_prefs_);
   CHECK(!profile_id_.empty());
 
-#if BUILDFLAG(IS_LINUX)
+#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_KO)
   // On Linux, treat free tier acceptance as a valid purchase so policies
   // are applied immediately at startup without waiting for the SKU check.
   if (local_state_->GetBoolean(kOriginFreeTierAccepted)) {
@@ -76,6 +77,7 @@ BraveOriginService::BraveOriginService(
   }
 #endif
 
+#if !BUILDFLAG(IS_KO)
   // Eagerly check purchase state on startup so the cached value is available.
   CheckPurchaseState(base::DoNothing());
 
@@ -86,6 +88,7 @@ BraveOriginService::BraveOriginService(
       skus::prefs::kSkusState,
       base::BindRepeating(&BraveOriginService::OnSkusStateChanged,
                           base::Unretained(this)));
+#endif  // !BUILDFLAG(IS_KO)
 
   // Record whether Origin was enforcing policies in the previous session.
   startup_was_enforcing_ =
@@ -181,6 +184,8 @@ std::optional<bool> BraveOriginService::GetPolicyValue(
 
 void BraveOriginService::CheckPurchaseState(
     base::OnceCallback<void(bool)> callback) {
+  // K-O: IsBraveOriginFeatureEnabled() is always false, so this never reaches
+  // the SKU service.
 #if BUILDFLAG(IS_BRAVE_DEBLOATED)
   // Origin is off by default here; don't wake the SKU service for it.
   if (!IsBraveOriginFeatureEnabled()) {
@@ -321,10 +326,13 @@ bool BraveOriginService::EnsureSkusConnected() {
 
 #if BUILDFLAG(IS_LINUX)
 void BraveOriginService::AcceptFreeTier() {
+  // No Origin tier in K-O; don't enable its policies.
+#if !BUILDFLAG(IS_KO)
   if (local_state_) {
     local_state_->SetBoolean(kOriginFreeTierAccepted, true);
   }
   BraveOriginPolicyManager::GetInstance()->SetPurchased(true);
+#endif  // !BUILDFLAG(IS_KO)
 }
 
 bool BraveOriginService::IsFreeTierAccepted() const {

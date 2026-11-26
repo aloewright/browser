@@ -85,6 +85,7 @@
 #include "brave/components/global_privacy_control/global_privacy_control_utils.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_throttle.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_util.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/mojom/ntp_background_images.mojom.h"
 #include "brave/components/password_strength_meter/password_strength_meter.mojom.h"
@@ -507,12 +508,17 @@ void MaybeBindBraveVpnImpl(
 void MaybeBindSkusSdkImpl(
     content::RenderFrameHost* const frame_host,
     mojo::PendingReceiver<skus::mojom::SkusService> receiver) {
+#if BUILDFLAG(IS_KO)
+  // Kept registered so a stray request can't kill the renderer, but inert:
+  // dropping the receiver disconnects the caller.
+#else
   const GURL& frame_host_url = frame_host->GetLastCommittedURL();
   if (!skus::IsSafeOrigin(frame_host_url)) {
     return;
   }
   auto* context = frame_host->GetBrowserContext();
   skus::SkusServiceFactory::BindForContext(context, std::move(receiver));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 #if !BUILDFLAG(IS_ANDROID)
@@ -753,9 +759,11 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
 #endif  // BUILDFLAG(ENABLE_BRAVE_REWARDS)
 #endif  // BUILDFLAG(ENABLE_BRAVE_ADS)
 
+#if !BUILDFLAG(IS_KO)
   if (base::FeatureList::IsEnabled(skus::features::kSkusFeature)) {
     registry.ForWebUI<SkusInternalsUI>().Add<skus::mojom::SkusInternals>();
   }
+#endif
 
 #if BUILDFLAG(ENABLE_BRAVE_REWARDS)
   registry.ForWebUI<brave_rewards::RewardsPageUI>()
