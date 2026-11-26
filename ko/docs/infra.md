@@ -117,7 +117,8 @@ telemetry host. If the proxy runs on the same host, set `KO_BIND_IP` to
 - `pg_dump -Fc` of the GlitchTip and PostHog Postgres databases
 - a ClickHouse `BACKUP DATABASE posthog` archive
 
-Dumps go straight from the container into `age`. The ClickHouse archive is
+Dumps go straight from the container into `age`; a failed dump fails the
+run (`pipefail`) and skips pruning. The ClickHouse archive is
 encrypted and its plaintext copy deleted. Backups older than
 `BACKUP_RETENTION_DAYS` (default 14) are removed. Containers are found by
 compose labels, so the script needs no Doppler access.

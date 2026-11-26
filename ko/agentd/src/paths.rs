@@ -7,6 +7,7 @@
 
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::{ErrorKind, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -81,6 +82,9 @@ impl Paths {
     pub fn workspaces_dir(&self) -> PathBuf {
         self.root.join("workspaces")
     }
+    pub fn lock_file(&self) -> PathBuf {
+        self.root.join("agentd.lock")
+    }
 
     /// Creates the data dir and its subdirs with 0700.
     pub fn ensure(&self) -> Result<()> {
@@ -113,6 +117,38 @@ impl Paths {
         }
         Ok(())
     }
+}
+
+/// Exclusive lock on `<data>/agentd.lock`, held while a daemon serves.
+pub struct DataDirLock {
+    _file: fs::File,
+}
+
+/// Fails if another daemon holds the data dir (its runs and temp dirs would
+/// otherwise be marked failed and deleted).
+pub fn lock_data_dir(paths: &Paths) -> Result<DataDirLock> {
+    let p = paths.lock_file();
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(&p)
+        .with_context(|| format!("opening {}", p.display()))?;
+    // SAFETY: flock on a valid fd owned by `file`.
+    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        let e = std::io::Error::last_os_error();
+        if e.kind() == ErrorKind::WouldBlock {
+            bail!(
+                "another ko-agentd is already running on {}",
+                paths.root().display()
+            );
+        }
+        return Err(e).with_context(|| format!("locking {}", p.display()));
+    }
+    Ok(DataDirLock { _file: file })
 }
 
 /// A 0700 dir under `<data>/tmp`, removed on drop.

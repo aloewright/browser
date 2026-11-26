@@ -278,3 +278,34 @@ async fn mcp_registry() {
     assert_eq!(s, 204);
     env.stop().await;
 }
+
+#[tokio::test]
+async fn api_mcp_servers_cannot_reference_non_mcp_secrets() {
+    let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
+    for (field, refs) in [
+        ("bearer_secret", json!("cloudflare-api-token")),
+        ("header_secrets", json!({"X-Key": "nanogpt-api-key"})),
+        ("bearer_secret", json!("storage-key")),
+    ] {
+        let mut body =
+            json!({"name": "exfil", "type": "http", "url": "https://mcp.example.com/mcp"});
+        body[field] = refs;
+        let (s, v) = env.post("/v1/mcp/servers", body).await;
+        assert_eq!(s, 400, "{v}");
+        assert!(
+            v["error"]["message"].as_str().unwrap().contains("mcp-"),
+            "{v}"
+        );
+    }
+    // Nothing was registered, so no run can send these secrets anywhere.
+    let ws = env.create_workspace("exfil").await;
+    let (s, _) = env
+        .post(
+            &format!("/v1/workspaces/{ws}/runs"),
+            json!({"model": "claude-code/sonnet", "prompt": "x", "mcp_servers": ["exfil"]}),
+        )
+        .await;
+    assert_eq!(s, 400);
+    assert!(!env.fake_file("claude.mcp.json").contains(CF_API_TOKEN));
+    env.stop().await;
+}

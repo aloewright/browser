@@ -236,3 +236,61 @@ async fn request_limits_and_errors_are_json() {
     assert_eq!(s, 413);
     env.stop().await;
 }
+
+#[tokio::test]
+async fn second_daemon_on_same_data_dir_is_refused() {
+    let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
+    let ws = env.create_workspace("lock").await;
+    let (s, run) = env
+        .post(
+            &format!("/v1/workspaces/{ws}/runs"),
+            json!({"model": "claude-code/sonnet", "prompt": "SLEEP"}),
+        )
+        .await;
+    assert_eq!(s, 202, "{run}");
+    let rid = run["id"].as_str().unwrap().to_owned();
+    let mut running = false;
+    for _ in 0..200 {
+        if env.get(&format!("/v1/runs/{rid}")).await.1["status"] == "running" {
+            running = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert!(running);
+    let tmp_entries = std::fs::read_dir(env.paths.tmp_dir()).unwrap().count();
+    let second = ko_agentd::server::start(
+        env.paths.clone(),
+        ko_agentd::server::ServeOptions {
+            port: Some(0),
+            unix_socket: Some(true),
+        },
+    )
+    .await;
+    let err = format!("{:#}", second.err().expect("second daemon must not start"));
+    assert!(err.contains("already running"), "{err}");
+    // The first daemon's state is untouched.
+    assert_eq!(
+        env.get(&format!("/v1/runs/{rid}")).await.1["status"],
+        "running"
+    );
+    assert_eq!(
+        std::fs::read_dir(env.paths.tmp_dir()).unwrap().count(),
+        tmp_entries
+    );
+    assert_eq!(env.get("/v1/models").await.0, 200);
+    let (s, _) = env
+        .send(
+            reqwest::Method::POST,
+            &format!("/v1/runs/{rid}/cancel"),
+            None,
+        )
+        .await;
+    assert_eq!(s, 202);
+    env.stop().await;
+    // The lock is released on shutdown.
+    let again = ko_agentd::server::start(env.paths.clone(), Default::default()).await;
+    let again = again.unwrap_or_else(|e| panic!("restart after shutdown: {e:#}"));
+    again.shutdown();
+    again.wait().await.unwrap();
+}

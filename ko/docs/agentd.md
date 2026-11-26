@@ -20,6 +20,7 @@ falling back to `~/.local/share/k-o`. To use another dir, pass
 | `agentd.token` | 0600 | Bearer token. Created on first run. |
 | `agentd.sock` | 0600 | Unix socket. Removed on shutdown. |
 | `agentd.port` | 0600 | Bound TCP port, written at start. |
+| `agentd.lock` | 0600 | `flock` held while serving; a second `serve` on the same dir exits. |
 | `agentd.db` | 0600 | SQLite index: workspaces, artifact metadata, runs, MCP servers added through the API. |
 | `artifacts/<ws>/<id>.bin` | 0600 | Artifact contents, AES-256-GCM. |
 | `runs/<id>.log` | 0600 | Run event log, AES-256-GCM records. |
@@ -105,7 +106,7 @@ Secret names used by default:
 | `cf-gateway-key-<provider>` | Provider key through AI Gateway (optional with BYOK) |
 | `cloudflare-api-token` | Worker deploys (Workers Scripts:Edit, account scope) |
 | `glitchtip-dsn` | Error reporting (optional) |
-| MCP `env_secrets`, `bearer_secret`, `header_secrets` | MCP servers |
+| MCP `env_secrets`, `bearer_secret`, `header_secrets` | MCP servers (`mcp-*` for servers added through the API) |
 
 ```sh
 printf '%s' "$KEY" | ko-agentd secrets set nanogpt-api-key   # or type it; input is hidden
@@ -197,7 +198,10 @@ You define servers in `[mcp.servers.<name>]`. API-added servers go in SQLite.
 `GET /v1/mcp/servers` lists both. It shows env var names, header names and
 whether each referenced secret is set, but never values. `POST
 /v1/mcp/servers` takes `{"name", "type": "http" | "stdio", …}` with secrets
-referenced by name. It refuses stdio servers unless
+referenced by name. API-added servers may only reference secrets named
+`mcp-*`, so a bearer-token holder cannot send provider keys, the Cloudflare
+token or `storage-key` to a host of its choosing; any `mcp-*` secret can
+still be pointed at any HTTPS URL this way. It refuses stdio servers unless
 `mcp.allow_api_stdio_servers = true`, because a stdio server is an arbitrary
 command. `DELETE /v1/mcp/servers/{name}` (extension) removes API-added
 servers.

@@ -254,6 +254,7 @@ fn bind_unix(path: &PathBuf) -> Result<UnixListener> {
 /// Opens state, binds listeners and starts serving in the background.
 pub async fn start(paths: Paths, opts: ServeOptions) -> Result<RunningServer> {
     paths.ensure()?;
+    let lock = crate::paths::lock_data_dir(&paths)?;
     paths.clean_tmp()?;
     let cfg = Arc::new(Config::load(&paths.config())?);
     let token = Arc::new(Token::load_or_create(&paths)?);
@@ -355,6 +356,7 @@ pub async fn start(paths: Paths, opts: ServeOptions) -> Result<RunningServer> {
             let _ = std::fs::remove_file(s);
         }
         let _ = std::fs::remove_file(p2.port_file());
+        drop(lock);
         tracing::info!("ko-agentd stopped");
     });
     tracing::info!(addr = %tcp_addr, unix = socket_path.is_some(), "ko-agentd listening");

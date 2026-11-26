@@ -57,11 +57,28 @@ pub async fn list(cfg: &Config, db: &Db) -> Result<Vec<(String, McpServerDef, &'
             continue;
         }
         match serde_json::from_str::<McpServerDef>(&json) {
-            Ok(def) => out.push((name, def, "api")),
-            Err(_) => tracing::warn!(server = %name, "skipping unreadable MCP server definition"),
+            Ok(def) if check_api_secret_refs(&def).is_ok() => out.push((name, def, "api")),
+            _ => tracing::warn!(server = %name, "skipping invalid MCP server definition"),
         }
     }
     Ok(out)
+}
+
+/// API-added servers may only reference secrets with this prefix, so a
+/// bearer-token holder cannot send provider keys, the Cloudflare token or the
+/// storage key to an MCP host it chooses.
+pub const API_SECRET_PREFIX: &str = "mcp-";
+
+fn check_api_secret_refs(def: &McpServerDef) -> Result<()> {
+    for s in def.secret_refs() {
+        if !s.starts_with(API_SECRET_PREFIX) {
+            bail!(
+                "API-added MCP servers may only reference secrets named \
+                 {API_SECRET_PREFIX}*; {s:?} is usable from agentd.toml only"
+            );
+        }
+    }
+    Ok(())
 }
 
 pub fn view(
@@ -284,6 +301,7 @@ pub fn parse_api_definition(cfg: &Config, name: &str, body: Value) -> Result<Mcp
     let def: McpServerDef =
         serde_json::from_value(body).context("invalid MCP server definition")?;
     def.validate(name, &cfg.network)?;
+    check_api_secret_refs(&def)?;
     if matches!(def, McpServerDef::Stdio(_)) && !cfg.mcp.allow_api_stdio_servers {
         bail!(
             "stdio servers can only be added in agentd.toml (mcp.allow_api_stdio_servers = false)"
@@ -386,7 +404,8 @@ mod tests {
     #[test]
     fn api_definitions() {
         let cfg = Config::default();
-        let http = json!({"type": "http", "url": "https://mcp.example.com", "bearer_secret": "t"});
+        let http =
+            json!({"type": "http", "url": "https://mcp.example.com", "bearer_secret": "mcp-t"});
         assert!(parse_api_definition(&cfg, "x", http).is_ok());
         let stdio = json!({"type": "stdio", "command": "sh"});
         assert!(parse_api_definition(&cfg, "x", stdio).is_err());
@@ -396,5 +415,17 @@ mod tests {
         assert!(parse_api_definition(&cfg, "x", plain).is_err());
         let bad_name = json!({"type": "http", "url": "https://a.example"});
         assert!(parse_api_definition(&cfg, "a.b", bad_name).is_err());
+        // Only mcp-* secrets, even when API stdio servers are allowed.
+        let provider_key =
+            json!({"type": "http", "url": "https://a.example", "bearer_secret": "nanogpt-api-key"});
+        assert!(parse_api_definition(&cfg, "x", provider_key).is_err());
+        let header = json!({"type": "http", "url": "https://a.example", "header_secrets": {"X-K": "storage-key"}});
+        assert!(parse_api_definition(&cfg, "x", header).is_err());
+        let open = Config::from_toml("[mcp]\nallow_api_stdio_servers = true").unwrap();
+        let env =
+            json!({"type": "stdio", "command": "x", "env_secrets": {"T": "cloudflare-api-token"}});
+        assert!(parse_api_definition(&open, "x", env).is_err());
+        let ok = json!({"type": "stdio", "command": "x", "env_secrets": {"T": "mcp-x-token"}});
+        assert!(parse_api_definition(&open, "x", ok).is_ok());
     }
 }

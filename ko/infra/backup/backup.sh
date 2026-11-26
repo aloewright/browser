@@ -1,14 +1,17 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Copyright (c) 2026 The Brave Authors. All rights reserved.
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Encrypted backups of GlitchTip and PostHog. Dumps are piped straight into
-# age (public-key encryption), so plaintext only exists inside containers.
+# Encrypted backups of GlitchTip and PostHog. Postgres dumps are piped
+# straight into age (public-key encryption); the ClickHouse backup is
+# encrypted and deleted right after it is written.
 #   BACKUP_DIR=/srv/ko-backups BACKUP_AGE_RECIPIENT=age1... backup.sh
 # POSTHOG_DIR: directory holding the PostHog stack (for the ClickHouse disk).
-set -eu
+# pipefail: a failed dump must fail the run, not leave an encrypted empty file
+# (and let retention prune the last good backups).
+set -euo pipefail
 : "${BACKUP_DIR:?}" "${BACKUP_AGE_RECIPIENT:?}"
 POSTHOG_DIR=${POSTHOG_DIR:-$(dirname "$0")/../posthog}
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
