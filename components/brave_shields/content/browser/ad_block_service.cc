@@ -572,11 +572,6 @@ void AdBlockService::StartKoFilterListUpdater(
   ko_filter_list_updater_->Start();
 }
 
-KoFilterListSource* AdBlockService::ko_filter_list_source() {
-  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-  return ko_filter_list_source_.get();
-}
-
 std::string AdBlockService::GetKoDATFingerprint() const {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return base::StrCat(

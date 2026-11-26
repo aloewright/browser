@@ -212,7 +212,6 @@ class AdBlockService {
   // Starts the signed K-O filter list channel if one is configured.
   void StartKoFilterListUpdater(
       scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory);
-  KoFilterListSource* ko_filter_list_source();
 #endif
 
   // Test accessors
