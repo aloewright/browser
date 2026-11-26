@@ -33,8 +33,9 @@ Code: `components/ko/workspace/` (core, mojom, handler, frontend) and
   a newline. The page tells you what to fix (missing, insecure or malformed
   token).
 - The K-O Assistant uses the same reader (`ko::ReadAgentdConfig()` in
-  `components/ko/common/agentd_config.h`), so both agree on the port and
-  on which tokens are valid.
+  `components/ko/common/agentd_config.h`), so both accept the same tokens
+  and follow the same port file. Only the Assistant honors the developer
+  switch `--ko-agentd-port`.
 - The data dir is `~/Library/Application Support/K-O` on macOS, or
   `$XDG_DATA_HOME/k-o` (fallback `~/.local/share/k-o`) on Linux.
 - CSP: `connect-src chrome://resources 'self' http://127.0.0.1:<port>`.

@@ -902,9 +902,9 @@ class OAIAPIStreamErrorTest : public OAIAPIUnitTest {
         });
 
     auto options = mojom::ModelOptions::NewCustomModelOptions(
-        mojom::CustomModelOptions::New("test_api_key", 0, 0, 0, "",
+        mojom::CustomModelOptions::New("claude-code/sonnet", 0, 0, 0, "",
                                        GURL("https://test.com"),
-                                       "claude-code/sonnet"));
+                                       "test_api_key"));
     client_->PerformRequest(
         *options, std::vector<OAIMessage>(), std::nullopt,
         base::BindRepeating(&MockCallbacks::OnDataReceived,

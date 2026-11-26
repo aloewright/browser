@@ -38,7 +38,8 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
 
 - `chat-automatic` ("K-O agentd") is always first, so every "automatic"
   fallback and `GetModels()[0]` land on agentd. It requests agentd's first
-  listed model, or `claude-code/default` before agentd has answered.
+  listed model (from the cached list until agentd answers), or
+  `claude-code/default` when there is no list or cache yet.
 - One `ko-agentd:<id>` model per entry of agentd's `GET /v1/models`
   (`claude-code/*`, `codex/*`, `cf-gateway/*`, `nanogpt/*`, ...).
 - All of them use `http://127.0.0.1:<port>/v1/chat/completions` (see
@@ -52,7 +53,7 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
   the `CONTENT_AGENT` capability, so Leo's tools (content agent tools in the
   agent profile, tab management) are offered on them. Models with tools off
   get neither, so they are not offered in the agent profile.
-  `chat-automatic` follows the first listed model; before agentd answers it
+  `chat-automatic` follows the first listed or cached model; with neither it
   is `claude-code/default`, tools off.
 
 The list is fetched when the model service starts, retried with backoff
@@ -136,10 +137,11 @@ models built before the first read point. When agentd moves, the next fetch
 - agentd resolves `claude-code/default` to its first configured Claude Code
   model; it is only used before the first `/v1/models` answer. Without
   Claude Code configured it answers 404 `model_not_found`.
-- Another local user could bind 47821 while agentd is down (its port file
-  is removed on shutdown) and receive the token and prompts. On a
-  single-user Mac that user can't read the token file anyway; if that
-  matters, keep agentd running (launchd).
+- Another local user could bind the port while agentd is down and receive
+  the token and prompts: 47821 after a clean shutdown (agentd removes its
+  port file), or the old port after a crash (the file stays behind). On a
+  single-user Mac there is no such user; otherwise keep agentd running
+  under launchd, which restarts it.
 - agentd lists `display_name`, `capabilities.vision`, `capabilities.tools`
   and `context_length` for every model. The browser's defaults above only
   matter for an older agentd or a cached list.
