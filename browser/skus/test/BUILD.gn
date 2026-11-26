@@ -11,16 +11,21 @@ source_set("browser_tests") {
 
   # K-O compiles the SKU service out, so the JS API has nothing to call.
   sources = []
-  if (!is_ko) {
+  if (is_ko) {
+    sources += [ "skus_ko_browsertest.cc" ]
+  } else {
     sources += [ "js_skus_api_browsertest.cc" ]
   }
 
   deps = [
     "//base/test:test_support",
     "//brave/browser",
+    "//brave/browser/skus",
     "//brave/components/skus/browser",
     "//brave/components/skus/common",
+    "//brave/components/skus/common:mojom",
     "//chrome/browser:browser_process",
+    "//chrome/browser/profiles:profile",
     "//chrome/test:test_support",
     "//chrome/test/base:chrome_test_utils",
     "//components/prefs",

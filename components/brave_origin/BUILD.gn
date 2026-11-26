@@ -99,7 +99,9 @@ source_set("unit_tests") {
   ]
 
   # K-O compiles the Origin purchase flow out, so these would only test that.
-  if (!is_ko) {
+  if (is_ko) {
+    sources += [ "brave_origin_ko_unittest.cc" ]
+  } else {
     sources += [
       "brave_origin_service_unittest.cc",
       "brave_origin_settings_handler_impl_unittest.cc",
