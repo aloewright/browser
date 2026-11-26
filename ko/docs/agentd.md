@@ -293,6 +293,11 @@ both on every model fetch and sends `/v1/models` and chat requests to that
 port. Use `fetch` with `Authorization`, including for SSE (`EventSource`
 cannot set headers). Never put the token in a URL.
 
+The Assistant treats a streamed chunk with a top-level `error` object as the
+end of the answer and shows an error, so keep sending
+`{"error": {"message", "type"}}` then `[DONE]` for failures after the
+stream starts.
+
 ## macOS service
 
 `ko/infra/launchd/install.sh /path/to/ko-agentd` does four things:

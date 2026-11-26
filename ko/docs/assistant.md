@@ -71,6 +71,18 @@ fields default to: `display_name` the id, `vision` false, `tools` as above,
 `context_length` 128000. Ids must match `[A-Za-z0-9._:/@+-]{1,200}`; at most
 200 models are used.
 
+### Errors while streaming
+
+Once a stream has started, agentd reports a failure as
+`data: {"error": {"message": "...", "type": "provider_error"}}` followed by
+`data: [DONE]`, on a 200 response. A streamed chunk with a top-level `error`
+object (or non-empty string) ends the answer: later chunks are dropped and
+the request completes with `ConnectionIssue` instead of an empty success.
+The error shows "Status code: 200, error code: <type>" (`stream_error` if
+the type is missing or not `[A-Za-z0-9._-]{1,64}`); the message itself is
+not shown. Like other connection errors it is retried once automatically.
+An HTTP error status wins over a streamed error.
+
 ### Token
 
 - Read on every fetch from `<data>/agentd.token`: macOS
@@ -173,9 +185,10 @@ debloat/macos/apply-policies.sh --ko
 
 - New: `components/ko/common/agentd_config_unittest.cc` (token and port
   file checks, token format), `ko_agentd_models_unittest.cc` (parsing, tool
-  defaults, URLs, port-file discovery, fetcher) and
+  defaults, URLs, port-file discovery, fetcher),
   `model_service_ko_unittest.cc` (no Leo models, agentd default, port file,
-  keys kept out of pages and prefs, migration).
+  keys kept out of pages and prefs, migration) and the K-O stream error
+  tests in `oai_api_client_unittest.cc`.
 - Left out of K-O builds because they test Leo, premium or Brave's servers:
   `model_service_unittest`, `conversation_handler_unittest`,
   `ai_chat_service_unittest`, `ai_chat_credential_manager_unittest`,
