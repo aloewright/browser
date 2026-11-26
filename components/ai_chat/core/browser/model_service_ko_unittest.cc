@@ -73,8 +73,12 @@ class ModelServiceKOTest : public testing::Test {
     ko::ResetAgentdPortForTesting();
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
 #if BUILDFLAG(IS_MAC)
-    app_data_override_.emplace(base::DIR_APP_DATA, temp_dir_.GetPath());
-    data_dir_ = temp_dir_.GetPath().Append("K-O");
+    // PathService::Override resolves symlinks (/var is /private/var on
+    // macOS), so build data_dir_ from the same resolved path.
+    const base::FilePath root = base::MakeAbsoluteFilePath(temp_dir_.GetPath());
+    ASSERT_FALSE(root.empty());
+    app_data_override_.emplace(base::DIR_APP_DATA, root);
+    data_dir_ = root.Append("K-O");
 #else
     xdg_override_.emplace("XDG_DATA_HOME", temp_dir_.GetPath().value());
     data_dir_ = temp_dir_.GetPath().Append("k-o");

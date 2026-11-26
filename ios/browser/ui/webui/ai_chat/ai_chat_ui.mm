@@ -24,6 +24,7 @@
 #include "brave/components/ai_chat/core/common/mojom/untrusted_frame.mojom.h"
 #include "brave/components/ai_chat/resources/grit/ai_chat_ui_generated_map.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/version_info/version_info.h"
 #include "brave/ios/browser/ai_chat/ai_chat_service_factory.h"
 #include "brave/ios/browser/ai_chat/ai_chat_ui_handler_bridge.h"
@@ -73,8 +74,8 @@ AIChatUI::AIChatUI(web::WebUIIOS* web_ui, const GURL& url)
   source->AddBoolean("isConversationShareEnabled",
                      base::FeatureList::IsEnabled(
                          ai_chat::features::kAIChatConversationShare));
-  // There is no K-O build for iOS.
-  source->AddBoolean("isPremiumAvailable", true);
+  // K-O has no Brave premium to upsell.
+  source->AddBoolean("isPremiumAvailable", !BUILDFLAG(IS_KO));
   source->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));
