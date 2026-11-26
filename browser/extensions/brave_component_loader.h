@@ -7,6 +7,7 @@
 #define BRAVE_BROWSER_EXTENSIONS_BRAVE_COMPONENT_LOADER_H_
 
 #include "base/memory/raw_ptr.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/extensions/component_loader.h"
 #include "components/prefs/pref_change_registrar.h"
 
@@ -31,6 +32,11 @@ class BraveComponentLoader : public ComponentLoader {
 
  private:
   void UpdateBraveExtension();
+
+#if BUILDFLAG(IS_KO)
+  // Extensions from the ko_bundled_extension_dirs GN arg.
+  void AddKoBundledExtensions();
+#endif
 
   bool UseBraveExtensionBackgroundPage();
 

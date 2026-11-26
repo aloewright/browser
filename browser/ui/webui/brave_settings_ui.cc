@@ -127,6 +127,10 @@
 #if BUILDFLAG(ENABLE_CONTAINERS)
 #include "brave/components/containers/core/browser/containers_settings_handler.h"
 #include "brave/components/containers/core/common/features.h"
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/containers/ko_container_proxy_service.h"
+#include "brave/browser/containers/ko_container_proxy_service_factory.h"
+#endif
 #endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/components/traffic_control/core/browser/traffic_control_settings_handler.h"
@@ -332,6 +336,7 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
       "isContainersEnabled",
       base::FeatureList::IsEnabled(containers::features::kContainers));
 #endif
+  html_source->AddBoolean("isKoBuild", BUILDFLAG(IS_KO));
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
   html_source->AddBoolean(
       "isTrafficControlEnabled",
@@ -459,9 +464,18 @@ void BraveSettingsUI::BindInterface(
   if (!base::FeatureList::IsEnabled(containers::features::kContainers)) {
     return;
   }
+#if BUILDFLAG(IS_KO)
+  // K-O: proxies are stored by the per-profile service, never in the list.
+  auto handler = std::make_unique<containers::ContainersSettingsHandler>(
+      user_prefs::UserPrefs::Get(
+          web_ui()->GetWebContents()->GetBrowserContext()),
+      KoContainerProxyServiceFactory::GetForProfile(
+          Profile::FromWebUI(web_ui())));
+#else
   auto handler = std::make_unique<containers::ContainersSettingsHandler>(
       user_prefs::UserPrefs::Get(
           web_ui()->GetWebContents()->GetBrowserContext()));
+#endif  // BUILDFLAG(IS_KO)
   MakeOwnedReceiver(std::move(handler), std::move(pending_receiver));
 }
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)

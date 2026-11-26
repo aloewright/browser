@@ -86,6 +86,7 @@
 
 #if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
 #include "brave/browser/ui/webui/ko_machines/ko_machines_ui.h"
+#include "brave/browser/ui/webui/ko_workspace/ko_workspace_ui.h"
 #endif
 
 namespace {
@@ -193,5 +194,6 @@ void RegisterChromeWebUIConfigs() {
 
 #if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
   map.AddWebUIConfig(std::make_unique<KOMachinesUIConfig>());
+  map.AddWebUIConfig(std::make_unique<KoWorkspaceUIConfig>());
 #endif
 }

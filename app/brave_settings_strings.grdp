@@ -137,6 +137,33 @@
     <message name="IDS_SETTINGS_CONTAINERS_ERROR_NOT_FOUND" desc="The error if container is not found" formatter_data="webui=Containers">
       Container is not found
     </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_LABEL" desc="K-O: label for the container proxy input field" formatter_data="webui=Containers">
+      Proxy
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_DESCRIPTION" desc="K-O: explains the container proxy field" formatter_data="webui=Containers">
+      Send this container's traffic through a proxy. If the proxy can't be reached, pages fail to load instead of connecting directly. Leave empty for no proxy.
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_PLACEHOLDER" desc="K-O: placeholder for the container proxy input field. Do not translate the URL." formatter_data="webui=Containers">
+      socks5h://100.64.0.10:1080
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_USERNAME_LABEL" desc="K-O: label for the optional proxy username field" formatter_data="webui=Containers">
+      Username (optional)
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_PASSWORD_LABEL" desc="K-O: label for the proxy password field" formatter_data="webui=Containers">
+      Password
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_CREDENTIALS_SAVED" desc="K-O: shown when encrypted proxy credentials are stored for the container" formatter_data="webui=Containers">
+      Credentials are saved encrypted. Enter new ones to replace them.
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_PROXY_CLEAR_CREDENTIALS" desc="K-O: button that removes stored proxy credentials" formatter_data="webui=Containers">
+      Remove credentials
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_ERROR_INVALID_PROXY" desc="K-O: error when the proxy is invalid" formatter_data="webui=Containers">
+      Use http, https, socks5 or socks5h with a host and port. Credentials need https or a private address.
+    </message>
+    <message name="IDS_SETTINGS_CONTAINERS_ERROR_PROXY_CREDENTIALS_UNAVAILABLE" desc="K-O: error when proxy credentials could not be encrypted" formatter_data="webui=Containers">
+      Credentials couldn't be encrypted, so nothing was saved.
+    </message>
     <message name="IDS_SETTINGS_DRAG_TO_REORDER_LABEL" desc="Accessible label for a list item reorder handle that supports arrow-key movement" formatter_data="webui=Containers">
       Reorder item. Use arrow keys to move.
     </message>

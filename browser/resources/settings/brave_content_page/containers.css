@@ -111,3 +111,30 @@
 .containers-add-row {
   padding-block-end: calc(var(--cr-section-padding) / 2);
 }
+
+.proxy-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--leo-spacing-m);
+}
+
+.proxy-section cr-input {
+  --cr-input-background-color: transparent;
+  --cr-input-border: 1px solid var(--leo-color-divider-subtle);
+  --cr-input-border-radius: var(--leo-radius-m);
+  --cr-input-border-bottom: none;
+}
+
+.proxy-description {
+  color: var(--leo-color-text-secondary);
+  font: var(--leo-font-small-regular);
+}
+
+.proxy-credentials-saved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--leo-spacing-m);
+  color: var(--leo-color-text-secondary);
+  font: var(--leo-font-small-regular);
+}

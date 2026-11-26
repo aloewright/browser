@@ -535,6 +535,13 @@ if (enable_ai_chat && is_android) {
   brave_chrome_browser_deps += brave_browser_ai_chat_android_deps
 }
 
+if (is_ko && !is_android) {
+  brave_chrome_browser_deps += [
+    "//brave/components/ko/workspace/common:mojom",
+    "//brave/components/ko/workspace/core",
+  ]
+}
+
 if (enable_containers) {
   brave_chrome_browser_allow_circular_includes_from +=
       [ "//brave/browser/containers" ]

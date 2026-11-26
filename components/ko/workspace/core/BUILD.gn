@@ -1,0 +1,42 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+assert(is_ko)
+
+static_library("core") {
+  sources = [
+    "agentd_config.cc",
+    "agentd_config.h",
+    "workspace_apps.cc",
+    "workspace_apps.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//url",
+  ]
+
+  deps = [ "//components/prefs" ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [
+    "agentd_config_unittest.cc",
+    "workspace_apps_unittest.cc",
+  ]
+
+  deps = [
+    ":core",
+    "//base",
+    "//base/test:test_support",
+    "//components/prefs:test_support",
+    "//testing/gtest",
+    "//url",
+  ]
+}

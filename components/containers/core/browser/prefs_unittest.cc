@@ -15,6 +15,7 @@
 #include "brave/components/containers/core/common/features.h"
 #include "brave/components/containers/core/mojom/containers.mojom-data-view.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/sync_preferences/testing_pref_service_syncable.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -210,7 +211,9 @@ TEST(ContainersPrefsRegistrationTest,
   feature_list.InitAndEnableFeature(features::kContainers);
   sync_preferences::TestingPrefServiceSyncable prefs;
   RegisterProfilePrefs(prefs.registry(), version_info::Channel::STABLE);
-  EXPECT_FALSE(prefs.GetBoolean(prefs::kContainersEnabled));
+  // K-O workspaces need containers, so K-O enables them on every channel.
+  EXPECT_EQ(prefs.GetBoolean(prefs::kContainersEnabled),
+            static_cast<bool>(BUILDFLAG(IS_KO)));
 }
 
 TEST(ContainersPrefsRegistrationTest,

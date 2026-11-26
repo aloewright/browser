@@ -1,0 +1,61 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+import("//brave/components/ko/bundled_extensions/bundled_extensions.gni")
+
+assert(is_ko)
+
+_staging_dir = "$target_gen_dir/ko_extensions"
+_header = "$target_gen_dir/ko_bundled_extensions.h"
+
+# Paths must not end with "/": the last component names the extension.
+_staged_dirs = []
+foreach(dir, ko_bundled_extension_dirs) {
+  _staged_dirs += [ "$_staging_dir/" + get_path_info(dir, "file") ]
+}
+
+# Copies the extensions (adding a fixed "key" where missing) and generates
+# the list the component loader reads.
+action("prepare") {
+  script = "prepare_bundled_extensions.py"
+  outputs = [ _header ] + _staged_dirs
+  depfile = "$target_gen_dir/prepare_bundled_extensions.d"
+  args = [
+    "--out-dir",
+    rebase_path(_staging_dir, root_build_dir),
+    "--header",
+    rebase_path(_header, root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+    "--depfile-target",
+    rebase_path(_header, root_build_dir),
+  ]
+  foreach(dir, ko_bundled_extension_dirs) {
+    args += [ rebase_path(dir, root_build_dir) ]
+  }
+}
+
+source_set("bundled_extensions") {
+  sources = [ _header ]
+  public_deps = [ ":prepare" ]
+}
+
+# The extension files go next to Brave's own component extension resources.
+if (ko_bundled_extension_dirs != []) {
+  if (is_mac) {
+    bundle_data("framework_bundle_data") {
+      sources = _staged_dirs
+      outputs = [ "{{bundle_resources_dir}}/ko_extensions/{{source_file_part}}" ]
+      public_deps = [ ":prepare" ]
+    }
+  } else {
+    copy("unpacked_resources") {
+      sources = _staged_dirs
+      outputs = [ "$root_out_dir/resources/ko_extensions/{{source_file_part}}" ]
+      deps = [ ":prepare" ]
+    }
+  }
+}

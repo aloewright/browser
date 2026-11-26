@@ -274,6 +274,15 @@
     "META": {"sizes": {"includes": [40]}},
     "includes": [54410],
   },
+  # K-O workspace (chrome://ko-workspace). Generated during the build.
+  "<(SHARED_INTERMEDIATE_DIR)/brave/components/ko/workspace/resources/ko_workspace_static_resources.grd": {
+    "META": {"sizes": {"includes": [5]}},
+    "includes": [54500],
+  },
+  "<(SHARED_INTERMEDIATE_DIR)/brave/web-ui-ko_workspace/ko_workspace.grd": {
+    "META": {"sizes": {"includes": [40]}},
+    "includes": [54510],
+  },
   # K-O embedded filter lists (brave/ko/shields/update_lists.py).
   "brave/ko/shields/ko_shields_resources.grd": {
     "includes": [54700],

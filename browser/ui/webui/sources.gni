@@ -77,6 +77,8 @@ if (enable_psst) {
 }
 
 if (is_ko && !is_android) {
-  brave_browser_ui_webui_configs_deps +=
-      [ "//brave/browser/ui/webui/ko_machines" ]
+  brave_browser_ui_webui_configs_deps += [
+    "//brave/browser/ui/webui/ko_machines",
+    "//brave/components/ko/workspace/common:mojom",
+  ]
 }

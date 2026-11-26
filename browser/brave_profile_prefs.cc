@@ -167,6 +167,10 @@ using extensions::FeatureSwitch;
 #include "brave/browser/ntp_background/ntp_background_prefs.h"
 #endif
 
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/components/ko/workspace/core/workspace_apps.h"
+#endif
+
 #if BUILDFLAG(ENABLE_PSST)
 #include "brave/components/psst/core/browser/pref_names.h"
 #endif
@@ -526,6 +530,10 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
 #if BUILDFLAG(ENABLE_BRAVE_WALLET)
   // Brave Wallet
   brave_wallet::RegisterProfilePrefs(registry);
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  ko_workspace::RegisterWorkspaceProfilePrefs(registry);
 #endif
 
 #if BUILDFLAG(ENABLE_PSST)

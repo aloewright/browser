@@ -1,0 +1,44 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import("//brave/components/ko/buildflags/buildflags.gni")
+
+assert(is_ko)
+
+static_library("browser") {
+  sources = [
+    "ko_workspace_handler.cc",
+    "ko_workspace_handler.h",
+  ]
+
+  public_deps = [
+    "//brave/components/ko/workspace/common:mojom",
+    "//brave/components/ko/workspace/core",
+    "//mojo/public/cpp/bindings",
+    "//url",
+  ]
+
+  deps = [
+    "//base",
+    "//components/prefs",
+  ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [ "ko_workspace_handler_unittest.cc" ]
+
+  deps = [
+    ":browser",
+    "//base",
+    "//base/test:test_support",
+    "//brave/components/ko/workspace/core",
+    "//components/prefs:test_support",
+    "//mojo/public/cpp/bindings",
+    "//testing/gtest",
+    "//url",
+  ]
+}

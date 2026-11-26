@@ -9,6 +9,7 @@
 
 #include "base/no_destructor.h"
 #include "brave/browser/ui/sidebar/sidebar_utils.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/sidebar/browser/pref_names.h"
 #include "brave/components/sidebar/browser/sidebar_service.h"
 #include "brave/components/sidebar/common/features.h"
@@ -22,7 +23,42 @@
 #include "components/prefs/pref_service.h"
 #include "components/version_info/channel.h"
 
+#if BUILDFLAG(IS_KO)
+#include <algorithm>
+
+#include "components/grit/brave_components_strings.h"
+#include "ui/base/l10n/l10n_util.h"
+#include "url/gurl.h"
+#endif
+
 namespace sidebar {
+
+#if BUILDFLAG(IS_KO)
+namespace {
+
+// Set once the K-O workspace web panel was offered, so removing it sticks.
+constexpr char kKoWorkspaceItemAddedPref[] = "ko.workspace.sidebar_item_added";
+constexpr char kKoWorkspaceUrl[] = "chrome://ko-workspace/";
+
+void MaybeAddKoWorkspaceItem(Profile* profile, SidebarService& service) {
+  PrefService* prefs = profile->GetPrefs();
+  if (profile->IsOffTheRecord() || profile->IsGuestSession() ||
+      prefs->GetBoolean(kKoWorkspaceItemAddedPref)) {
+    return;
+  }
+  prefs->SetBoolean(kKoWorkspaceItemAddedPref, true);
+  const GURL url(kKoWorkspaceUrl);
+  if (std::ranges::any_of(service.items(), [&url](const SidebarItem& item) {
+        return item.url == url;
+      })) {
+    return;
+  }
+  service.AddItem(SidebarItem::CreateWebPanelItem(
+      url, l10n_util::GetStringUTF16(IDS_KO_WORKSPACE_TITLE)));
+}
+
+}  // namespace
+#endif  // BUILDFLAG(IS_KO)
 
 // static
 SidebarServiceFactory* SidebarServiceFactory::GetInstance() {
@@ -97,8 +133,12 @@ std::unique_ptr<KeyedService>
 SidebarServiceFactory::BuildServiceInstanceForBrowserContext(
     content::BrowserContext* context) const {
   auto* profile = Profile::FromBrowserContext(context);
-  return std::make_unique<SidebarService>(
+  auto service = std::make_unique<SidebarService>(
       profile->GetPrefs(), GetBuiltInItemTypesForProfile(profile));
+#if BUILDFLAG(IS_KO)
+  MaybeAddKoWorkspaceItem(profile, *service);
+#endif
+  return service;
 }
 
 content::BrowserContext* SidebarServiceFactory::GetBrowserContextToUse(
@@ -111,6 +151,9 @@ void SidebarServiceFactory::RegisterProfilePrefs(
     user_prefs::PrefRegistrySyncable* registry) {
   SidebarService::RegisterProfilePrefs(
       registry, GetDefaultShowSidebarOption(chrome::GetChannel()));
+#if BUILDFLAG(IS_KO)
+  registry->RegisterBooleanPref(kKoWorkspaceItemAddedPref, false);
+#endif
 }
 
 }  // namespace sidebar

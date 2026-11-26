@@ -18,8 +18,13 @@
 #include "brave/components/containers/core/browser/container_specifier.h"
 #include "brave/components/containers/core/browser/containers_service_observer.h"
 #include "brave/components/containers/core/mojom/containers.mojom-forward.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "components/prefs/pref_change_registrar.h"
+
+#if BUILDFLAG(IS_KO)
+#include "third_party/skia/include/core/SkColor.h"
+#endif
 
 class PrefService;
 
@@ -75,6 +80,14 @@ class ContainersService : public KeyedService {
   // use `CreateAndPersistTemporaryContainer` to get a generated name.
   mojom::ContainerPtr GetOrCreateTemporaryContainerByName(
       std::string_view name);
+
+#if BUILDFLAG(IS_KO)
+  // K-O: adds a regular (synced) container, e.g. for a workspace. Returns
+  // null if the properties are invalid.
+  mojom::ContainerPtr CreateContainer(std::string_view name,
+                                      mojom::Icon icon,
+                                      SkColor background_color);
+#endif  // BUILDFLAG(IS_KO)
 
   // Returns the runtime container with the given `id`. Runtime containers are
   // containers that are currently in use by the user. This can be a synced

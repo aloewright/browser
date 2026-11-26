@@ -19,11 +19,19 @@
 #include "brave/components/containers/core/common/features.h"
 #include "brave/components/containers/core/mojom/containers.mojom-data-view.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/sync_preferences/testing_pref_service_syncable.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/receiver.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if BUILDFLAG(IS_KO)
+#include <map>
+
+#include "base/json/json_writer.h"
+#include "brave/components/containers/core/browser/container_proxy.h"
+#endif
 
 namespace containers {
 
@@ -408,5 +416,162 @@ TEST_F(ContainersSettingsHandlerTest, ExternalContainerChanges) {
   EXPECT_EQ("test-id", mock_observer_->last_containers()[0]->id);
   EXPECT_EQ("Test Container", mock_observer_->last_containers()[0]->name);
 }
+
+#if BUILDFLAG(IS_KO)
+namespace {
+
+class FakeProxyDelegate : public ContainersSettingsHandler::ProxyDelegate {
+ public:
+  mojom::ContainerProxyPtr GetProxyForUI(const std::string& id) override {
+    auto it = proxies_.find(id);
+    if (it == proxies_.end()) {
+      return nullptr;
+    }
+    return mojom::ContainerProxy::New(it->second.server.ToString(),
+                                      it->second.credentials.has_value());
+  }
+
+  void SetProxy(const std::string& id,
+                std::optional<ParsedContainerProxy> proxy,
+                bool keep_credentials,
+                SetProxyCallback callback) override {
+    ++set_count_;
+    last_keep_credentials_ = keep_credentials;
+    if (fail_) {
+      std::move(callback).Run(false);
+      return;
+    }
+    if (!proxy) {
+      proxies_.erase(id);
+    } else {
+      auto it = proxies_.find(id);
+      if (keep_credentials && !proxy->credentials && it != proxies_.end() &&
+          it->second.server == proxy->server) {
+        proxy->credentials = it->second.credentials;
+      }
+      proxies_[id] = std::move(*proxy);
+    }
+    std::move(callback).Run(true);
+  }
+
+  std::map<std::string, ParsedContainerProxy> proxies_;
+  bool fail_ = false;
+  bool last_keep_credentials_ = false;
+  int set_count_ = 0;
+};
+
+}  // namespace
+
+class ContainersSettingsHandlerProxyTest
+    : public ContainersSettingsHandlerTest {
+ public:
+  void SetUp() override {
+    ContainersSettingsHandlerTest::SetUp();
+    handler_ = std::make_unique<ContainersSettingsHandler>(&prefs_, &delegate_);
+  }
+
+  // The handler holds a pointer to `delegate_`, which is destroyed first.
+  void TearDown() override { handler_.reset(); }
+
+ protected:
+  std::optional<mojom::ContainerOperationError> Add(
+      const std::string& proxy_url,
+      bool has_credentials = false) {
+    base::test::TestFuture<std::optional<mojom::ContainerOperationError>>
+        future;
+    handler_->AddContainer(
+        mojom::Container::New(
+            "", "Proxied", mojom::Icon::kWork, SK_ColorWHITE,
+            mojom::ContainerProxy::New(proxy_url, has_credentials)),
+        future.GetCallback());
+    return future.Take();
+  }
+
+  std::vector<mojom::ContainerPtr> GetContainers() {
+    base::test::TestFuture<std::vector<mojom::ContainerPtr>> future;
+    handler_->GetContainers(future.GetCallback());
+    return future.Take();
+  }
+
+  FakeProxyDelegate delegate_;
+};
+
+TEST_F(ContainersSettingsHandlerProxyTest, ProxyIsStoredOutsideSyncedList) {
+  EXPECT_EQ(std::nullopt, Add("socks5h://zone-user:s3cr3t@100.64.0.10:1080"));
+
+  auto containers = GetContainers();
+  ASSERT_EQ(1u, containers.size());
+  ASSERT_TRUE(containers[0]->proxy);
+  EXPECT_EQ("socks5h://100.64.0.10:1080", containers[0]->proxy->url);
+  EXPECT_TRUE(containers[0]->proxy->has_credentials);
+
+  ASSERT_EQ(1u, delegate_.proxies_.count(containers[0]->id));
+  const auto& stored = delegate_.proxies_[containers[0]->id];
+  ASSERT_TRUE(stored.credentials);
+  EXPECT_EQ("zone-user", stored.credentials->username);
+
+  // Neither the server nor the credentials reach the synced list.
+  const std::string synced =
+      base::WriteJson(prefs_.GetList(prefs::kContainersList)).value_or("");
+  EXPECT_EQ(std::string::npos, synced.find("100.64.0.10"));
+  EXPECT_EQ(std::string::npos, synced.find("zone-user"));
+  EXPECT_EQ(std::string::npos, synced.find("s3cr3t"));
+  EXPECT_EQ(std::string::npos, synced.find("proxy"));
+}
+
+TEST_F(ContainersSettingsHandlerProxyTest, NoProxyMeansNoEntry) {
+  EXPECT_EQ(std::nullopt, Add(""));
+  auto containers = GetContainers();
+  ASSERT_EQ(1u, containers.size());
+  EXPECT_FALSE(containers[0]->proxy);
+  EXPECT_TRUE(delegate_.proxies_.empty());
+}
+
+TEST_F(ContainersSettingsHandlerProxyTest, InvalidProxyIsRejected) {
+  EXPECT_EQ(mojom::ContainerOperationError::kInvalidProxy,
+            Add("ftp://100.64.0.10"));
+  EXPECT_EQ(mojom::ContainerOperationError::kInvalidProxy,
+            Add("socks5h://u:p@proxy.example.com"));
+  EXPECT_TRUE(GetContainers().empty());
+  EXPECT_EQ(0, delegate_.set_count_);
+}
+
+TEST_F(ContainersSettingsHandlerProxyTest, StorageFailureAddsNothing) {
+  delegate_.fail_ = true;
+  EXPECT_EQ(mojom::ContainerOperationError::kProxyCredentialsUnavailable,
+            Add("socks5h://u:p@100.64.0.10:1080"));
+  EXPECT_TRUE(GetContainers().empty());
+}
+
+TEST_F(ContainersSettingsHandlerProxyTest, UpdateKeepsOrClearsProxy) {
+  ASSERT_EQ(std::nullopt, Add("socks5h://u:p@100.64.0.10:1080"));
+  auto container = std::move(GetContainers()[0]);
+  const std::string id = container->id;
+
+  // The UI sends back what it got: server only, has_credentials = true.
+  base::test::TestFuture<std::optional<mojom::ContainerOperationError>> future;
+  container->name = "Renamed";
+  handler_->UpdateContainer(container.Clone(), future.GetCallback());
+  EXPECT_EQ(std::nullopt, future.Take());
+  EXPECT_TRUE(delegate_.last_keep_credentials_);
+  ASSERT_TRUE(delegate_.proxies_[id].credentials);
+  EXPECT_EQ("Renamed", GetContainers()[0]->name);
+
+  // Clearing the field removes the proxy.
+  container->proxy = nullptr;
+  handler_->UpdateContainer(container.Clone(), future.GetCallback());
+  EXPECT_EQ(std::nullopt, future.Take());
+  EXPECT_FALSE(delegate_.proxies_.count(id));
+  EXPECT_FALSE(GetContainers()[0]->proxy);
+
+  // Unknown containers are not touched.
+  container->id = "missing";
+  container->proxy = mojom::ContainerProxy::New("socks5h://10.0.0.1", false);
+  const int set_count = delegate_.set_count_;
+  handler_->UpdateContainer(container.Clone(), future.GetCallback());
+  EXPECT_EQ(mojom::ContainerOperationError::kNotFound, future.Take());
+  EXPECT_EQ(set_count, delegate_.set_count_);
+}
+#endif  // BUILDFLAG(IS_KO)
 
 }  // namespace containers

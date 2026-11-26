@@ -1,0 +1,8 @@
+include_rules = [
+  "+brave/components/containers/core",
+  "+brave/components/ko/workspace",
+  "+components/prefs",
+  "+components/pref_registry",
+  "+components/sync_preferences/testing_pref_service_syncable.h",
+  "+url",
+]

@@ -5,13 +5,21 @@
 
 #include "brave/components/sidebar/common/features.h"
 
+#include "brave/components/ko/buildflags/buildflags.h"
+
 namespace sidebar::features {
 
 BASE_FEATURE(kSidebarShowAlwaysOnStable,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
+// K-O shows its workspace and workspace apps in web panels.
 BASE_FEATURE(kSidebarWebPanel,
-             base::FEATURE_DISABLED_BY_DEFAULT);
+#if BUILDFLAG(IS_KO)
+             base::FEATURE_ENABLED_BY_DEFAULT
+#else
+             base::FEATURE_DISABLED_BY_DEFAULT
+#endif
+);
 
 const base::FeatureParam<bool> kOpenOneShotLeoPanel{
     &kSidebarShowAlwaysOnStable,
