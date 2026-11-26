@@ -1870,6 +1870,40 @@
   <message name="IDS_SETTINGS_LEO_ASSISTANT_INPUT_CONTEXT_SIZE_TOOLTIP_INFO" desc="A brief description for context size, as well as a concise explanation for how it relates to the the user's experience.">
     The maximum number of tokens the model can process in a single interaction. A larger context size allows the model to handle longer conversations. Different models support different maximum context sizes.
   </message>
+  <!-- K-O provider presets. Present in all builds so the template resolves; only K-O shows them. -->
+  <message name="IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_LABEL" desc="An input title for picking a model provider preset when adding a model.">
+    Provider
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_DESC" desc="A brief description for the model provider preset picker.">
+    Presets fill in the endpoint. Requests go straight to the provider, not through ko-agentd.
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_CUSTOM" desc="Model provider preset option for entering any OpenAI-compatible endpoint by hand.">
+    Custom endpoint
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_CLOUDFLARE" desc="Model provider preset option for Cloudflare AI Gateway. Product name; do not translate.">
+    Cloudflare AI Gateway
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_PROVIDER_PRESET_NANOGPT" desc="Model provider preset option for NanoGPT. Product name; do not translate.">
+    NanoGPT
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_ACCOUNT_ID" desc="An input title for a Cloudflare account ID.">
+    Cloudflare account ID
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_GATEWAY_ID" desc="An input title for a Cloudflare AI Gateway ID.">
+    Gateway ID
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_IDS_ERROR" desc="An error shown when the Cloudflare account ID or gateway ID is malformed.">
+    The account ID is 32 hexadecimal characters. The gateway ID uses letters, digits, '-' and '_'.
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_CLOUDFLARE_MODEL_HINT" desc="A hint for the model request name when using Cloudflare AI Gateway.">
+    Use the provider/model form, e.g. openai/gpt-5-mini. The API key is your provider key, or your gateway token if the gateway stores keys for you.
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_NANOGPT_MODEL_HINT" desc="A hint for the model request name when using NanoGPT.">
+    Use a NanoGPT model ID, e.g. gpt-5-mini, with your NanoGPT API key.
+  </message>
+  <message name="IDS_SETTINGS_KO_ASSISTANT_API_KEY_KEEP_NOTE" desc="A note under the API key input when editing a model whose key is already saved.">
+    The saved key is never shown. Leave this empty to keep it.
+  </message>
   <message name="IDS_SETTINGS_LEO_ASSISTANT_PROXY_NOTE" desc="A note for users when adding model server info">
     Brave doesn't proxy these requests, please read privacy terms of the chosen provider.
   </message>

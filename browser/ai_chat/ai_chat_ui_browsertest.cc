@@ -25,6 +25,7 @@
 #include "brave/components/ai_chat/core/browser/types.h"
 #include "brave/components/ai_chat/core/browser/utils.h"
 #include "brave/components/constants/brave_paths.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/text_recognition/common/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/pdf/pdf_extension_test_util.h"
@@ -309,6 +310,8 @@ IN_PROC_BROWSER_TEST_F(AIChatUIBrowserTest,
   FetchSearchQuerySummary(FROM_HERE, std::nullopt);
 }
 
+// K-O never fetches Brave Search summaries.
+#if !BUILDFLAG(IS_KO)
 IN_PROC_BROWSER_TEST_F(AIChatUIBrowserTest,
                        FetchSearchQuerySummary_DynamicMetaTag_SingleQuery) {
   // Test when summarizer-key meta tag is dynamically inserted, should return
@@ -342,6 +345,7 @@ IN_PROC_BROWSER_TEST_F(AIChatUIBrowserTest,
                                          {{"test query", "test summary"},
                                           {"test query 2", "test summary 2"}}));
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 IN_PROC_BROWSER_TEST_F(AIChatUIBrowserTest, PdfScreenshot) {
   NavigateURL(https_server_.GetURL("a.com", "/text_in_image.pdf"));

@@ -32,6 +32,7 @@
 #include "brave/components/brave_account/brave_account_service.h"
 #include "brave/components/brave_account/features.h"
 #include "brave/components/brave_debloat/buildflags/buildflags.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/brave_origin/brave_origin_service.h"
 #include "brave/components/brave_origin/brave_origin_settings_handler_impl.h"
 #include "brave/components/brave_origin/brave_origin_utils.h"
@@ -342,6 +343,7 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
                           BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED));
   html_source->AddBoolean("isBraveDebloatedBuild",
                           BUILDFLAG(IS_BRAVE_DEBLOATED));
+  html_source->AddBoolean("isKOBuild", BUILDFLAG(IS_KO));
   html_source->AddBoolean("isBraveOriginPurchased",
                           brave_origin::IsBraveOriginPurchased());
   html_source->AddBoolean("isBraveOriginFeatureEnabled",

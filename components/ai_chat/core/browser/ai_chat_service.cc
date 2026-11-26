@@ -1130,7 +1130,9 @@ mojom::ServiceStatePtr AIChatService::BuildState() {
 
   // Premium prompt is only shown conditionally (e.g. the user hasn't dismissed
   // it and it's been some time since the user started using the feature).
+  // K-O has no premium to offer.
   bool can_show_premium_prompt =
+      !BUILDFLAG(IS_KO) &&
       !profile_prefs_->GetBoolean(prefs::kUserDismissedPremiumPrompt) &&
       !last_accepted_disclaimer.is_null() &&
       last_accepted_disclaimer < base::Time::Now() - base::Days(1);

@@ -227,7 +227,7 @@ export default function FeatureMenu(props: Props) {
           </div>
         </leo-menu-item>
       )}
-      {!aiChatContext.isPremiumUser && (
+      {aiChatContext.isPremiumAvailable && !aiChatContext.isPremiumUser && (
         <leo-menu-item onClick={aiChatContext.goPremium}>
           <div
             className={classnames(

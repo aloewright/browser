@@ -31,6 +31,7 @@
 #include "brave/components/ai_chat/core/common/pref_names.h"
 #include "brave/components/ai_chat/resources/grit/ai_chat_ui_generated_map.h"
 #include "brave/components/constants/webui_url_constants.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/version_info/version_info.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
 #include "chrome/browser/history/history_service_factory.h"
@@ -106,6 +107,8 @@ AIChatUI::AIChatUI(content::WebUI* web_ui)
   source->AddBoolean("isAIChatAgentProfile", profile_->IsAIChatAgent());
   source->AddBoolean("isConversationShareEnabled",
                      ai_chat::features::IsConversationShareEnabled());
+  // K-O has no Brave premium to upsell.
+  source->AddBoolean("isPremiumAvailable", !BUILDFLAG(IS_KO));
   source->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));

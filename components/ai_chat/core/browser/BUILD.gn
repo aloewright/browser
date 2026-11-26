@@ -224,10 +224,10 @@ source_set("unit_tests") {
   ]
 
   if (is_ko) {
-    sources += [
-      "ko_agentd_models_unittest.cc",
-      "model_service_ko_unittest.cc",
-    ]
+    sources += [ "ko_agentd_models_unittest.cc" ]
+    if (is_mac || is_linux) {
+      sources += [ "model_service_ko_unittest.cc" ]
+    }
   } else {
     # These assume Leo models, premium or Brave's AI servers, none of which
     # exist in K-O builds.

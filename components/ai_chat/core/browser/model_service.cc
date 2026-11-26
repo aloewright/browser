@@ -584,8 +584,10 @@ ModelService::ModelService(
           pref_service_->GetList(ko::kAgentdModelsCachePref)),
       std::string());
   agentd_retry_delay_ = kAgentdInitialRetryDelay;
-  agentd_fetcher_ = std::make_unique<ko::AgentdModelsFetcher>(
-      std::move(url_loader_factory), ko::GetDataDir());
+  if (url_loader_factory) {
+    agentd_fetcher_ = std::make_unique<ko::AgentdModelsFetcher>(
+        std::move(url_loader_factory), ko::GetDataDir());
+  }
 #else
   ObliviousHttpConfigManager::DeleteExpiredKeyConfigs(pref_service_);
 
@@ -1360,6 +1362,9 @@ std::unique_ptr<EngineConsumer> ModelService::GetEngineForModel(
 #if BUILDFLAG(IS_KO)
 void ModelService::RefreshAgentdModels() {
   agentd_refresh_timer_.Stop();
+  if (!agentd_fetcher_) {
+    return;
+  }
   agentd_fetcher_->Fetch(base::BindOnce(&ModelService::OnAgentdModelsFetched,
                                         weak_ptr_factory_.GetWeakPtr()));
 }
