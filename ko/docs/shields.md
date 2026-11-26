@@ -205,12 +205,23 @@ Declared in `components/ko/shields/buildflags/buildflags.gni`
 
 * About 11 MB of list text is committed per snapshot (roughly 3 MB in the pak).
 * Snapshot lists are re-read from the pak on every engine rebuild.
-* Only three unit test suites are adapted to K-O:
-  `brave_content_settings_pref_provider_unittest`,
-  `brave_shields_settings_service_unittest` and `brave_shields_utils_unittest`.
-  They skip or adapt cases that assert stock defaults (`IS_KO`) or keep
-  per-site relaxations (`ko_shields_strict_enforcement`), and
-  `KoLockedShieldsDefaults` and the `KoStrict*` tests cover the K-O behavior.
-  Other suites are not adapted yet. For example,
-  `brave_shields_data_controller_unittest` expects the stock cosmetic default
-  and per-site relaxations, so it is expected to fail in K-O builds.
+* Tests that assert stock defaults or rely on global or weakening writes keep
+  their stock expectations under `!IS_KO` and get K-O ones (or strict-mode
+  ones under `ko_shields_strict_enforcement`):
+  * Shields and content-settings unit tests (pref provider, settings
+    service, utils, registry, P3A, component service manager).
+  * The `browser/brave_shields` and `browser/farbling` browser tests.
+  * Suites that set Shields from other features: Shields data controller,
+    browsing data remover, ephemeral storage, network delegate, renderer
+    content settings agent, toolbar and page info.
+
+  `KoLockedShieldsDefaults`, `KoStrict*` and the `Ko*` tests in those files
+  cover the K-O behavior. Nothing has been run yet.
+* K-O's strict HTTPS upgrade default turns on HTTPS-First for every plain
+  `http://` main-frame navigation except loopback. Browser tests that serve
+  plain HTTP on test hostnames must allowlist those hosts, as the adapted
+  suites do. Other suites, including upstream ones run under K-O, can hit the
+  interstitial.
+* No K-O test pins the number of engine rebuilds at startup.
+  `DefaultStartupWithCookieList` is stock-only. K-O providers now notify only
+  when the selected lists change.

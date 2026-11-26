@@ -22,3 +22,7 @@ K-O has no Brave subscription or purchase flow. Under `BUILDFLAG(IS_KO)`:
   ai-providers area.
 
 Tests that only cover the removed purchase flows are skipped when `is_ko`.
+`brave_origin_ko_unittest.cc` and `skus_ko_browsertest.cc` check that the
+SKU and Origin purchase paths stay inert in K-O. Not covered: iOS
+(`ios/browser/skus/skus_service_factory.mm` only checks `kSkusFeature`) and
+Android's Origin in-app subscription binding still follow the feature flags.

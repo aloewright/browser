@@ -202,8 +202,12 @@ debloat/macos/apply-policies.sh --ko
   file checks, token format), `ko_agentd_models_unittest.cc` (parsing, tool
   defaults, URLs, port-file discovery, fetcher),
   `model_service_ko_unittest.cc` (no Leo models, agentd default, port file,
-  keys kept out of pages and prefs, migration) and the K-O stream error
-  tests in `oai_api_client_unittest.cc`.
+  keys kept out of pages and prefs, migration), the K-O stream error
+  tests in `oai_api_client_unittest.cc` and `ko_brave_services_unittest.cc`
+  (premium stays inactive, no SKU binding, rating/feedback/sharing fail
+  without a request, Brave-hosted helpers stay off).
+- Agent task browser tests run on a tool-capable model in K-O, and the two
+  Brave Origin agent-profile policy browser tests are guarded by `IS_KO`.
 - Left out of K-O builds because they test Leo, premium or Brave's servers:
   `model_service_unittest`, `conversation_handler_unittest`,
   `ai_chat_service_unittest`, `ai_chat_credential_manager_unittest`,
