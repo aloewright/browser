@@ -5,6 +5,7 @@
 
 #include "base/path_service.h"
 #include "base/strings/pattern.h"
+#include "base/strings/strcat.h"
 #include "base/strings/utf_string_conversions.h"
 #include "brave/components/brave_wallet/common/buildflags/buildflags.h"
 #include "brave/components/constants/brave_paths.h"
@@ -128,8 +129,16 @@ class BraveSchemeLoadBrowserTest : public InProcessBrowserTest,
 
     browser()->tab_strip_model()->RemoveObserver(this);
 
-    EXPECT_EQ(url, base::UTF16ToUTF8(
-                       LocationBarModel::From(browser())->GetURLForDisplay()));
+#if defined(KO_BUILD)
+    // chrome:// pages are shown as ko:// in K-O.
+    const std::string expected_display =
+        base::StrCat({"ko://", url.substr(std::size("brave://") - 1)});
+#else
+    const std::string& expected_display = url;
+#endif
+    EXPECT_EQ(expected_display,
+              base::UTF16ToUTF8(
+                  LocationBarModel::From(browser())->GetURLForDisplay()));
     EXPECT_EQ(2, browser()->tab_strip_model()->count());
     // Private window stays as initial state.
     EXPECT_EQ("about:blank",
