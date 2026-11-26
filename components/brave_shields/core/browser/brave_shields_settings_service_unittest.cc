@@ -144,6 +144,16 @@ TEST_F(BraveShieldsSettingsServiceTest, IsBraveShieldsManaged) {
                                     std::move(disabled_list));
   EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsManaged(host));
 }
+#else
+TEST_F(BraveShieldsSettingsServiceTest, KoStrictIsBraveShieldsManaged) {
+  EXPECT_TRUE(
+      brave_shields_settings()->IsBraveShieldsManaged(GURL("http://host.com")));
+  EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsManaged(
+      GURL("https://host.com")));
+  // Other schemes still follow policy.
+  EXPECT_FALSE(brave_shields_settings()->IsBraveShieldsManaged(
+      GURL("chrome://settings")));
+}
 #endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 #if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
@@ -184,6 +194,34 @@ TEST_F(BraveShieldsSettingsServiceTest, AdBlockMode) {
   EXPECT_EQ(
       brave_shields_settings()->GetAdBlockMode(GURL("https://example.com")),
       AdBlockMode::STANDARD);
+}
+#else
+TEST_F(BraveShieldsSettingsServiceTest, KoAdBlockMode) {
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT) && !BUILDFLAG(IS_IOS)
+  // Strict K-O builds drop per-site relaxations.
+  constexpr AdBlockMode kStandardMode = AdBlockMode::AGGRESSIVE;
+  constexpr AdBlockMode kAllowMode = AdBlockMode::AGGRESSIVE;
+#else
+  constexpr AdBlockMode kStandardMode = AdBlockMode::STANDARD;
+  constexpr AdBlockMode kAllowMode = AdBlockMode::ALLOW;
+#endif
+  // K-O blocks aggressively by default.
+  EXPECT_EQ(brave_shields_settings()->GetAdBlockMode(kTestUrl),
+            AdBlockMode::AGGRESSIVE);
+  EXPECT_EQ(brave_shields::GetCosmeticFilteringControlType(
+                GetHostContentSettingsMap(), kTestUrl),
+            brave_shields::ControlType::BLOCK);
+
+  brave_shields_settings()->SetAdBlockMode(AdBlockMode::STANDARD, kTestUrl);
+  EXPECT_EQ(brave_shields_settings()->GetAdBlockMode(kTestUrl), kStandardMode);
+
+  brave_shields_settings()->SetAdBlockMode(AdBlockMode::ALLOW, kTestUrl);
+  EXPECT_EQ(brave_shields_settings()->GetAdBlockMode(kTestUrl), kAllowMode);
+
+  // verify other urls remain unchanged
+  EXPECT_EQ(
+      brave_shields_settings()->GetAdBlockMode(GURL("https://example.com")),
+      AdBlockMode::AGGRESSIVE);
 }
 #endif  // !BUILDFLAG(IS_KO)
 
@@ -234,6 +272,25 @@ TEST_F(BraveShieldsSettingsServiceTest, DefaultAdBlockMode) {
   EXPECT_EQ(brave_shields::GetCosmeticFilteringControlType(
                 GetHostContentSettingsMap(), kTestUrl),
             brave_shields::ControlType::BLOCK_THIRD_PARTY);
+}
+#else
+TEST_F(BraveShieldsSettingsServiceTest, KoDefaultAdBlockMode) {
+  EXPECT_EQ(brave_shields_settings()->GetDefaultAdBlockMode(),
+            AdBlockMode::AGGRESSIVE);
+
+  brave_shields_settings()->SetDefaultAdBlockMode(AdBlockMode::STANDARD);
+#if BUILDFLAG(IS_IOS)
+  // iOS has no BravePrefProvider; the change lasts for the session.
+  EXPECT_EQ(brave_shields_settings()->GetDefaultAdBlockMode(),
+            AdBlockMode::STANDARD);
+#else
+  // BravePrefProvider ignores global overrides.
+  EXPECT_EQ(brave_shields_settings()->GetDefaultAdBlockMode(),
+            AdBlockMode::AGGRESSIVE);
+  EXPECT_EQ(
+      brave_shields_settings()->GetAdBlockMode(GURL("https://example.com")),
+      AdBlockMode::AGGRESSIVE);
+#endif
 }
 #endif  // !BUILDFLAG(IS_KO)
 
@@ -301,7 +358,9 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintMode) {
             brave_shields::ControlType::DEFAULT);
 }
 
-#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
+// K-O locks the global Shields defaults, except on iOS, which has no
+// BravePrefProvider and keeps the stock fingerprinting default.
+#if !BUILDFLAG(IS_KO) || BUILDFLAG(IS_IOS)
 TEST_F(BraveShieldsSettingsServiceTest, DefaultFingerprintMode) {
   // explicitly set so we can verify this is unchanged by updating default
   brave_shields_settings()->SetFingerprintMode(FingerprintMode::STANDARD_MODE,
@@ -335,7 +394,17 @@ TEST_F(BraveShieldsSettingsServiceTest, DefaultFingerprintMode) {
                 GetHostContentSettingsMap(), kTestUrl),
             brave_shields::ControlType::DEFAULT);
 }
-#endif  // !BUILDFLAG(IS_KO)
+#else
+TEST_F(BraveShieldsSettingsServiceTest, KoDefaultFingerprintModeLocked) {
+  brave_shields_settings()->SetDefaultFingerprintMode(
+      FingerprintMode::ALLOW_MODE);
+  EXPECT_EQ(brave_shields_settings()->GetDefaultFingerprintMode(),
+            FingerprintMode::STANDARD_MODE);
+  EXPECT_EQ(
+      brave_shields_settings()->GetFingerprintMode(GURL("https://example.com")),
+      FingerprintMode::STANDARD_MODE);
+}
+#endif  // !BUILDFLAG(IS_KO) || BUILDFLAG(IS_IOS)
 
 TEST_F(BraveShieldsSettingsServiceTest, NoScriptsEnabled) {
   // verify the initial values
