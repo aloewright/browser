@@ -13,6 +13,8 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/brave_shield_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/test/base/testing_profile.h"
 #include "components/prefs/testing_pref_service.h"
@@ -82,6 +84,9 @@ TEST_F(BraveShieldsP3ATest, RecordGlobalFingerprintBlockSetting) {
   histogram_tester_->ExpectTotalCount(kFingerprintSettingHistogramName, 3);
 }
 
+// K-O's global ad blocking is aggressive and locked; see
+// KoInitialShieldsSettingsReport.
+#if !BUILDFLAG(IS_KO)
 TEST_F(BraveShieldsP3ATest, RecordDomainAdBlockCounts) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
   auto* prefs = profile_->GetPrefs();
@@ -145,6 +150,34 @@ TEST_F(BraveShieldsP3ATest, RecordDomainAdBlockCounts) {
   histogram_tester_->ExpectBucketCount(kDomainAdsSettingsBelowHistogramName, 1,
                                        7);
 }
+#else
+TEST_F(BraveShieldsP3ATest, KoInitialShieldsSettingsReport) {
+  auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
+  auto* prefs = profile_->GetPrefs();
+
+  // Aggressive ad blocking, standard fingerprinting, strict HTTPS upgrades.
+  MaybeRecordInitialShieldsSettings(
+      &local_state_, prefs, map, GetCosmeticFilteringControlType(map, GURL()),
+      GetFingerprintingControlType(map, GURL()));
+  histogram_tester_->ExpectUniqueSample(kAdsSettingHistogramName, 2, 1);
+  histogram_tester_->ExpectUniqueSample(kFingerprintSettingHistogramName, 1, 1);
+  histogram_tester_->ExpectUniqueSample(kUpgradeHTTPSGlobalHistogramName, 2, 1);
+  histogram_tester_->ExpectUniqueSample(kDomainAdsSettingsAboveHistogramName, 0,
+                                        1);
+  histogram_tester_->ExpectUniqueSample(kDomainAdsSettingsBelowHistogramName, 0,
+                                        1);
+
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // A standard site counts below the aggressive default.
+  SetCosmeticFilteringControlType(map, ControlType::BLOCK_THIRD_PARTY,
+                                  GURL("https://brave.com"), nullptr, prefs);
+  histogram_tester_->ExpectBucketCount(kDomainAdsSettingsAboveHistogramName, 0,
+                                       2);
+  histogram_tester_->ExpectBucketCount(kDomainAdsSettingsBelowHistogramName, 1,
+                                       1);
+#endif
+}
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsP3ATest, RecordDomainFingerprintBlockCounts) {
   base::test::ScopedFeatureList scoped_feature_list;
@@ -160,14 +193,15 @@ TEST_F(BraveShieldsP3ATest, RecordDomainFingerprintBlockCounts) {
 
   // Test initial count
   MaybeRecordInitialShieldsSettings(
-      &local_state_, profile_->GetPrefs(), map,
-      GetCosmeticFilteringControlType(map, GURL()),
+      &local_state_, prefs, map, GetCosmeticFilteringControlType(map, GURL()),
       GetFingerprintingControlType(map, GURL()));
   histogram_tester_->ExpectBucketCount(kDomainFPSettingsAboveHistogramName, 1,
                                        1);
   histogram_tester_->ExpectBucketCount(kDomainFPSettingsBelowHistogramName, 0,
                                        1);
 
+  // Strict K-O builds refuse per-site relaxations.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
   // Test delta counting
   SetFingerprintingControlType(map, ControlType::ALLOW,
                                GURL("https://brave.com"), nullptr, prefs);
@@ -198,6 +232,7 @@ TEST_F(BraveShieldsP3ATest, RecordDomainFingerprintBlockCounts) {
   histogram_tester_->ExpectBucketCount(kDomainFPSettingsBelowHistogramName, 0,
                                        2);
 
+#if !BUILDFLAG(IS_KO)
   // Change global setting
   SetFingerprintingControlType(map, ControlType::BLOCK, GURL(), nullptr, prefs);
   histogram_tester_->ExpectBucketCount(kDomainFPSettingsAboveHistogramName, 0,
@@ -211,8 +246,20 @@ TEST_F(BraveShieldsP3ATest, RecordDomainFingerprintBlockCounts) {
                                        3);
   histogram_tester_->ExpectBucketCount(kDomainFPSettingsBelowHistogramName, 1,
                                        7);
+#else
+  // K-O locks the global setting, so counts stay relative to standard.
+  SetFingerprintingControlType(map, ControlType::DEFAULT,
+                               GURL("https://amazon.com"), nullptr, prefs);
+  histogram_tester_->ExpectBucketCount(kDomainFPSettingsAboveHistogramName, 1,
+                                       7);
+  histogram_tester_->ExpectBucketCount(kDomainFPSettingsBelowHistogramName, 0,
+                                       3);
+#endif  // !BUILDFLAG(IS_KO)
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 }
 
+// K-O upgrades strictly by default and ignores global changes.
+#if !BUILDFLAG(IS_KO)
 TEST_F(BraveShieldsP3ATest, RecordHTTPSUpgradeGlobalSetting) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
 
@@ -233,7 +280,21 @@ TEST_F(BraveShieldsP3ATest, RecordHTTPSUpgradeGlobalSetting) {
   SetHttpsUpgradeControlType(map, ControlType::BLOCK_THIRD_PARTY, GURL());
   histogram_tester_->ExpectBucketCount(kUpgradeHTTPSGlobalHistogramName, 1, 2);
 }
+#else
+TEST_F(BraveShieldsP3ATest, KoRecordHTTPSUpgradeGlobalSettingLocked) {
+  auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
 
+  RecordHTTPSUpgradeSettingP3A(map);
+  SetHttpsUpgradeControlType(map, ControlType::ALLOW, GURL());
+  SetHttpsUpgradeControlType(map, ControlType::BLOCK_THIRD_PARTY, GURL());
+  histogram_tester_->ExpectUniqueSample(kUpgradeHTTPSGlobalHistogramName, 2, 3);
+  histogram_tester_->ExpectUniqueSample(kUpgradeHTTPSPerSiteHistogramName,
+                                        INT_MAX - 1, 3);
+}
+#endif  // !BUILDFLAG(IS_KO)
+
+// K-O's global HTTPS upgrade setting is strict, not standard.
+#if !BUILDFLAG(IS_KO)
 TEST_F(BraveShieldsP3ATest, RecordHTTPSUpgradePerSiteNonDefault) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
 
@@ -260,14 +321,41 @@ TEST_F(BraveShieldsP3ATest, RecordHTTPSUpgradePerSiteNonDefault) {
                              GURL("https://brave.com"));
   histogram_tester_->ExpectBucketCount(kUpgradeHTTPSPerSiteHistogramName, 1, 2);
 }
+#else
+TEST_F(BraveShieldsP3ATest, KoRecordHTTPSUpgradePerSiteNonDefault) {
+  auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
+
+  // A strict site matches the strict global setting - should suspend
+  SetHttpsUpgradeControlType(map, ControlType::BLOCK,
+                             GURL("https://brave.com"));
+  histogram_tester_->ExpectBucketCount(kUpgradeHTTPSPerSiteHistogramName,
+                                       INT_MAX - 1, 1);
+
+  SetHttpsUpgradeControlType(map, ControlType::BLOCK_THIRD_PARTY,
+                             GURL("https://brave.com"));
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds refuse the relaxation - should suspend
+  histogram_tester_->ExpectBucketCount(kUpgradeHTTPSPerSiteHistogramName,
+                                       INT_MAX - 1, 2);
+#else
+  // A standard site differs from global - should report 1
+  histogram_tester_->ExpectBucketCount(kUpgradeHTTPSPerSiteHistogramName, 1, 1);
+#endif
+}
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsP3ATest, RecordHTTPSUpgradeDisabledGlobalNoPerSite) {
   auto* map = HostContentSettingsMapFactory::GetForProfile(profile_.get());
 
   // Set global to disabled - both metrics should suspend
   SetHttpsUpgradeControlType(map, ControlType::ALLOW, GURL());
+#if !BUILDFLAG(IS_KO)
   histogram_tester_->ExpectBucketCount(kUpgradeHTTPSGlobalHistogramName,
                                        INT_MAX - 1, 1);
+#else
+  // K-O ignores the global change and stays strict.
+  histogram_tester_->ExpectUniqueSample(kUpgradeHTTPSGlobalHistogramName, 2, 1);
+#endif
   histogram_tester_->ExpectBucketCount(kUpgradeHTTPSPerSiteHistogramName,
                                        INT_MAX - 1, 1);
 }
