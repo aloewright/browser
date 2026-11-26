@@ -20,6 +20,7 @@
 #include "components/prefs/pref_service.h"
 #include "content/public/browser/web_contents.h"
 #include "crypto/hash.h"
+#include "mojo/public/cpp/bindings/callback_helpers.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "services/network/public/mojom/network_context.mojom.h"
 #include "third_party/blink/public/common/renderer_preferences/renderer_preferences.h"
@@ -135,7 +136,8 @@ void KoContainerProxyService::ConfigureNetworkContextParams(
   params->initial_proxy_config.reset();
 
   mojo::PendingRemote<network::mojom::ProxyConfigClient> client;
-  params->proxy_config_client_receiver = client.InitWithNewPipeAndPassReceiver();
+  params->proxy_config_client_receiver =
+      client.InitWithNewPipeAndPassReceiver();
   clients_[container_id].Add(std::move(client));
 
   bool pending = false;
@@ -188,10 +190,11 @@ mojom::ContainerProxyPtr KoContainerProxyService::GetProxyForUI(
                                     !stored->encrypted_credentials.empty());
 }
 
-void KoContainerProxyService::SetProxy(const std::string& id,
-                                       std::optional<ParsedContainerProxy> proxy,
-                                       bool keep_credentials,
-                                       SetProxyCallback callback) {
+void KoContainerProxyService::SetProxy(
+    const std::string& id,
+    std::optional<ParsedContainerProxy> proxy,
+    bool keep_credentials,
+    SetProxyCallback callback) {
   if (!proxy) {
     RemoveStoredContainerProxy(*prefs_, id);
     std::move(callback).Run(true);
@@ -199,9 +202,12 @@ void KoContainerProxyService::SetProxy(const std::string& id,
   }
 
   if (proxy->credentials && !encryptor_) {
+    // Reports failure if dropped (e.g. at shutdown) rather than never replying.
     pending_until_encryptor_.push_back(base::BindOnce(
         &KoContainerProxyService::SetProxy, weak_factory_.GetWeakPtr(), id,
-        std::move(proxy), keep_credentials, std::move(callback)));
+        std::move(proxy), keep_credentials,
+        mojo::WrapCallbackWithDefaultInvokeIfNotRun(std::move(callback),
+                                                    false)));
     return;
   }
 
@@ -338,12 +344,11 @@ void KoContainerProxyService::PushConfig(const std::string& container_id) {
   }
   if (!config) {
     // The proxy was removed while tabs use this context. Go direct only if
-    // that matches what the profile would do; otherwise stay closed until the
-    // context is recreated.
-    const bool can_go_direct = container_exists_ &&
-                               container_exists_.Run(container_id) &&
-                               profile_has_proxy_ &&
-                               profile_has_proxy_.Run() == false;
+    // that matches what the profile would do (known to have no proxy);
+    // otherwise stay closed until the context is recreated.
+    const bool can_go_direct =
+        container_exists_ && container_exists_.Run(container_id) &&
+        profile_has_proxy_ && profile_has_proxy_.Run() == false;
     config = can_go_direct ? net::ProxyConfigWithAnnotation::CreateDirect()
                            : CreateFailClosedContainerProxyConfig();
   }

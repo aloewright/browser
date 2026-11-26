@@ -113,8 +113,8 @@ TEST_F(KoWorkspaceHandlerTest, CreateContainerValidatesName) {
   ASSERT_TRUE(container);
   EXPECT_EQ(container->name, "Research");
 
-  for (const std::string& bad : {std::string(), std::string("   "),
-                                 std::string(65, 'x')}) {
+  for (const std::string& bad :
+       {std::string(), std::string("   "), std::string(65, 'x')}) {
     handler_->CreateContainer(bad, future.GetCallback());
     EXPECT_FALSE(future.Take());
   }
@@ -122,11 +122,11 @@ TEST_F(KoWorkspaceHandlerTest, CreateContainerValidatesName) {
 }
 
 TEST_F(KoWorkspaceHandlerTest, OpenTabsOnlyInKnownContainersAndWebUrls) {
-  EXPECT_EQ(OpenTabs("c-1", {GURL("https://example.com/"),
-                             GURL("http://example.org/"),
-                             GURL("chrome://settings"),
-                             GURL("javascript:alert(1)"), GURL("file:///etc")}),
-            2u);
+  EXPECT_EQ(
+      OpenTabs("c-1", {GURL("https://example.com/"),
+                       GURL("http://example.org/"), GURL("chrome://settings"),
+                       GURL("javascript:alert(1)"), GURL("file:///etc")}),
+      2u);
   ASSERT_EQ(delegate_->opened.size(), 2u);
   EXPECT_EQ(delegate_->opened[0].first, "c-1");
 

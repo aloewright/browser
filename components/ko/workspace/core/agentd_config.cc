@@ -130,9 +130,8 @@ std::optional<std::string> ReadUserFile(const base::FilePath& path,
     *error = PrivateFileError::kInsecure;
     return std::nullopt;
   }
-  const mode_t forbidden = allow_group_or_world_read
-                               ? (S_IWGRP | S_IWOTH)
-                               : (S_IRWXG | S_IRWXO);
+  const mode_t forbidden =
+      allow_group_or_world_read ? (S_IWGRP | S_IWOTH) : (S_IRWXG | S_IRWXO);
   if (!S_ISREG(info.st_mode) || info.st_uid != geteuid() ||
       (info.st_mode & forbidden) != 0) {
     *error = PrivateFileError::kInsecure;
@@ -163,10 +162,9 @@ AgentdConfig ReadAgentdConfig(const base::FilePath& data_dir) {
 
   // A port file others can write could point the page, and its token, at
   // another local listener, so it must be as private as the token.
-  if (auto contents =
-          ReadUserFile(data_dir.AppendASCII(kAgentdPortFileName),
-                       kMaxPortFileSize, /*allow_group_or_world_read=*/false,
-                       nullptr)) {
+  if (auto contents = ReadUserFile(
+          data_dir.AppendASCII(kAgentdPortFileName), kMaxPortFileSize,
+          /*allow_group_or_world_read=*/false, nullptr)) {
     if (auto port = ParseAgentdPort(*contents)) {
       config.port = *port;
     }

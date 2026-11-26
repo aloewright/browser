@@ -162,17 +162,15 @@ TEST_F(KoContainerProxyServiceTest, ProxiedContainerGetsOwnConfig) {
 }
 
 TEST_F(KoContainerProxyServiceTest, CredentialsAreEncryptedAtRest) {
-  ASSERT_TRUE(
-      SetProxy(std::string("socks5h://zone-user:") + kSecret +
-               "@100.64.0.10:1080"));
+  ASSERT_TRUE(SetProxy(std::string("socks5h://zone-user:") + kSecret +
+                       "@100.64.0.10:1080"));
 
   auto stored = GetStoredContainerProxy(prefs_, kContainerId);
   ASSERT_TRUE(stored);
   EXPECT_EQ(stored->server, "socks5h://100.64.0.10:1080");
   ASSERT_FALSE(stored->encrypted_credentials.empty());
   EXPECT_EQ(stored->encrypted_credentials.find(kSecret), std::string::npos);
-  EXPECT_EQ(stored->encrypted_credentials.find("zone-user"),
-            std::string::npos);
+  EXPECT_EQ(stored->encrypted_credentials.find("zone-user"), std::string::npos);
 
   auto ui = service_->GetProxyForUI(kContainerId);
   ASSERT_TRUE(ui);
@@ -197,8 +195,8 @@ TEST_F(KoContainerProxyServiceTest, KeepCredentialsOnlyForSameServer) {
 }
 
 TEST_F(KoContainerProxyServiceTest, HttpProxyCredentialsOnlyForThatProxy) {
-  ASSERT_TRUE(SetProxy(std::string("http://zone-user:") + kSecret +
-                       "@10.0.0.2:3128"));
+  ASSERT_TRUE(
+      SetProxy(std::string("http://zone-user:") + kSecret + "@10.0.0.2:3128"));
 
   // HTTP credentials never go into the proxy server itself.
   auto params = ConfigureContainerContext();
@@ -282,9 +280,9 @@ TEST_F(KoContainerProxyServiceTest, PendingWithoutEncryptor) {
   // New credentials are not stored in plain text meanwhile.
   bool called = false;
   auto parsed = ParseContainerProxyUrl("socks5h://u:q@100.64.0.10:1080");
-  service_->SetProxy(kContainerId, std::move(*parsed), false,
-                     base::BindOnce([](bool* called, bool) { *called = true; },
-                                    &called));
+  service_->SetProxy(
+      kContainerId, std::move(*parsed), false,
+      base::BindOnce([](bool* called, bool) { *called = true; }, &called));
   EXPECT_FALSE(called);
 }
 

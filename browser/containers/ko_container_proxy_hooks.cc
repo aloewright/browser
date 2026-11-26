@@ -79,10 +79,9 @@ class ContainerProxyLoginDelegate : public content::LoginDelegate {
       std::optional<net::AuthCredentials> credentials,
       content::LoginDelegate::LoginAuthRequiredCallback callback) {
     base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
-        FROM_HERE,
-        base::BindOnce(&ContainerProxyLoginDelegate::Reply,
-                       weak_factory_.GetWeakPtr(), std::move(credentials),
-                       std::move(callback)));
+        FROM_HERE, base::BindOnce(&ContainerProxyLoginDelegate::Reply,
+                                  weak_factory_.GetWeakPtr(),
+                                  std::move(credentials), std::move(callback)));
   }
   ~ContainerProxyLoginDelegate() override = default;
 
@@ -114,6 +113,13 @@ std::string GetContainerIdForRequest(
       process->GetStoragePartition()->GetConfig()));
 }
 
+// Off-the-record container partitions follow the original profile's proxies,
+// so a private window never bypasses them.
+KoContainerProxyService* GetProxyService(content::BrowserContext* context) {
+  return KoContainerProxyServiceFactory::GetForProfile(
+      Profile::FromBrowserContext(context)->GetOriginalProfile());
+}
+
 }  // namespace
 
 void ConfigureKoContainerNetworkContext(
@@ -129,14 +135,13 @@ void ConfigureKoContainerNetworkContext(
   if (!containers_root.IsParent(relative_partition_path)) {
     return;
   }
-  auto* service = KoContainerProxyServiceFactory::GetForProfile(
-      Profile::FromBrowserContext(context));
-  if (service) {
+  if (auto* service = GetProxyService(context)) {
     service->ConfigureNetworkContextParams(relative_partition_path, params);
   }
 }
 
-std::unique_ptr<content::LoginDelegate> MaybeCreateKoContainerProxyLoginDelegate(
+std::unique_ptr<content::LoginDelegate>
+MaybeCreateKoContainerProxyLoginDelegate(
     const net::AuthChallengeInfo& auth_info,
     content::WebContents* web_contents,
     const content::GlobalRequestID& request_id,
@@ -163,8 +168,7 @@ std::unique_ptr<content::LoginDelegate> MaybeCreateKoContainerProxyLoginDelegate
   if (!browser_context) {
     return nullptr;
   }
-  auto* service = KoContainerProxyServiceFactory::GetForProfile(
-      Profile::FromBrowserContext(browser_context));
+  auto* service = GetProxyService(browser_context);
   if (!service || !service->HasProxy(container_id)) {
     return nullptr;
   }
@@ -182,7 +186,8 @@ bool MaybeBlockKoContainerPrefetch(
     content::RenderFrameHost* frame,
     network::URLLoaderFactoryBuilder& factory_builder) {
   if (!frame || !base::FeatureList::IsEnabled(features::kContainers) ||
-      !IsContainersStoragePartition(frame->GetStoragePartition()->GetConfig())) {
+      !IsContainersStoragePartition(
+          frame->GetStoragePartition()->GetConfig())) {
     return false;
   }
   // The downstream remote is dropped: nothing reaches the network.

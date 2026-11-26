@@ -53,7 +53,8 @@ void ForEachContainerTab(
     }
     for (auto* tab : *tab_strip) {
       content::WebContents* contents = tab ? tab->GetContents() : nullptr;
-      if (contents && containers::GetContainerIdForWebContents(contents) == id) {
+      if (contents &&
+          containers::GetContainerIdForWebContents(contents) == id) {
         visit.Run(contents);
       }
     }

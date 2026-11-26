@@ -462,7 +462,8 @@ class FakeProxyDelegate : public ContainersSettingsHandler::ProxyDelegate {
 
 }  // namespace
 
-class ContainersSettingsHandlerProxyTest : public ContainersSettingsHandlerTest {
+class ContainersSettingsHandlerProxyTest
+    : public ContainersSettingsHandlerTest {
  public:
   void SetUp() override {
     ContainersSettingsHandlerTest::SetUp();
@@ -496,8 +497,7 @@ class ContainersSettingsHandlerProxyTest : public ContainersSettingsHandlerTest 
 };
 
 TEST_F(ContainersSettingsHandlerProxyTest, ProxyIsStoredOutsideSyncedList) {
-  EXPECT_EQ(std::nullopt,
-            Add("socks5h://zone-user:s3cr3t@100.64.0.10:1080"));
+  EXPECT_EQ(std::nullopt, Add("socks5h://zone-user:s3cr3t@100.64.0.10:1080"));
 
   auto containers = GetContainers();
   ASSERT_EQ(1u, containers.size());
@@ -549,8 +549,7 @@ TEST_F(ContainersSettingsHandlerProxyTest, UpdateKeepsOrClearsProxy) {
   const std::string id = container->id;
 
   // The UI sends back what it got: server only, has_credentials = true.
-  base::test::TestFuture<std::optional<mojom::ContainerOperationError>>
-      future;
+  base::test::TestFuture<std::optional<mojom::ContainerOperationError>> future;
   container->name = "Renamed";
   handler_->UpdateContainer(container.Clone(), future.GetCallback());
   EXPECT_EQ(std::nullopt, future.Take());

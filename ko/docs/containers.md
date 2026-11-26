@@ -77,6 +77,8 @@ Code: `browser/containers/ko_container_proxy_*`,
   - Proxy removed while tabs are open: the context goes direct only if the
     container still exists and the profile has no proxy of its own.
     Otherwise it stays on the closed port until the next start.
+- **Private windows.** A container partition opened from a private window
+  uses the same proxy as in the regular profile.
 - **Live changes.** Editing a proxy is pushed to open contexts immediately.
 - **Proxy auth.**
   - SOCKS5: brave's username/password SOCKS5 auth carries the credentials

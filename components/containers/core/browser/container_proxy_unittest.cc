@@ -116,9 +116,9 @@ TEST(ContainerProxyTest, RejectsInvalidUrls) {
     EXPECT_FALSE(ContainerProxyErrorToString(parsed.error()).empty());
   }
 
-  EXPECT_EQ(ParseContainerProxyUrl("socks5h://" + std::string(3000, 'a'))
-                .error(),
-            ContainerProxyError::kTooLong);
+  EXPECT_EQ(
+      ParseContainerProxyUrl("socks5h://" + std::string(3000, 'a')).error(),
+      ContainerProxyError::kTooLong);
 }
 
 TEST(ContainerProxyTest, ParsesCredentials) {
@@ -138,9 +138,8 @@ TEST(ContainerProxyTest, ParsesCredentials) {
   EXPECT_TRUE(parsed->credentials->password.empty());
 
   // Private host names are allowed for cleartext credentials.
-  EXPECT_TRUE(
-      ParseContainerProxyUrl("socks5h://u:p@peer.netbird.cloud:1080")
-          .has_value());
+  EXPECT_TRUE(ParseContainerProxyUrl("socks5h://u:p@peer.netbird.cloud:1080")
+                  .has_value());
   EXPECT_TRUE(ParseContainerProxyUrl("http://u:p@localhost:8080").has_value());
   EXPECT_TRUE(ParseContainerProxyUrl("http://u:p@[fd00::5]:8080").has_value());
   // TLS to the proxy allows any host.
@@ -181,9 +180,9 @@ TEST(ContainerProxyTest, RejectsBadCredentials) {
       ParseContainerProxyUrl("socks5://us%3Aer:p@10.0.0.1").has_value());
 
   const std::string long_user(256, 'u');
-  EXPECT_EQ(ParseContainerProxyUrl("socks5h://" + long_user + ":p@10.0.0.1")
-                .error(),
-            ContainerProxyError::kInvalidCredentials);
+  EXPECT_EQ(
+      ParseContainerProxyUrl("socks5h://" + long_user + ":p@10.0.0.1").error(),
+      ContainerProxyError::kInvalidCredentials);
 }
 
 TEST(ContainerProxyTest, StoredServerRejectsCredentials) {
@@ -241,7 +240,8 @@ TEST(ContainerProxyTest, SocksConfigCarriesCredentialsWithoutFallback) {
 }
 
 TEST(ContainerProxyTest, HttpConfigKeepsCredentialsOutOfServer) {
-  auto parsed = ParseContainerProxyUrl("http://zone-user:s3cr3t-Pa55@[fd00::5]");
+  auto parsed =
+      ParseContainerProxyUrl("http://zone-user:s3cr3t-Pa55@[fd00::5]");
   ASSERT_TRUE(parsed.has_value());
 
   const auto config =

@@ -57,10 +57,11 @@ TEST(KoWorkspaceAppsTest, ParsesBothFileShapes) {
 TEST(KoWorkspaceAppsTest, CapsCount) {
   base::ListValue list;
   for (size_t i = 0; i < kMaxWorkspaceApps + 10; ++i) {
-    list.Append(base::DictValue()
-                    .Set("name", "App")
-                    .Set("url", base::StrCat({"https://a", base::NumberToString(i),
-                                              ".example.com/"})));
+    list.Append(
+        base::DictValue()
+            .Set("name", "App")
+            .Set("url", base::StrCat({"https://a", base::NumberToString(i),
+                                      ".example.com/"})));
   }
   EXPECT_EQ(WorkspaceAppsFromList(list).size(), kMaxWorkspaceApps);
 }

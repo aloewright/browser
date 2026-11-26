@@ -68,9 +68,9 @@ void BraveComponentLoader::AddKoBundledExtensions() {
   for (const auto& extension : ko::kBundledExtensions) {
     // Files are in <resources>/ko_extensions/<dir>; the build gave the
     // manifest a fixed "key", so the ID matches `extension.id`.
-    const auto id =
-        Add(extension.manifest, base::FilePath(FILE_PATH_LITERAL("ko_extensions"))
-                                    .AppendASCII(extension.dir));
+    const auto id = Add(extension.manifest,
+                        base::FilePath(FILE_PATH_LITERAL("ko_extensions"))
+                            .AppendASCII(extension.dir));
     LOG_IF(ERROR, id != extension.id)
         << "Bundled extension " << extension.dir << " got an unexpected ID";
   }

@@ -39,6 +39,7 @@
 #include "chrome/browser/ui/navigator/browser_navigator_params.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/webui/webui_embedding_context.h"
+#include "components/grit/brave_components_strings.h"
 #include "components/grit/brave_components_webui_strings.h"
 #include "components/viz/common/frame_sinks/copy_output_result.h"
 #include "content/public/browser/browser_context.h"
@@ -52,6 +53,7 @@
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
+#include "ui/base/l10n/l10n_util.h"
 #include "ui/base/page_transition_types.h"
 #include "ui/base/window_open_disposition.h"
 #include "ui/gfx/codec/png_codec.h"
@@ -82,7 +84,7 @@ std::string SanitizeForFileName(std::string_view host) {
   std::string out;
   for (char c : host) {
     out.push_back(base::IsAsciiAlphaNumeric(c) || c == '.' || c == '-' ? c
-                                                                      : '_');
+                                                                       : '_');
   }
   return out.empty() ? std::string("page") : out;
 }
@@ -94,9 +96,8 @@ ko_workspace::mojom::CapturePtr MakeCapture(std::string file_name,
   if (data.empty() || data.size() > kMaxCaptureBytes) {
     return nullptr;
   }
-  return ko_workspace::mojom::Capture::New(std::move(file_name),
-                                           std::move(mime_type),
-                                           std::move(data), source_url);
+  return ko_workspace::mojom::Capture::New(
+      std::move(file_name), std::move(mime_type), std::move(data), source_url);
 }
 
 std::optional<std::vector<uint8_t>> ReadAndDeleteFile(
@@ -123,8 +124,8 @@ class WorkspaceDelegate : public ko_workspace::WorkspaceHandler::Delegate {
  public:
   explicit WorkspaceDelegate(content::WebContents* web_contents)
       : web_contents_(web_contents),
-        profile_(Profile::FromBrowserContext(
-            web_contents->GetBrowserContext())) {}
+        profile_(
+            Profile::FromBrowserContext(web_contents->GetBrowserContext())) {}
   ~WorkspaceDelegate() override = default;
 
   std::vector<ko_workspace::mojom::WorkspaceContainerPtr> GetContainers()
@@ -145,9 +146,9 @@ class WorkspaceDelegate : public ko_workspace::WorkspaceHandler::Delegate {
       const std::string& name) override {
 #if BUILDFLAG(ENABLE_CONTAINERS)
     if (auto* service = GetContainersService()) {
-      if (auto container = service->CreateContainer(
-              name, containers::mojom::Icon::kWork,
-              SkColorSetRGB(0x63, 0x5B, 0xFF))) {
+      if (auto container =
+              service->CreateContainer(name, containers::mojom::Icon::kWork,
+                                       SkColorSetRGB(0x63, 0x5B, 0xFF))) {
         return ko_workspace::mojom::WorkspaceContainer::New(container->id,
                                                             container->name);
       }
@@ -184,13 +185,13 @@ class WorkspaceDelegate : public ko_workspace::WorkspaceHandler::Delegate {
   }
 
   void ShowWorkspace(bool in_side_panel) override {
-    OpenUrl(GURL(kKoWorkspaceURL), u"Workspace", in_side_panel);
+    OpenUrl(GURL(kKoWorkspaceURL),
+            l10n_util::GetStringUTF16(IDS_KO_WORKSPACE_TITLE), in_side_panel);
   }
 
-  void CaptureActiveTab(
-      ko_workspace::mojom::CaptureKind kind,
-      ko_workspace::WorkspaceHandler::CaptureActiveTabCallback callback)
-      override {
+  void CaptureActiveTab(ko_workspace::mojom::CaptureKind kind,
+                        ko_workspace::WorkspaceHandler::CaptureActiveTabCallback
+                            callback) override {
     auto reply = mojo::WrapCallbackWithDefaultInvokeIfNotRun(
         std::move(callback), ko_workspace::mojom::CapturePtr());
     auto* browser = GetBrowser();
@@ -283,10 +284,10 @@ class WorkspaceDelegate : public ko_workspace::WorkspaceHandler::Delegate {
             [](const GURL& url, std::string file_name,
                ko_workspace::WorkspaceHandler::CaptureActiveTabCallback reply,
                std::optional<std::vector<uint8_t>> png) {
-              std::move(reply).Run(
-                  png ? MakeCapture(std::move(file_name), "image/png",
-                                    std::move(*png), url)
-                      : nullptr);
+              std::move(reply).Run(png ? MakeCapture(std::move(file_name),
+                                                     "image/png",
+                                                     std::move(*png), url)
+                                       : nullptr);
             },
             url, std::move(file_name), std::move(reply)));
   }
@@ -332,8 +333,7 @@ class WorkspaceDelegate : public ko_workspace::WorkspaceHandler::Delegate {
                                               std::move(*data), url)
                                 : nullptr);
                       },
-                      url, std::move(file_name), std::move(reply),
-                      file_size));
+                      url, std::move(file_name), std::move(reply), file_size));
             },
             file_path, url, std::move(file_name), std::move(reply)));
   }
@@ -352,8 +352,9 @@ void HandleAgentdScript(const std::string& path,
           [](content::WebUIDataSource::GotDataCallback callback,
              ko_workspace::AgentdConfig config) {
             g_last_agentd_port = config.port;
-            std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
-                ko_workspace::BuildAgentdScript(config)));
+            std::move(callback).Run(
+                base::MakeRefCounted<base::RefCountedString>(
+                    ko_workspace::BuildAgentdScript(config)));
           },
           std::move(callback)));
 }

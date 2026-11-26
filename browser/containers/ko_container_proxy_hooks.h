@@ -41,7 +41,8 @@ void ConfigureKoContainerNetworkContext(
 
 // Answers proxy auth for proxied containers from stored credentials and never
 // prompts. Returns nullptr, leaving `callback` untouched, for other requests.
-std::unique_ptr<content::LoginDelegate> MaybeCreateKoContainerProxyLoginDelegate(
+std::unique_ptr<content::LoginDelegate>
+MaybeCreateKoContainerProxyLoginDelegate(
     const net::AuthChallengeInfo& auth_info,
     content::WebContents* web_contents,
     const content::GlobalRequestID& request_id,

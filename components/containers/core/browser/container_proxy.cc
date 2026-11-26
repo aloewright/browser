@@ -45,7 +45,7 @@ constexpr uint16_t kFailClosedPort = 9;
 
 // Host suffixes treated as private networks (NetBird, mDNS, home LANs).
 constexpr std::array<std::string_view, 7> kPrivateHostSuffixes = {
-    ".netbird.cloud", ".netbird.selfhosted", ".internal", ".local",
+    ".netbird.cloud", ".netbird.selfhosted", ".internal",  ".local",
     ".lan",           ".home.arpa",          ".localhost",
 };
 
@@ -100,9 +100,8 @@ const SchemeInfo& GetSchemeInfo(ContainerProxyScheme scheme) {
 }
 
 bool ContainsControlOrSpace(std::string_view value) {
-  return std::ranges::any_of(value, [](char c) {
-    return base::IsAsciiControl(c) || c == ' ';
-  });
+  return std::ranges::any_of(
+      value, [](char c) { return base::IsAsciiControl(c) || c == ' '; });
 }
 
 // Strict percent-decoding: every '%' must start a valid escape.
@@ -291,8 +290,8 @@ std::string ParsedContainerProxy::ToString() const {
   if (!credentials) {
     return server.ToString();
   }
-  return base::StrCat({server.ToString(), " (credentials ",
-                       credentials->ToString(), ")"});
+  return base::StrCat(
+      {server.ToString(), " (credentials ", credentials->ToString(), ")"});
 }
 
 base::expected<ParsedContainerProxy, ContainerProxyError>

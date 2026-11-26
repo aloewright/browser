@@ -24,8 +24,8 @@ namespace {
 // Matches the Brave Containers storage partition key charset.
 bool IsValidContainerId(std::string_view id) {
   return !id.empty() && id.size() <= 64 && std::ranges::all_of(id, [](char c) {
-           return base::IsAsciiAlphaNumeric(c) || c == '-';
-         });
+    return base::IsAsciiAlphaNumeric(c) || c == '-';
+  });
 }
 
 std::optional<std::vector<WorkspaceApp>> ReadAppsFile(
@@ -34,10 +34,9 @@ std::optional<std::vector<WorkspaceApp>> ReadAppsFile(
     return std::nullopt;
   }
   // Not secret, but must not be writable by others.
-  auto contents =
-      ReadUserFile(data_dir.AppendASCII(kWorkspaceAppsFileName),
-                   kMaxWorkspaceAppsFileSize,
-                   /*allow_group_or_world_read=*/true, nullptr);
+  auto contents = ReadUserFile(data_dir.AppendASCII(kWorkspaceAppsFileName),
+                               kMaxWorkspaceAppsFileSize,
+                               /*allow_group_or_world_read=*/true, nullptr);
   if (!contents) {
     return std::nullopt;
   }
@@ -107,17 +106,17 @@ void WorkspaceHandler::GetWorkspaceApps(GetWorkspaceAppsCallback callback) {
   base::ThreadPool::PostTaskAndReplyWithResult(
       FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_VISIBLE},
       base::BindOnce(&ReadAppsFile, data_dir_),
-      base::BindOnce(
-          &WorkspaceHandler::OnAppsFileRead, weak_factory_.GetWeakPtr(),
-          /*replace_existing=*/false,
-          base::BindOnce(
-              [](base::WeakPtr<WorkspaceHandler> handler,
-                 GetWorkspaceAppsCallback callback, bool) {
-                std::move(callback).Run(
-                    handler ? handler->GetAppsForPage()
-                            : std::vector<mojom::WorkspaceAppPtr>());
-              },
-              weak_factory_.GetWeakPtr(), std::move(callback))));
+      base::BindOnce(&WorkspaceHandler::OnAppsFileRead,
+                     weak_factory_.GetWeakPtr(),
+                     /*replace_existing=*/false,
+                     base::BindOnce(
+                         [](base::WeakPtr<WorkspaceHandler> handler,
+                            GetWorkspaceAppsCallback callback, bool) {
+                           std::move(callback).Run(
+                               handler ? handler->GetAppsForPage()
+                                       : std::vector<mojom::WorkspaceAppPtr>());
+                         },
+                         weak_factory_.GetWeakPtr(), std::move(callback))));
 }
 
 void WorkspaceHandler::ReloadWorkspaceAppsFromFile(
@@ -141,9 +140,8 @@ void WorkspaceHandler::ReloadWorkspaceAppsFromFile(
 void WorkspaceHandler::OpenWorkspaceApp(const GURL& url, bool in_side_panel) {
   // Only URLs from the user's own list.
   const auto apps = ko_workspace::GetWorkspaceApps(*prefs_);
-  if (std::ranges::none_of(apps, [&url](const WorkspaceApp& app) {
-        return app.url == url;
-      })) {
+  if (std::ranges::none_of(
+          apps, [&url](const WorkspaceApp& app) { return app.url == url; })) {
     return;
   }
   delegate_->OpenWorkspaceApp(url, in_side_panel);

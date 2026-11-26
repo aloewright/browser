@@ -38,8 +38,7 @@ class KoWorkspaceUI : public ui::MojoWebUIController {
   WEB_UI_CONTROLLER_TYPE_DECL();
 };
 
-class KoWorkspaceUIConfig
-    : public content::DefaultWebUIConfig<KoWorkspaceUI> {
+class KoWorkspaceUIConfig : public content::DefaultWebUIConfig<KoWorkspaceUI> {
  public:
   KoWorkspaceUIConfig();
 

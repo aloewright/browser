@@ -131,7 +131,8 @@ class KoContainerProxyService
   // Work that needs the encryptor, run once it is ready.
   std::vector<base::OnceClosure> pending_until_encryptor_;
   // Live network contexts of proxied containers.
-  std::map<std::string, mojo::RemoteSet<network::mojom::ProxyConfigClient>,
+  std::map<std::string,
+           mojo::RemoteSet<network::mojom::ProxyConfigClient>,
            std::less<>>
       clients_;
   // Proxied container ids as of the last pref change.
