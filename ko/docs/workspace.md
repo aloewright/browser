@@ -106,7 +106,8 @@ What happens at build time
    `resources/ko_extensions/` on Linux.
 4. At startup `BraveComponentLoader` loads each one as a component
    extension. The manifests are compiled in, so there is no disk read on
-   the UI thread.
+   the UI thread. Their IDs are added to the component extension allowlist
+   (`chromium_src/chrome/browser/extensions/component_extensions_allowlist/`).
 
 Requirements:
 

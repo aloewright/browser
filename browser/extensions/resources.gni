@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # you can obtain one at http://mozilla.org/MPL/2.0/.
 
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//extensions/buildflags/buildflags.gni")
 
 brave_extensions_resources = []
@@ -13,4 +14,9 @@ if (enable_extensions) {
     "//brave/browser/extensions/api:generated_api_registration",
     "//brave/browser/extensions:resources",
   ]
+
+  # The component extension allowlist needs the bundled extension IDs.
+  if (is_ko) {
+    brave_extensions_resources += [ "//brave/components/ko/bundled_extensions" ]
+  }
 }
