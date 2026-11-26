@@ -18,6 +18,7 @@ specific_include_rules = {
     "+content/public/test",
   ],
   "brave_content_client_unittest\.cc": [
+    "+components/crash/core/common/crash_key.h",
     "+content/common/url_schemes.h",
   ],
   "brave_channel_info_unittest\.cc": [
