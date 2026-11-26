@@ -23,8 +23,11 @@ namespace ko {
 inline constexpr char kAgentdTokenFileName[] = "agentd.token";
 inline constexpr char kAgentdPortFileName[] = "agentd.port";
 inline constexpr uint16_t kAgentdDefaultPort = 47821;
-// agentd's token is 32 random bytes in unpadded base64url.
-inline constexpr size_t kAgentdTokenLength = 43;
+// agentd writes 32 random bytes in unpadded base64url (43 characters) and
+// starts with any base64url token of at least 32 characters. Accept the same
+// range, bounded.
+inline constexpr size_t kAgentdTokenMinLength = 32;
+inline constexpr size_t kAgentdTokenMaxLength = 512;
 
 enum class AgentdTokenStatus {
   kOk,
@@ -57,8 +60,9 @@ struct AgentdConfig {
 // token.
 AgentdConfig ReadAgentdConfig(const base::FilePath& data_dir);
 
-// The trimmed token if `contents` is kAgentdTokenLength base64url characters
-// ([A-Za-z0-9_-]), optionally surrounded by ASCII whitespace.
+// The trimmed token if `contents` is kAgentdTokenMinLength to
+// kAgentdTokenMaxLength base64url characters ([A-Za-z0-9_-]), optionally
+// surrounded by ASCII whitespace.
 std::optional<std::string> ParseAgentdToken(std::string_view contents);
 // 1-65535, optionally surrounded by ASCII whitespace.
 std::optional<uint16_t> ParseAgentdPort(std::string_view contents);

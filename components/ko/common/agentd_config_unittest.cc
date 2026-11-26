@@ -28,23 +28,25 @@ std::string Repeat(char c, size_t count) {
 }  // namespace
 
 TEST(KoAgentdConfigTest, ParsesTokensInAgentdFormatOnly) {
-  ASSERT_EQ(std::string_view(kToken).size(), kAgentdTokenLength);
+  ASSERT_EQ(std::string_view(kToken).size(), 43u);
   EXPECT_EQ(ParseAgentdToken(kToken), kToken);
   // agentd writes the token followed by a newline.
   EXPECT_EQ(ParseAgentdToken(std::string(kToken) + "\n"), kToken);
   EXPECT_EQ(ParseAgentdToken(std::string(" \t") + kToken + "\r\n"), kToken);
-  EXPECT_TRUE(ParseAgentdToken(Repeat('a', kAgentdTokenLength)));
+  // agentd starts with any base64url token of 32 or more characters.
+  EXPECT_TRUE(ParseAgentdToken(Repeat('a', kAgentdTokenMinLength)));
+  EXPECT_TRUE(ParseAgentdToken(Repeat('a', 86)));
+  EXPECT_TRUE(ParseAgentdToken(Repeat('a', kAgentdTokenMaxLength)));
 
   EXPECT_FALSE(ParseAgentdToken(""));
   EXPECT_FALSE(ParseAgentdToken("\n"));
   EXPECT_FALSE(ParseAgentdToken("short"));
-  // One character short or long.
-  EXPECT_FALSE(ParseAgentdToken(Repeat('a', kAgentdTokenLength - 1)));
-  EXPECT_FALSE(ParseAgentdToken(Repeat('a', kAgentdTokenLength + 1)));
+  EXPECT_FALSE(ParseAgentdToken(Repeat('a', kAgentdTokenMinLength - 1)));
+  EXPECT_FALSE(ParseAgentdToken(Repeat('a', kAgentdTokenMaxLength + 1)));
   // Standard base64 and padding are not agentd's alphabet.
   for (const char* last : {"+", "/", "=", ".", "~"}) {
     SCOPED_TRACE(last);
-    EXPECT_FALSE(ParseAgentdToken(Repeat('a', kAgentdTokenLength - 1) + last));
+    EXPECT_FALSE(ParseAgentdToken(Repeat('a', 42) + last));
   }
   // Nothing that could break out of a header or a script.
   EXPECT_FALSE(ParseAgentdToken(Repeat('a', 20) + "\r\n" + Repeat('a', 21)));
@@ -132,6 +134,11 @@ TEST_F(KoAgentdConfigFileTest, RefusesSymlinkedToken) {
 
 TEST_F(KoAgentdConfigFileTest, RejectsMalformedOrOversizedToken) {
   Write(kAgentdTokenFileName, "not a token", 0600);
+  EXPECT_EQ(ReadAgentdConfig(temp_dir_.GetPath()).token_status,
+            AgentdTokenStatus::kInvalid);
+  // Fits the file limit but is longer than any token the browser takes.
+  Write(kAgentdTokenFileName, Repeat('a', kAgentdTokenMaxLength + 1) + "\n",
+        0600);
   EXPECT_EQ(ReadAgentdConfig(temp_dir_.GetPath()).token_status,
             AgentdTokenStatus::kInvalid);
   Write(kAgentdTokenFileName, Repeat('a', 4096), 0600);

@@ -465,8 +465,8 @@ TEST_F(KOAgentdModelsFetcherTest, RefusesTokensNotInAgentdFormat) {
   // Characters outside base64url, or the wrong length, are not agentd's.
   for (const std::string& bad :
        {std::string(42, 'a') + "+", std::string(42, 'a') + "/",
-        std::string(42, 'a') + "=", std::string(32, 'a'),
-        std::string(256, 'a')}) {
+        std::string(42, 'a') + "=", std::string(31, 'a'),
+        std::string(513, 'a')}) {
     SCOPED_TRACE(bad);
     WriteFile(::ko::kAgentdTokenFileName, bad, 0600);
     AgentdFetchResult result = Fetch();
@@ -474,6 +474,28 @@ TEST_F(KOAgentdModelsFetcherTest, RefusesTokensNotInAgentdFormat) {
     EXPECT_FALSE(result.models);
   }
   EXPECT_TRUE(requested_urls_.empty());
+}
+
+// agentd starts with any base64url token of 32 or more characters, not only
+// the 43 it writes; the browser must not silently go quiet on those.
+TEST_F(KOAgentdModelsFetcherTest, SendsOtherTokenLengthsAgentdAccepts) {
+  std::optional<std::string> authorization;
+  url_loader_factory_.SetInterceptor(
+      base::BindLambdaForTesting([&](const network::ResourceRequest& request) {
+        authorization = request.headers.GetHeader("Authorization");
+      }));
+  url_loader_factory_.AddResponse(GetAgentdUrl(kAgentdModelsPath).spec(),
+                                  R"({"data": []})");
+  for (const std::string& token :
+       {std::string(32, 'a'), std::string(86, 'b'), std::string(512, 'c')}) {
+    SCOPED_TRACE(token.size());
+    WriteFile(::ko::kAgentdTokenFileName, token + "\n", 0600);
+    authorization.reset();
+    AgentdFetchResult result = Fetch();
+    EXPECT_EQ(result.token, token);
+    EXPECT_TRUE(result.models);
+    EXPECT_EQ(authorization, "Bearer " + token);
+  }
 }
 
 TEST_F(KOAgentdModelsFetcherTest, RefusesTokenOthersCanRead) {

@@ -48,7 +48,8 @@ std::string AgentdConfig::GetBaseUrl() const {
 std::optional<std::string> ParseAgentdToken(std::string_view contents) {
   const std::string_view token =
       base::TrimWhitespaceASCII(contents, base::TRIM_ALL);
-  if (token.size() != kAgentdTokenLength ||
+  if (token.size() < kAgentdTokenMinLength ||
+      token.size() > kAgentdTokenMaxLength ||
       !std::ranges::all_of(token, IsBase64UrlChar)) {
     return std::nullopt;
   }
