@@ -28,6 +28,7 @@
 #include "base/test/test_future.h"
 #include "base/test/thread_test_helper.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/values.h"
 #include "brave/app/brave_command_ids.h"
 #include "brave/browser/brave_browser_process.h"
 #include "brave/browser/brave_shields/ad_block_browser_test_helper.h"
@@ -51,6 +52,7 @@
 #include "brave/components/constants/brave_paths.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/de_amp/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/playlist/core/common/buildflags/buildflags.h"
 #include "brave/components/speedreader/common/buildflags/buildflags.h"
 #include "build/build_config.h"
@@ -3227,6 +3229,8 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ProceduralFilterXpath) {
   }
 }
 
+// K-O locks the cookie list on; see KoLockedListStaysEnabled.
+#if !BUILDFLAG(IS_KO)
 class CookieListPrefObserver {
  public:
   explicit CookieListPrefObserver(PrefService* local_state) {
@@ -3279,6 +3283,31 @@ IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, ListEnabled) {
     EXPECT_EQ(false, *lists[0].GetDict().FindBool("enabled"));
   }
 }
+#else   // !BUILDFLAG(IS_KO)
+// Unchecking a locked list leaves it on. The catalog may also hold K-O's
+// embedded copy, so look the list up by uuid.
+IN_PROC_BROWSER_TEST_F(AdBlockServiceTest, KoLockedListStaysEnabled) {
+  InstallRegionalAdBlockComponent(brave_shields::kCookieListUuid, false);
+
+  component_service_manager()->EnableFilterList(brave_shields::kCookieListUuid,
+                                                false);
+
+  EXPECT_TRUE(component_service_manager()->IsFilterListEnabled(
+      brave_shields::kCookieListUuid));
+  bool listed = false;
+  for (const auto& list : component_service_manager()->GetRegionalLists()) {
+    const base::DictValue& dict = list.GetDict();
+    const std::string* uuid = dict.FindString("uuid");
+    if (!uuid || *uuid != brave_shields::kCookieListUuid) {
+      continue;
+    }
+    listed = true;
+    EXPECT_TRUE(dict.FindBool("enabled").value_or(false));
+    EXPECT_TRUE(dict.FindBool("locked").value_or(false));
+  }
+  EXPECT_TRUE(listed);
+}
+#endif  // !BUILDFLAG(IS_KO)
 
 // Content Picker and the context menu are disabled for Android.
 #if !BUILDFLAG(IS_ANDROID)
@@ -3531,6 +3560,8 @@ class AdblockOnlyModeFilterListsTest : public AdBlockServiceTest {
   base::test::ScopedFeatureList feature_list_;
 };
 
+// K-O has no ad block only mode; see KoIgnoresAdblockOnlyMode.
+#if !BUILDFLAG(IS_KO)
 IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
                        CookieListDisabledByAdblockOnlyMode) {
   InstallRegionalAdBlockComponent(brave_shields::kCookieListUuid, true);
@@ -3628,6 +3659,21 @@ IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
     EXPECT_EQ(false, *lists[0].GetDict().FindBool("enabled"));
   }
 }
+#else   // !BUILDFLAG(IS_KO)
+// Neither unchecking nor ad block only mode turns a locked list off.
+IN_PROC_BROWSER_TEST_F(AdblockOnlyModeFilterListsTest,
+                       KoIgnoresAdblockOnlyMode) {
+  component_service_manager()->EnableFilterList(
+      brave_shields::kDefaultAdblockFiltersListUuid, false);
+  local_state()->SetBoolean(brave_shields::prefs::kAdBlockOnlyModeEnabled,
+                            true);
+
+  EXPECT_TRUE(component_service_manager()->IsFilterListEnabled(
+      brave_shields::kDefaultAdblockFiltersListUuid));
+  EXPECT_TRUE(component_service_manager()->IsFilterListEnabled(
+      brave_shields::kCookieListUuid));
+}
+#endif  // !BUILDFLAG(IS_KO)
 
 class AdblockOnlyModeFilterListsWithFeatureDisabledTest
     : public AdBlockServiceTest {

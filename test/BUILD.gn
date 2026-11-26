@@ -1193,6 +1193,7 @@ test("brave_browser_tests") {
     "//brave/components/debounce/core/common",
     "//brave/components/global_privacy_control",
     "//brave/components/https_upgrade_exceptions/browser",
+    "//brave/components/ko/buildflags",
     "//brave/components/l10n/common",
     "//brave/components/l10n/common:test_support",
     "//brave/components/ntp_background_images/buildflags",
