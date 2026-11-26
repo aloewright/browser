@@ -60,12 +60,13 @@ Code: `browser/containers/ko_container_proxy_*`,
 `components/containers/core/browser/container_proxy.*`.
 
 - **Network context.** `BraveContentBrowserClient::ConfigureNetworkContextParams`
-  matches the partition path (`Storage/ext/containers/<hash>`) to a proxied
-  container. That context is detached from the profile-wide
-  `ProxyConfigMonitor` (so profile, policy, extension or system proxy
-  changes cannot redirect it) and gets one fixed proxy with **no DIRECT
-  fallback**. Loopback and link-local destinations keep Chromium's implicit
-  bypass, so pages cannot reach the proxy host's own local services.
+  puts every container context (`Storage/ext/containers/<hash>`) behind a
+  relay between it and the profile-wide `ProxyConfigMonitor`. While the
+  container has a proxy, the context gets that one proxy with **no DIRECT
+  fallback**, and profile, policy, extension or system proxy changes are
+  held back. Without one, the profile's config passes through unchanged.
+  Loopback and link-local destinations keep Chromium's implicit bypass, so
+  pages cannot reach the proxy host's own local services.
 - **Fail closed.**
   - Proxy unreachable: requests fail with `ERR_PROXY_CONNECTION_FAILED`.
   - SOCKS credentials not decryptable yet (OSCrypt still starting): the
@@ -74,12 +75,15 @@ Code: `browser/containers/ko_container_proxy_*`,
   - SOCKS credentials not decryptable at all: the proxy is used without
     them, so an authenticating proxy rejects the connection.
   - Corrupt stored entry: a closed local port (`127.0.0.1:9`) is used.
-  - Proxy removed while tabs are open: the context goes direct only if the
-    container still exists and the profile has no proxy of its own.
-    Otherwise it stays on the closed port until the next start.
+  - Proxy added while the container already has a context: SOCKS
+    credentials still waiting for OSCrypt put it on the closed port first.
+  - Proxy removed while tabs are open: the context goes back to the
+    profile's proxy settings, like any other container. A deleted
+    container's context stays on the closed port until the next start.
 - **Private windows.** A container partition opened from a private window
   uses the same proxy as in the regular profile.
-- **Live changes.** Editing a proxy is pushed to open contexts immediately.
+- **Live changes.** Adding, editing or removing a proxy applies to open
+  contexts immediately, including ones created before the proxy was set.
 - **Proxy auth.**
   - SOCKS5: brave's username/password SOCKS5 auth carries the credentials
     in the proxy server sent to the network service.
@@ -89,7 +93,8 @@ Code: `browser/containers/ko_container_proxy_*`,
     challenger differs, the request fails.
 - **WebRTC.** Tabs in a proxied container get `disable_non_proxied_udp`, and
   the per-URL overrides are cleared (`chromium_src/chrome/browser/ui/prefs/
-  prefs_tab_helper.cc`). Open tabs are updated when a proxy is added.
+  prefs_tab_helper.cc`). Open tabs, also in private windows, are updated
+  when a proxy is added.
 - **Prefetch.** Speculation-rules prefetch from any container frame is
   blocked. Chromium runs it in the default or an isolated, unproxied network
   context, which would leak cookies and the real IP.
@@ -138,4 +143,6 @@ In NetBird, allow only the Mac's peer group to reach those ports.
   list, invalid proxies and storage failures add nothing.
 - `browser/containers/ko_container_proxy_service_unittest.cc`: partition
   path, credentials encrypted at rest, HTTP proxy auth matching, live
-  updates, fail-closed removal, pending without OSCrypt.
+  updates (including a proxy added to an existing context), profile changes
+  held back while proxied, deleted containers staying closed, pending
+  without OSCrypt.

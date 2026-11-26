@@ -6,7 +6,7 @@
 #ifndef BRAVE_BROWSER_CONTAINERS_KO_CONTAINER_PROXY_SERVICE_H_
 #define BRAVE_BROWSER_CONTAINERS_KO_CONTAINER_PROXY_SERVICE_H_
 
-#include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -22,11 +22,9 @@
 #include "brave/components/containers/core/browser/containers_settings_handler.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "components/prefs/pref_change_registrar.h"
-#include "mojo/public/cpp/bindings/remote_set.h"
 #include "net/base/auth.h"
 #include "net/proxy_resolution/proxy_config_with_annotation.h"
 #include "services/network/public/mojom/network_context.mojom-forward.h"
-#include "services/network/public/mojom/proxy_config_with_annotation.mojom.h"
 
 class PrefService;
 
@@ -52,10 +50,6 @@ class KoContainerProxyService
     : public KeyedService,
       public ContainersSettingsHandler::ProxyDelegate {
  public:
-  // Returns whether the profile has a proxy of its own (settings, policy,
-  // extension or system); nullopt while unknown.
-  using ProfileProxyConfiguredCallback =
-      base::RepeatingCallback<std::optional<bool>()>;
   // Returns whether `id` is still a known container.
   using ContainerExistsCallback =
       base::RepeatingCallback<bool(std::string_view id)>;
@@ -66,7 +60,6 @@ class KoContainerProxyService
 
   KoContainerProxyService(PrefService* prefs,
                           os_crypt_async::OSCryptAsync* os_crypt_async,
-                          ProfileProxyConfiguredCallback profile_has_proxy,
                           ContainerExistsCallback container_exists,
                           ForEachContainerTabCallback for_each_container_tab);
   ~KoContainerProxyService() override;
@@ -76,13 +69,16 @@ class KoContainerProxyService
 
   // Mirrors content's layout: Storage/ext/containers/<hash of id>.
   static base::FilePath GetRelativePartitionPath(std::string_view container_id);
+  static bool IsContainerPartitionPath(
+      const base::FilePath& relative_partition_path);
 
   // Forces WebRTC to stay behind the proxy for `web_contents` if its
   // container is proxied.
   void ApplyWebRtcPolicy(content::WebContents* web_contents) const;
 
-  // For proxied containers, replaces the profile-wide proxy client with a
-  // container-specific one. No-op for other partitions.
+  // Puts every container network context behind a relay between it and the
+  // profile-wide proxy monitor, so its container's proxy (if any, now or
+  // later) replaces the profile's config. No-op for other partitions.
   void ConfigureNetworkContextParams(
       const base::FilePath& relative_partition_path,
       network::mojom::NetworkContextParams* params);
@@ -111,6 +107,8 @@ class KoContainerProxyService
   bool encryptor_ready_for_testing() const { return !!encryptor_; }
 
  private:
+  class ContextRelay;
+
   // nullopt with `*pending` set means credentials are still waiting for the
   // encryptor; nullopt otherwise means the container has no proxy.
   std::optional<net::ProxyConfigWithAnnotation> GetConfig(
@@ -118,23 +116,24 @@ class KoContainerProxyService
       bool* pending) const;
   std::optional<ContainerProxyCredentials> DecryptCredentials(
       std::string_view encrypted) const;
+  // Id of the proxied container whose partition is `relative_partition_path`,
+  // or empty.
+  std::string FindProxiedContainer(
+      const base::FilePath& relative_partition_path) const;
 
   void OnEncryptorReady(scoped_refptr<os_crypt_async::Encryptor> encryptor);
   void OnProxiesPrefChanged();
-  void PushConfig(const std::string& container_id);
+  void UpdateRelay(ContextRelay& relay);
+  void OnRelayDisconnected(ContextRelay* relay);
 
   raw_ptr<PrefService> prefs_;
-  ProfileProxyConfiguredCallback profile_has_proxy_;
   ContainerExistsCallback container_exists_;
   ForEachContainerTabCallback for_each_container_tab_;
   scoped_refptr<os_crypt_async::Encryptor> encryptor_;
   // Work that needs the encryptor, run once it is ready.
   std::vector<base::OnceClosure> pending_until_encryptor_;
-  // Live network contexts of proxied containers.
-  std::map<std::string,
-           mojo::RemoteSet<network::mojom::ProxyConfigClient>,
-           std::less<>>
-      clients_;
+  // One per live container network context.
+  std::vector<std::unique_ptr<ContextRelay>> relays_;
   // Proxied container ids as of the last pref change.
   std::set<std::string, std::less<>> proxied_ids_;
   PrefChangeRegistrar pref_change_registrar_;

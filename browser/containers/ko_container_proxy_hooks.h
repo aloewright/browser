@@ -33,7 +33,7 @@ class URLLoaderFactoryBuilder;
 // K-O entry points used by BraveContentBrowserClient.
 namespace containers {
 
-// Gives a proxied container's network context its own proxy config.
+// Puts a container's network context behind its container's proxy, if any.
 void ConfigureKoContainerNetworkContext(
     content::BrowserContext* context,
     const base::FilePath& relative_partition_path,

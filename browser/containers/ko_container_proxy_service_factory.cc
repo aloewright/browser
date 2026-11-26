@@ -5,7 +5,6 @@
 
 #include "brave/browser/containers/ko_container_proxy_service_factory.h"
 
-#include <optional>
 #include <string_view>
 
 #include "base/feature_list.h"
@@ -18,8 +17,6 @@
 #include "brave/components/containers/core/common/features.h"
 #include "brave/components/containers/core/mojom/containers.mojom.h"
 #include "chrome/browser/browser_process.h"
-#include "chrome/browser/net/profile_network_context_service.h"
-#include "chrome/browser/net/profile_network_context_service_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/profiles/profile_selections.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
@@ -28,11 +25,6 @@
 #include "components/tabs/public/tab_interface.h"
 
 namespace {
-
-std::optional<bool> IsProfileProxyConfigured(Profile* profile) {
-  auto* service = ProfileNetworkContextServiceFactory::GetForContext(profile);
-  return service ? service->IsProxyConfigured() : std::nullopt;
-}
 
 bool ContainerExists(Profile* profile, std::string_view id) {
   auto* service = ContainersServiceFactory::GetForProfile(profile);
@@ -44,7 +36,8 @@ void ForEachContainerTab(
     std::string_view id,
     base::RepeatingCallback<void(content::WebContents*)> visit) {
   for (auto* browser : GetAllBrowserWindowInterfaces()) {
-    if (browser->GetProfile() != profile) {
+    // Private windows use the same container proxies.
+    if (browser->GetProfile()->GetOriginalProfile() != profile) {
       continue;
     }
     auto* tab_strip = browser->GetTabStripModel();
@@ -83,7 +76,6 @@ KoContainerProxyServiceFactory::KoContainerProxyServiceFactory()
               .WithRegular(ProfileSelection::kOwnInstance)
               .Build()) {
   DependsOn(ContainersServiceFactory::GetInstance());
-  DependsOn(ProfileNetworkContextServiceFactory::GetInstance());
 }
 
 KoContainerProxyServiceFactory::~KoContainerProxyServiceFactory() = default;
@@ -97,7 +89,6 @@ KoContainerProxyServiceFactory::BuildServiceInstanceForBrowserContext(
   auto* profile = Profile::FromBrowserContext(context);
   auto service = std::make_unique<containers::KoContainerProxyService>(
       profile->GetPrefs(), g_browser_process->os_crypt_async(),
-      base::BindRepeating(&IsProfileProxyConfigured, base::Unretained(profile)),
       base::BindRepeating(&ContainerExists, base::Unretained(profile)),
       base::BindRepeating(&ForEachContainerTab, base::Unretained(profile)));
   if (!profile->IsOffTheRecord()) {

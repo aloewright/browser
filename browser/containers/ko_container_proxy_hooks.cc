@@ -126,13 +126,9 @@ void ConfigureKoContainerNetworkContext(
     content::BrowserContext* context,
     const base::FilePath& relative_partition_path,
     network::mojom::NetworkContextParams* params) {
-  if (!base::FeatureList::IsEnabled(features::kContainers)) {
-    return;
-  }
-  // Skip every partition outside Storage/ext/containers/.
-  const base::FilePath containers_root =
-      KoContainerProxyService::GetRelativePartitionPath("any").DirName();
-  if (!containers_root.IsParent(relative_partition_path)) {
+  if (!base::FeatureList::IsEnabled(features::kContainers) ||
+      !KoContainerProxyService::IsContainerPartitionPath(
+          relative_partition_path)) {
     return;
   }
   if (auto* service = GetProxyService(context)) {

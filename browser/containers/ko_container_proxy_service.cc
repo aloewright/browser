@@ -21,8 +21,12 @@
 #include "content/public/browser/web_contents.h"
 #include "crypto/hash.h"
 #include "mojo/public/cpp/bindings/callback_helpers.h"
+#include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
+#include "mojo/public/cpp/bindings/receiver.h"
+#include "mojo/public/cpp/bindings/remote.h"
 #include "services/network/public/mojom/network_context.mojom.h"
+#include "services/network/public/mojom/proxy_config_with_annotation.mojom.h"
 #include "third_party/blink/public/common/renderer_preferences/renderer_preferences.h"
 #include "third_party/blink/public/mojom/peerconnection/webrtc_ip_handling_policy.mojom.h"
 #include "url/scheme_host_port.h"
@@ -55,14 +59,78 @@ bool IsSameServer(std::string_view stored, const ContainerProxyServer& server) {
 
 }  // namespace
 
+// Sits between the profile's ProxyConfigMonitor and one container network
+// context. While the container is proxied, profile updates are only recorded;
+// otherwise they pass through unchanged.
+class KoContainerProxyService::ContextRelay
+    : public network::mojom::ProxyConfigClient {
+ public:
+  ContextRelay(
+      base::FilePath relative_partition_path,
+      mojo::PendingReceiver<network::mojom::ProxyConfigClient> from_profile,
+      std::optional<net::ProxyConfigWithAnnotation> profile_config,
+      mojo::PendingRemote<network::mojom::ProxyConfigClient> to_context)
+      : relative_partition_path_(std::move(relative_partition_path)),
+        profile_config_(std::move(profile_config)),
+        to_context_(std::move(to_context)) {
+    if (from_profile.is_valid()) {
+      from_profile_.Bind(std::move(from_profile));
+    }
+  }
+
+  ContextRelay(const ContextRelay&) = delete;
+  ContextRelay& operator=(const ContextRelay&) = delete;
+  ~ContextRelay() override = default;
+
+  const base::FilePath& relative_partition_path() const {
+    return relative_partition_path_;
+  }
+  const std::optional<net::ProxyConfigWithAnnotation>& profile_config() const {
+    return profile_config_;
+  }
+  // Container whose proxy this context uses, or empty to follow the profile.
+  const std::string& proxied_container_id() const {
+    return proxied_container_id_;
+  }
+  void set_proxied_container_id(std::string id) {
+    proxied_container_id_ = std::move(id);
+  }
+
+  void SetDisconnectHandler(base::OnceClosure handler) {
+    to_context_.set_disconnect_handler(std::move(handler));
+  }
+
+  void Send(const net::ProxyConfigWithAnnotation& config) {
+    to_context_->OnProxyConfigUpdated(config);
+  }
+
+  // network::mojom::ProxyConfigClient:
+  void OnProxyConfigUpdated(
+      const net::ProxyConfigWithAnnotation& config) override {
+    profile_config_ = config;
+    if (proxied_container_id_.empty()) {
+      Send(config);
+    }
+  }
+  void FlushProxyConfig(FlushProxyConfigCallback callback) override {
+    to_context_->FlushProxyConfig(
+        mojo::WrapCallbackWithDefaultInvokeIfNotRun(std::move(callback)));
+  }
+
+ private:
+  const base::FilePath relative_partition_path_;
+  std::optional<net::ProxyConfigWithAnnotation> profile_config_;
+  std::string proxied_container_id_;
+  mojo::Receiver<network::mojom::ProxyConfigClient> from_profile_{this};
+  mojo::Remote<network::mojom::ProxyConfigClient> to_context_;
+};
+
 KoContainerProxyService::KoContainerProxyService(
     PrefService* prefs,
     os_crypt_async::OSCryptAsync* os_crypt_async,
-    ProfileProxyConfiguredCallback profile_has_proxy,
     ContainerExistsCallback container_exists,
     ForEachContainerTabCallback for_each_container_tab)
     : prefs_(prefs),
-      profile_has_proxy_(std::move(profile_has_proxy)),
       container_exists_(std::move(container_exists)),
       for_each_container_tab_(std::move(for_each_container_tab)) {
   CHECK(prefs_);
@@ -74,8 +142,8 @@ KoContainerProxyService::KoContainerProxyService(
       kKoContainerProxiesPref,
       base::BindRepeating(&KoContainerProxyService::OnProxiesPrefChanged,
                           base::Unretained(this)));
-  // No OSCrypt means credentials stay pending: proxied contexts never get a
-  // config and their requests never leave (fail closed).
+  // No OSCrypt means SOCKS credentials stay pending: those contexts never get
+  // a config and their requests never leave (fail closed).
   if (os_crypt_async) {
     os_crypt_async->GetInstance(
         base::BindOnce(&KoContainerProxyService::OnEncryptorReady,
@@ -94,6 +162,13 @@ base::FilePath KoContainerProxyService::GetRelativePartitionPath(
       .Append(base::FilePath::FromUTF8Unsafe(kContainersStoragePartitionDomain))
       .AppendASCII(
           base::HexEncode(base::span(hash).first<kPartitionNameHashBytes>()));
+}
+
+// static
+bool KoContainerProxyService::IsContainerPartitionPath(
+    const base::FilePath& relative_partition_path) {
+  return GetRelativePartitionPath("any").DirName().IsParent(
+      relative_partition_path);
 }
 
 void KoContainerProxyService::ApplyWebRtcPolicy(
@@ -117,34 +192,46 @@ void KoContainerProxyService::ConfigureNetworkContextParams(
     const base::FilePath& relative_partition_path,
     network::mojom::NetworkContextParams* params) {
   CHECK(params);
-  std::string container_id;
-  for (const auto& id : GetContainerIdsWithStoredProxy(*prefs_)) {
-    if (GetRelativePartitionPath(id) == relative_partition_path) {
-      container_id = id;
-      break;
-    }
-  }
-  if (container_id.empty()) {
+  if (!IsContainerPartitionPath(relative_partition_path)) {
     return;
   }
 
-  // Detach from the profile-wide monitor so profile, policy, extension or
-  // system proxy changes cannot redirect this container, and drop the
-  // initial profile config so nothing goes out before ours is set.
+  // Take over what the profile-wide monitor handed this context, so profile,
+  // policy, extension or system proxy changes go through the relay.
+  mojo::PendingReceiver<network::mojom::ProxyConfigClient> from_profile =
+      std::move(params->proxy_config_client_receiver);
+  std::optional<net::ProxyConfigWithAnnotation> profile_config =
+      std::move(params->initial_proxy_config);
   params->proxy_config_client_receiver.reset();
-  params->proxy_config_poller_client.reset();
   params->initial_proxy_config.reset();
-
-  mojo::PendingRemote<network::mojom::ProxyConfigClient> client;
-  params->proxy_config_client_receiver =
-      client.InitWithNewPipeAndPassReceiver();
-  clients_[container_id].Add(std::move(client));
-
-  bool pending = false;
-  if (auto config = GetConfig(container_id, &pending)) {
-    params->initial_proxy_config = std::move(*config);
+  if (!from_profile.is_valid() && !profile_config) {
+    // What the network service would use without any proxy params.
+    profile_config = net::ProxyConfigWithAnnotation::CreateDirect();
   }
-  // While pending, the network service holds requests until PushConfig().
+
+  mojo::PendingRemote<network::mojom::ProxyConfigClient> to_context;
+  params->proxy_config_client_receiver =
+      to_context.InitWithNewPipeAndPassReceiver();
+  auto relay = std::make_unique<ContextRelay>(
+      relative_partition_path, std::move(from_profile),
+      std::move(profile_config), std::move(to_context));
+  relay->SetDisconnectHandler(
+      base::BindOnce(&KoContainerProxyService::OnRelayDisconnected,
+                     weak_factory_.GetWeakPtr(), relay.get()));
+
+  const std::string container_id =
+      FindProxiedContainer(relative_partition_path);
+  if (container_id.empty()) {
+    // Pending profile config: the network service waits for the relay.
+    params->initial_proxy_config = relay->profile_config();
+  } else {
+    bool pending = false;
+    // Pending credentials: the network service holds requests until
+    // UpdateRelay() sends the config.
+    params->initial_proxy_config = GetConfig(container_id, &pending);
+    relay->set_proxied_container_id(container_id);
+  }
+  relays_.push_back(std::move(relay));
 }
 
 bool KoContainerProxyService::HasProxy(std::string_view container_id) const {
@@ -237,7 +324,7 @@ void KoContainerProxyService::Shutdown() {
   weak_factory_.InvalidateWeakPtrs();
   pref_change_registrar_.RemoveAll();
   pending_until_encryptor_.clear();
-  clients_.clear();
+  relays_.clear();
 }
 
 void KoContainerProxyService::PruneStaleEntries() {
@@ -280,6 +367,16 @@ KoContainerProxyService::GetConfig(std::string_view container_id,
                                     credentials ? &*credentials : nullptr);
 }
 
+std::string KoContainerProxyService::FindProxiedContainer(
+    const base::FilePath& relative_partition_path) const {
+  for (auto& id : GetContainerIdsWithStoredProxy(*prefs_)) {
+    if (GetRelativePartitionPath(id) == relative_partition_path) {
+      return std::move(id);
+    }
+  }
+  return std::string();
+}
+
 std::optional<ContainerProxyCredentials>
 KoContainerProxyService::DecryptCredentials(std::string_view encrypted) const {
   if (!encryptor_) {
@@ -300,8 +397,8 @@ KoContainerProxyService::DecryptCredentials(std::string_view encrypted) const {
 void KoContainerProxyService::OnEncryptorReady(
     scoped_refptr<os_crypt_async::Encryptor> encryptor) {
   encryptor_ = std::move(encryptor);
-  for (const auto& [id, unused] : clients_) {
-    PushConfig(id);
+  for (auto& relay : relays_) {
+    UpdateRelay(*relay);
   }
   auto pending = std::move(pending_until_encryptor_);
   for (auto& closure : pending) {
@@ -314,8 +411,8 @@ void KoContainerProxyService::OnProxiesPrefChanged() {
   for (auto& id : GetContainerIdsWithStoredProxy(*prefs_)) {
     now.insert(std::move(id));
   }
-  for (const auto& [id, unused] : clients_) {
-    PushConfig(id);
+  for (auto& relay : relays_) {
+    UpdateRelay(*relay);
   }
   // Newly proxied containers: tighten WebRTC in tabs that are already open.
   if (for_each_container_tab_) {
@@ -330,31 +427,49 @@ void KoContainerProxyService::OnProxiesPrefChanged() {
   proxied_ids_ = std::move(now);
 }
 
-void KoContainerProxyService::PushConfig(const std::string& container_id) {
-  auto it = clients_.find(container_id);
-  if (it == clients_.end() || it->second.empty()) {
+void KoContainerProxyService::UpdateRelay(ContextRelay& relay) {
+  const std::string container_id =
+      FindProxiedContainer(relay.relative_partition_path());
+  if (!container_id.empty()) {
+    bool pending = false;
+    std::optional<net::ProxyConfigWithAnnotation> config =
+        GetConfig(container_id, &pending);
+    if (pending) {
+      // Already waiting on this proxy: keep holding requests. Otherwise stop
+      // the current (profile) config until the credentials can be decrypted.
+      if (relay.proxied_container_id() != container_id) {
+        relay.set_proxied_container_id(container_id);
+        relay.Send(CreateFailClosedContainerProxyConfig());
+      }
+      return;
+    }
+    relay.set_proxied_container_id(container_id);
+    relay.Send(*config);
     return;
   }
 
-  bool pending = false;
-  std::optional<net::ProxyConfigWithAnnotation> config =
-      GetConfig(container_id, &pending);
-  if (pending) {
+  const std::string previous = relay.proxied_container_id();
+  if (previous.empty()) {
     return;
   }
-  if (!config) {
-    // The proxy was removed while tabs use this context. Go direct only if
-    // that matches what the profile would do (known to have no proxy);
-    // otherwise stay closed until the context is recreated.
-    const bool can_go_direct =
-        container_exists_ && container_exists_.Run(container_id) &&
-        profile_has_proxy_ && profile_has_proxy_.Run() == false;
-    config = can_go_direct ? net::ProxyConfigWithAnnotation::CreateDirect()
-                           : CreateFailClosedContainerProxyConfig();
+  // The proxy was removed while the context is live. A deleted container's
+  // tabs stay closed; otherwise follow the profile like any other container.
+  if (!container_exists_ || !container_exists_.Run(previous)) {
+    relay.Send(CreateFailClosedContainerProxyConfig());
+    return;
   }
-  for (const auto& client : it->second) {
-    client->OnProxyConfigUpdated(*config);
+  relay.set_proxied_container_id(std::string());
+  // With the profile's config still pending, the container proxy stays in
+  // place until the relay passes the profile's first config on.
+  if (relay.profile_config()) {
+    relay.Send(*relay.profile_config());
   }
+}
+
+void KoContainerProxyService::OnRelayDisconnected(ContextRelay* relay) {
+  std::erase_if(relays_, [relay](const std::unique_ptr<ContextRelay>& r) {
+    return r.get() == relay;
+  });
 }
 
 }  // namespace containers

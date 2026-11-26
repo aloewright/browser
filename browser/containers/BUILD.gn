@@ -47,7 +47,9 @@ source_set("containers") {
     ]
     deps += [
       "//brave/components/ko/buildflags",
+      "//chrome/browser:browser_process",
       "//chrome/browser/ui/browser_window",
+      "//chrome/browser/ui/tabs:tab_strip",
       "//components/keyed_service/core",
       "//components/os_crypt/async/browser",
       "//components/os_crypt/async/common",
@@ -139,6 +141,7 @@ source_set("unit_tests") {
       "//components/sync_preferences:test_support",
       "//mojo/public/cpp/bindings",
       "//net",
+      "//net/traffic_annotation:test_support",
       "//services/network/public/mojom",
     ]
   }

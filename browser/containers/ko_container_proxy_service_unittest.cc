@@ -26,10 +26,12 @@
 #include "components/os_crypt/async/browser/test_utils.h"
 #include "components/sync_preferences/testing_pref_service_syncable.h"
 #include "mojo/public/cpp/bindings/receiver.h"
+#include "mojo/public/cpp/bindings/remote.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/proxy_server.h"
 #include "net/proxy_resolution/proxy_config.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "services/network/public/mojom/network_context.mojom.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/scheme_host_port.h"
@@ -91,11 +93,6 @@ class KoContainerProxyServiceTest : public testing::Test {
     return std::make_unique<KoContainerProxyService>(
         &prefs_, os_crypt,
         base::BindRepeating(
-            [](const KoContainerProxyServiceTest* test) -> std::optional<bool> {
-              return test->profile_has_proxy_;
-            },
-            base::Unretained(this)),
-        base::BindRepeating(
             [](const KoContainerProxyServiceTest* test, std::string_view id) {
               return test->container_exists_;
             },
@@ -112,14 +109,26 @@ class KoContainerProxyServiceTest : public testing::Test {
     return future.Get();
   }
 
+  // Mimics the profile's ProxyConfigMonitor: an initial config plus a client
+  // pipe for later updates, which `profile_monitor_` drives.
   network::mojom::NetworkContextParamsPtr ConfigureContainerContext() {
     auto params = network::mojom::NetworkContextParams::New();
     params->initial_proxy_config =
         net::ProxyConfigWithAnnotation::CreateDirect();
+    profile_monitor_.reset();
+    params->proxy_config_client_receiver =
+        profile_monitor_.BindNewPipeAndPassReceiver();
     service_->ConfigureNetworkContextParams(
         KoContainerProxyService::GetRelativePartitionPath(kContainerId),
         params.get());
     return params;
+  }
+
+  void RemoveProxy() {
+    base::test::TestFuture<bool> removed;
+    service_->SetProxy(kContainerId, std::nullopt, false,
+                       removed.GetCallback());
+    ASSERT_TRUE(removed.Get());
   }
 
   base::test::TaskEnvironment task_environment_;
@@ -127,7 +136,7 @@ class KoContainerProxyServiceTest : public testing::Test {
   sync_preferences::TestingPrefServiceSyncable prefs_;
   std::unique_ptr<os_crypt_async::OSCryptAsync> os_crypt_;
   std::unique_ptr<KoContainerProxyService> service_;
-  std::optional<bool> profile_has_proxy_ = false;
+  mojo::Remote<network::mojom::ProxyConfigClient> profile_monitor_;
   bool container_exists_ = true;
 };
 
@@ -158,7 +167,6 @@ TEST_F(KoContainerProxyServiceTest, ProxiedContainerGetsOwnConfig) {
   EXPECT_EQ(server.host_port_pair().host(), "100.64.0.10");
   EXPECT_EQ(server.host_port_pair().port(), 1080);
   EXPECT_TRUE(params->proxy_config_client_receiver.is_valid());
-  EXPECT_FALSE(params->proxy_config_poller_client.is_valid());
 }
 
 TEST_F(KoContainerProxyServiceTest, CredentialsAreEncryptedAtRest) {
@@ -219,7 +227,7 @@ TEST_F(KoContainerProxyServiceTest, HttpProxyCredentialsOnlyForThatProxy) {
       "other", url::SchemeHostPort("http", "10.0.0.2", 3128)));
 }
 
-TEST_F(KoContainerProxyServiceTest, LiveContextsFollowChangesAndFailClosed) {
+TEST_F(KoContainerProxyServiceTest, LiveContextsFollowChanges) {
   ASSERT_TRUE(SetProxy("socks5h://100.64.0.10:1080"));
   auto params = ConfigureContainerContext();
   FakeProxyConfigClient client(std::move(params->proxy_config_client_receiver));
@@ -230,26 +238,46 @@ TEST_F(KoContainerProxyServiceTest, LiveContextsFollowChangesAndFailClosed) {
   EXPECT_EQ(OnlyServer(client.configs().back()).host_port_pair().host(),
             "100.64.0.11");
 
-  // Removing the proxy while the profile has its own proxy keeps the context
-  // closed instead of going direct.
-  profile_has_proxy_ = true;
-  base::test::TestFuture<bool> removed;
-  service_->SetProxy(kContainerId, std::nullopt, false, removed.GetCallback());
-  ASSERT_TRUE(removed.Get());
+  // Profile-wide changes cannot redirect a proxied container.
+  net::ProxyConfig profile_proxy;
+  profile_proxy.proxy_rules().ParseFromString("http://10.0.0.7:3128");
+  profile_monitor_->OnProxyConfigUpdated(net::ProxyConfigWithAnnotation(
+      profile_proxy, TRAFFIC_ANNOTATION_FOR_TESTS));
+  profile_monitor_.FlushForTesting();
+  client.Flush();
+  ASSERT_EQ(client.configs().size(), 1u);
+
+  // Removing the proxy hands the context back to the profile's config.
+  RemoveProxy();
   client.Flush();
   ASSERT_EQ(client.configs().size(), 2u);
   EXPECT_EQ(OnlyServer(client.configs().back()).host_port_pair().host(),
-            "127.0.0.1");
+            "10.0.0.7");
+}
 
-  // With no profile proxy it may go direct, like any other tab.
-  ASSERT_TRUE(SetProxy("socks5h://100.64.0.11:1080"));
-  profile_has_proxy_ = false;
-  base::test::TestFuture<bool> removed_again;
-  service_->SetProxy(kContainerId, std::nullopt, false,
-                     removed_again.GetCallback());
-  ASSERT_TRUE(removed_again.Get());
+TEST_F(KoContainerProxyServiceTest, ProxyAddedToLiveContextApplies) {
+  // The container's context exists before it gets a proxy.
+  auto params = ConfigureContainerContext();
+  ASSERT_TRUE(params->initial_proxy_config);
+  EXPECT_TRUE(params->initial_proxy_config->value().proxy_rules().empty());
+  FakeProxyConfigClient client(std::move(params->proxy_config_client_receiver));
+
+  // Unproxied, it follows the profile.
+  net::ProxyConfig profile_proxy;
+  profile_proxy.proxy_rules().ParseFromString("http://10.0.0.7:3128");
+  profile_monitor_->OnProxyConfigUpdated(net::ProxyConfigWithAnnotation(
+      profile_proxy, TRAFFIC_ANNOTATION_FOR_TESTS));
+  profile_monitor_.FlushForTesting();
   client.Flush();
-  EXPECT_TRUE(client.configs().back().value().proxy_rules().empty());
+  ASSERT_EQ(client.configs().size(), 1u);
+  EXPECT_EQ(OnlyServer(client.configs().back()).host_port_pair().host(),
+            "10.0.0.7");
+
+  ASSERT_TRUE(SetProxy("socks5h://100.64.0.10:1080"));
+  client.Flush();
+  ASSERT_EQ(client.configs().size(), 2u);
+  EXPECT_EQ(OnlyServer(client.configs().back()).host_port_pair().host(),
+            "100.64.0.10");
 }
 
 TEST_F(KoContainerProxyServiceTest, DeletedContainerStaysClosed) {
@@ -258,12 +286,18 @@ TEST_F(KoContainerProxyServiceTest, DeletedContainerStaysClosed) {
   FakeProxyConfigClient client(std::move(params->proxy_config_client_receiver));
 
   container_exists_ = false;
-  base::test::TestFuture<bool> removed;
-  service_->SetProxy(kContainerId, std::nullopt, false, removed.GetCallback());
-  ASSERT_TRUE(removed.Get());
+  RemoveProxy();
   client.Flush();
   ASSERT_FALSE(client.configs().empty());
   EXPECT_EQ(OnlyServer(client.configs().back()).host_port_pair().port(), 9);
+
+  // Later profile updates do not reopen it.
+  const size_t count = client.configs().size();
+  profile_monitor_->OnProxyConfigUpdated(
+      net::ProxyConfigWithAnnotation::CreateDirect());
+  profile_monitor_.FlushForTesting();
+  client.Flush();
+  EXPECT_EQ(client.configs().size(), count);
 }
 
 TEST_F(KoContainerProxyServiceTest, PendingWithoutEncryptor) {
