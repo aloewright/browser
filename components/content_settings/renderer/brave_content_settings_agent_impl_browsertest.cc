@@ -406,10 +406,19 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   EXPECT_EQ(kExpectedImageDataHashFarblingBalanced,
             content::EvalJs(child_frame(), kGetImageDataScript));
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse Shields down and allowed fingerprinting.
+  constexpr int kExpectedImageDataHashRelaxed =
+      kExpectedImageDataHashFarblingBalanced;
+#else
+  constexpr int kExpectedImageDataHashRelaxed =
+      kExpectedImageDataHashFarblingOff;
+#endif
+
   // Farbling should be off if shields is down
   ShieldsDown();
   NavigateToPageWithIframe();
-  EXPECT_EQ(kExpectedImageDataHashFarblingOff,
+  EXPECT_EQ(kExpectedImageDataHashRelaxed,
             content::EvalJs(contents(), kGetImageDataScript));
 
   // Farbling should be off if shields is up but fingerprinting is allowed
@@ -417,7 +426,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   ShieldsUp();
   AllowFingerprinting();
   NavigateToPageWithIframe();
-  EXPECT_EQ(kExpectedImageDataHashFarblingOff,
+  EXPECT_EQ(kExpectedImageDataHashRelaxed,
             content::EvalJs(contents(), kGetImageDataScript));
 }
 
@@ -476,10 +485,18 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   BlockFingerprinting();
   ShieldsDown();
   AllowFingerprinting();
+#if defined(KO_SHIELDS_STRICT_BUILD)
+  // Strict K-O builds refuse both relaxations, so blocking stays.
+  constexpr bool kExpectedPointInPath = false;
+#else
+  constexpr bool kExpectedPointInPath = true;
+#endif
   NavigateToPageWithIframe();
-  EXPECT_EQ(true, content::EvalJs(contents(), kPointInPathScript));
+  EXPECT_EQ(kExpectedPointInPath,
+            content::EvalJs(contents(), kPointInPathScript));
   NavigateIframe(cross_site_url());
-  EXPECT_EQ(true, content::EvalJs(child_frame(), kPointInPathScript));
+  EXPECT_EQ(kExpectedPointInPath,
+            content::EvalJs(child_frame(), kPointInPathScript));
 }
 
 // TODO(iefremov): We should reduce the copy-paste amount in these tests.
@@ -888,6 +905,8 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   Check3PCookie(child_frame(), kTestCookie);
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
                        ShieldsDownOverridesBlockedCookies) {
   BlockCookies();
@@ -899,6 +918,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   NavigateIframe(cross_site_url());
   Check3PCookie(child_frame(), kTestCookie);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
                        ShieldsDownAllowsCookies) {
@@ -990,6 +1010,8 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest, AllowScripts) {
   EXPECT_EQ(CollectAllRenderFrameHosts(contents()).size(), 4u);
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
                        BlockScriptsShieldsDown) {
   BlockScripts();
@@ -998,6 +1020,7 @@ IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
   NavigateToURLUntilLoadStop("a.test", "/load_js_from_origins.html");
   EXPECT_EQ(CollectAllRenderFrameHosts(contents()).size(), 4u);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(BraveContentSettingsAgentImplBrowserTest,
                        BlockScriptsShieldsDownInOtherTab) {

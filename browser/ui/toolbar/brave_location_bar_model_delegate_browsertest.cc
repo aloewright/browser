@@ -137,6 +137,8 @@ IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
   EXPECT_EQ(icon, &kLeoShieldDoneIcon);
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
                        ReturnsShieldDisabledIconWhenShieldsDisabled) {
   NavigateToHTTPS();
@@ -150,3 +152,4 @@ IN_PROC_BROWSER_TEST_F(BraveLocationBarModelDelegateShieldsBrowserTest,
   const gfx::VectorIcon* icon = delegate_->GetVectorIconOverride();
   EXPECT_EQ(icon, &kLeoShieldDisableFilledIcon);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
