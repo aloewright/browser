@@ -84,6 +84,8 @@ class BraveShieldsSettingsServiceTest : public testing::Test {
       brave_shields_settings_;
 };
 
+// Strict K-O builds drop per-site relaxations; see KoStrictIgnoresRelaxations.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsSettingsServiceTest, BraveShieldsEnabled) {
   // verify the initial values
   EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsEnabled(kTestUrl));
@@ -102,6 +104,26 @@ TEST_F(BraveShieldsSettingsServiceTest, BraveShieldsEnabled) {
   EXPECT_TRUE(brave_shields::IsBraveShieldsEnabled(
       GetHostContentSettingsMap(), GURL("https://example.com")));
 }
+#else
+TEST_F(BraveShieldsSettingsServiceTest, KoStrictIgnoresRelaxations) {
+  const GURL url("http://a.com");
+  brave_shields_settings()->SetBraveShieldsEnabled(false, url);
+  EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsEnabled(url));
+  EXPECT_FALSE(
+      brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
+          url));
+
+  brave_shields_settings()->SetFingerprintMode(FingerprintMode::ALLOW_MODE,
+                                               url);
+  EXPECT_EQ(brave_shields_settings()->GetFingerprintMode(url),
+            FingerprintMode::STANDARD_MODE);
+
+  // Farbling stays on.
+  brave_shields::FarblingPRNG prng;
+  EXPECT_TRUE(brave_shields_settings()->MakePseudoRandomGeneratorForURL(url, {},
+                                                                        &prng));
+}
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 // Strict K-O builds report Shields as managed.
 #if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
@@ -224,12 +246,21 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintMode) {
 
   brave_shields_settings()->SetFingerprintMode(FingerprintMode::ALLOW_MODE,
                                                kTestUrl);
+#if BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
+  // Strict K-O builds drop per-site relaxations.
+  EXPECT_EQ(brave_shields_settings()->GetFingerprintMode(kTestUrl),
+            FingerprintMode::STANDARD_MODE);
+  EXPECT_EQ(brave_shields::GetFingerprintingControlType(
+                GetHostContentSettingsMap(), kTestUrl),
+            brave_shields::ControlType::DEFAULT);
+#else
   EXPECT_EQ(brave_shields_settings()->GetFingerprintMode(kTestUrl),
             FingerprintMode::ALLOW_MODE);
   // verify underlying FingerprintingControlType is updated
   EXPECT_EQ(brave_shields::GetFingerprintingControlType(
                 GetHostContentSettingsMap(), kTestUrl),
             brave_shields::ControlType::ALLOW);
+#endif
 
   // iOS does not support FingerprintMode::STRICT_MODE
 #if !BUILDFLAG(IS_IOS)
@@ -498,6 +529,9 @@ TEST_F(BraveShieldsSettingsServiceTest,
           GURL("https://test.com")));
 }
 
+// Strict K-O builds drop per-site Shields-down rules; see
+// KoStrictIgnoresRelaxations.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_ExactDomainMatch) {
   // Tests exact domain matching
@@ -542,6 +576,7 @@ TEST_F(BraveShieldsSettingsServiceTest,
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://test.com")));
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_AllowSettingIgnored) {
@@ -563,11 +598,20 @@ TEST_F(BraveShieldsSettingsServiceTest,
       ContentSettingsPattern::Wildcard(), ContentSettingsPattern::Wildcard(),
       ContentSettingsType::BRAVE_SHIELDS, CONTENT_SETTING_BLOCK);
 
+#if BUILDFLAG(IS_KO)
+  // K-O ignores global Shields overrides.
+  EXPECT_FALSE(
+      brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
+          GURL("https://example.com")));
+#else
   EXPECT_TRUE(
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://example.com")));
+#endif
 }
 
+// Strict K-O builds drop per-site Shields-down rules.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsSettingsServiceTest,
        IsShieldsDisabledOnAnyHostMatchingDomainOf_MultipleSettings) {
   // Set multiple settings - some matching, some not
@@ -669,6 +713,7 @@ TEST_F(BraveShieldsSettingsServiceTest,
       brave_shields_settings()->IsShieldsDisabledOnAnyHostMatchingDomainOf(
           GURL("https://other.com")));
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 TEST_F(BraveShieldsSettingsServiceTest, PRNGKnownValues) {
   const std::array<std::tuple<GURL, uint64_t>, 2> test_cases = {
@@ -715,6 +760,8 @@ TEST_F(BraveShieldsSettingsServiceTest, InvalidDomains) {
   }
 }
 
+// Strict K-O builds keep farbling on; see KoStrictIgnoresRelaxations.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsSettingsServiceTest, ShieldsDown) {
   const GURL url("http://a.com");
   brave_shields::SetBraveShieldsEnabled(GetHostContentSettingsMap(), false,
@@ -732,6 +779,7 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintingAllowed) {
   EXPECT_FALSE(brave_shields_settings()->MakePseudoRandomGeneratorForURL(
       url, {}, &prng));
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
 // Farbling token related tests.
 
