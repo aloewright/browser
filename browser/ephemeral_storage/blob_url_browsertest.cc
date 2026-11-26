@@ -19,7 +19,9 @@
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/tabs/tab_enums.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/ui_test_utils.h"
+#include "components/prefs/pref_service.h"
 #include "content/public/common/content_switches.h"
 #include "content/public/common/url_constants.h"
 #include "content/public/test/browser_test.h"
@@ -364,6 +366,16 @@ class BlobUrlBrowserTest : public BlobUrlBrowserTestBase,
                            public testing::WithParamInterface<bool> {
  public:
   BlobUrlBrowserTest() = default;
+
+#if defined(KO_BUILD)
+  void SetUpOnMainThread() override {
+    BlobUrlBrowserTestBase::SetUpOnMainThread();
+    // K-O upgrades http:// navigations strictly (HTTP interstitial on
+    // failure); chromium.org is served over plain HTTP here.
+    browser()->GetProfile()->GetPrefs()->SetList(
+        prefs::kHttpAllowlist, base::ListValue().Append("chromium.org"));
+  }
+#endif
 
  private:
   base::test::ScopedFeatureList scoped_feature_list_;

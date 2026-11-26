@@ -11,8 +11,10 @@
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/common/chrome_paths.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
+#include "components/prefs/pref_service.h"
 #include "content/public/browser/storage_partition.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
@@ -85,6 +87,16 @@ class HSTSPartitioningBrowserTestBase : public InProcessBrowserTest {
     InProcessBrowserTest::SetUpOnMainThread();
     host_resolver()->AddRule("*", "127.0.0.1");
     mock_cert_verifier_.mock_cert_verifier()->set_default_result(net::OK);
+#if defined(KO_BUILD)
+    // K-O upgrades http:// navigations strictly; these tests need plain HTTP
+    // main frames unless HSTS applies.
+    browser()->GetProfile()->GetPrefs()->SetList(prefs::kHttpAllowlist,
+                                                 base::ListValue()
+                                                     .Append("[*.]a.com")
+                                                     .Append("[*.]b.com")
+                                                     .Append("c.com")
+                                                     .Append("d.com"));
+#endif
   }
 
   void SetUpInProcessBrowserTestFixture() override {
