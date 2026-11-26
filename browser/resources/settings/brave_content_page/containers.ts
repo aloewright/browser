@@ -104,7 +104,7 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
   accessor deleteDialogError_: string | undefined
   // K-O: per-container proxy. The browser never sends credentials back; the
   // password only lives here until the dialog closes.
-  readonly isKoBuild_ = loadTimeData.getBoolean('isKoBuild')
+  readonly isKOBuild_ = loadTimeData.getBoolean('isKOBuild')
   accessor editingProxyUrl_ = ''
   accessor editingProxyUsername_ = ''
   accessor editingProxyPassword_ = ''
@@ -240,7 +240,7 @@ export class SettingsBraveContentContainersElement extends SettingsBraveContentC
 
   // Credentials go to the browser embedded in the URL, percent-encoded.
   private buildProxy_(): ContainerProxy | null {
-    if (!this.isKoBuild_) {
+    if (!this.isKOBuild_) {
       return null
     }
     const url = this.editingProxyUrl_.trim()

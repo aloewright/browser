@@ -172,7 +172,7 @@ export function getHtml(this: SettingsBraveContentContainersElement) {
                           `,
                         )}
                     </section>
-                  ${this.isKoBuild_
+                  ${this.isKOBuild_
                     ? html`
                         <section class="proxy-section">
                           <div class="edit-subsection-label">

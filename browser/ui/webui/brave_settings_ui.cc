@@ -336,7 +336,6 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
       "isContainersEnabled",
       base::FeatureList::IsEnabled(containers::features::kContainers));
 #endif
-  html_source->AddBoolean("isKoBuild", BUILDFLAG(IS_KO));
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
   html_source->AddBoolean(
       "isTrafficControlEnabled",
