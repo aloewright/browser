@@ -15,6 +15,8 @@
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
+#include "brave/components/ko/shields/buildflags/buildflags.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/content_settings/core/common/content_settings.h"
 #include "components/content_settings/core/common/content_settings_types.h"
@@ -101,6 +103,8 @@ TEST_F(BraveShieldsSettingsServiceTest, BraveShieldsEnabled) {
       GetHostContentSettingsMap(), GURL("https://example.com")));
 }
 
+// Strict K-O builds report Shields as managed.
+#if !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 TEST_F(BraveShieldsSettingsServiceTest, IsBraveShieldsManaged) {
   const GURL host("http://host.com");
 
@@ -117,7 +121,9 @@ TEST_F(BraveShieldsSettingsServiceTest, IsBraveShieldsManaged) {
                                     std::move(disabled_list));
   EXPECT_TRUE(brave_shields_settings()->IsBraveShieldsManaged(host));
 }
+#endif  // !BUILDFLAG(KO_SHIELDS_STRICT_ENFORCEMENT)
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsSettingsServiceTest, AdBlockMode) {
   // verify the initial values
   EXPECT_EQ(brave_shields_settings()->GetAdBlockMode(kTestUrl),
@@ -156,7 +162,9 @@ TEST_F(BraveShieldsSettingsServiceTest, AdBlockMode) {
       brave_shields_settings()->GetAdBlockMode(GURL("https://example.com")),
       AdBlockMode::STANDARD);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsSettingsServiceTest, DefaultAdBlockMode) {
   // explicitly set so we can verify this is unchanged by updating default
   brave_shields_settings()->SetAdBlockMode(AdBlockMode::STANDARD, kTestUrl);
@@ -204,6 +212,7 @@ TEST_F(BraveShieldsSettingsServiceTest, DefaultAdBlockMode) {
                 GetHostContentSettingsMap(), kTestUrl),
             brave_shields::ControlType::BLOCK_THIRD_PARTY);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsSettingsServiceTest, FingerprintMode) {
   // verify the initial values
@@ -260,6 +269,7 @@ TEST_F(BraveShieldsSettingsServiceTest, FingerprintMode) {
             brave_shields::ControlType::DEFAULT);
 }
 
+#if !BUILDFLAG(IS_KO)  // K-O locks the global Shields defaults.
 TEST_F(BraveShieldsSettingsServiceTest, DefaultFingerprintMode) {
   // explicitly set so we can verify this is unchanged by updating default
   brave_shields_settings()->SetFingerprintMode(FingerprintMode::STANDARD_MODE,
@@ -293,6 +303,7 @@ TEST_F(BraveShieldsSettingsServiceTest, DefaultFingerprintMode) {
                 GetHostContentSettingsMap(), kTestUrl),
             brave_shields::ControlType::DEFAULT);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(BraveShieldsSettingsServiceTest, NoScriptsEnabled) {
   // verify the initial values
