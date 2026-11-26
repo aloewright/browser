@@ -43,8 +43,7 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
         }
       )");
 
-// TCP keepalive so a dead peer is noticed; matches macOS Screen Sharing's
-// idle tolerance.
+// TCP keepalive so a dead peer is noticed.
 constexpr uint16_t kKeepAliveDelaySeconds = 60;
 
 mojom::ConnectResult ToConnectResult(ResolveError error) {
