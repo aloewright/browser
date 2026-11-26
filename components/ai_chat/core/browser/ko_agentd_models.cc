@@ -79,9 +79,11 @@ std::optional<uint16_t> GetAgentdPortOverride() {
   return static_cast<uint16_t>(port);
 }
 
+// agentd's model-name charset plus '+'. '[' and ']' are in Claude Code
+// aliases such as "claude-code/sonnet[1m]".
 bool IsModelIdChar(char c) {
   return base::IsAsciiAlphaNumeric(c) || c == '-' || c == '_' || c == '.' ||
-         c == '/' || c == ':' || c == '@' || c == '+';
+         c == '/' || c == ':' || c == '@' || c == '+' || c == '[' || c == ']';
 }
 
 bool IsValidModelId(std::string_view id) {

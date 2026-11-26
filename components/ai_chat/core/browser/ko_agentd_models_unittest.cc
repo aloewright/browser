@@ -144,6 +144,49 @@ TEST_F(KOAgentdModelsTest, ParsesModelList) {
   EXPECT_EQ((*models)[2].context_size, kAgentdDefaultContextSize);
 }
 
+// agentd lists Claude Code's 1M-context aliases, e.g. "sonnet[1m]".
+TEST_F(KOAgentdModelsTest, KeepsBracketedClaudeCodeAliases) {
+  std::optional<std::vector<AgentdModelInfo>> infos =
+      ParseAgentdModels(base::test::ParseJson(R"json({
+        "data": [
+          {"id": "claude-code/sonnet[1m]",
+           "display_name": "sonnet[1m] (Claude Code)",
+           "capabilities": {"vision": false, "tools": false}},
+          {"id": "claude-code/opus[1m]"},
+          {"id": "nanogpt/x y"},
+          {"id": "nanogpt/{x}"},
+          {"id": "nanogpt/<x>"},
+          {"id": "nanogpt/x\""},
+          {"id": "nanogpt/x"}
+        ]
+      })json"));
+  ASSERT_TRUE(infos);
+  ASSERT_EQ(infos->size(), 3u);
+  EXPECT_EQ((*infos)[0].id, "claude-code/sonnet[1m]");
+  EXPECT_EQ((*infos)[0].display_name, "sonnet[1m] (Claude Code)");
+  EXPECT_EQ((*infos)[1].id, "claude-code/opus[1m]");
+  EXPECT_FALSE((*infos)[1].tools);
+  EXPECT_EQ((*infos)[2].id, "nanogpt/x");
+
+  // Listed first, it is what chat-automatic requests.
+  std::vector<mojom::ModelPtr> models =
+      BuildAgentdModels(*infos, kToken, ::ko::kAgentdDefaultPort);
+  ASSERT_EQ(models.size(), 4u);
+  EXPECT_EQ(models[0]->key, kChatAutomaticModelKey);
+  EXPECT_EQ(models[0]->options->get_custom_model_options()->model_request_name,
+            "claude-code/sonnet[1m]");
+  EXPECT_FALSE(models[0]->supports_tools);
+  EXPECT_EQ(models[1]->key, "ko-agentd:claude-code/sonnet[1m]");
+  EXPECT_EQ(models[1]->options->get_custom_model_options()->model_request_name,
+            "claude-code/sonnet[1m]");
+  EXPECT_EQ(models[2]->key, "ko-agentd:claude-code/opus[1m]");
+  EXPECT_EQ(models[2]->display_name, "claude-code/opus[1m]");
+  EXPECT_TRUE(IsAgentdModelKey(models[1]->key));
+
+  // The cache keeps them across restarts.
+  EXPECT_EQ(AgentdModelsFromCache(AgentdModelsToCache(*infos)), *infos);
+}
+
 TEST_F(KOAgentdModelsTest, ExplicitCapabilitiesWinOverIdDefaults) {
   std::optional<std::vector<AgentdModelInfo>> models =
       ParseAgentdModels(base::test::ParseJson(R"({
