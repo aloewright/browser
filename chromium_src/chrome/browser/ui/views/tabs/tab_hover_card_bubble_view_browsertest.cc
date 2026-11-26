@@ -18,7 +18,12 @@
 
 namespace {
 
+// chrome:// is shown as ko:// in K-O.
+#if defined(KO_BUILD)
+constexpr char16_t kTabDomain[] = u"ko://settings";
+#else
 constexpr char16_t kTabDomain[] = u"brave://settings";
+#endif
 constexpr char16_t kTabTitle[] = u"Settings - Addresses and more";
 constexpr char kTabUrl[] = "chrome://settings/addresses";
 
