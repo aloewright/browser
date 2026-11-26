@@ -39,13 +39,9 @@
     background-color: var(--leo-color-container-disabled);
     pointer-events: none;
   }
-  #koDefaultsLockedNotice {
-    column-gap: var(--leo-spacing-m);
-  }
-  .ko-locked-icon {
-    --leo-icon-size: 20px;
-    color: var(--leo-color-icon-default);
-    flex-shrink: 0;
+  #koDefaultsLockedNotice leo-alert {
+    flex: 1;
+    margin: var(--leo-spacing-m) 0;
   }
 </style>
 
@@ -67,8 +63,7 @@
   </div>
   <div id="koDefaultsLockedNotice" class="settings-box"
       hidden="[[!isKoShieldsDefaultsLocked_]]">
-    <leo-icon name="lock" class="ko-locked-icon"></leo-icon>
-    <div class="secondary">$i18n{koShieldsDefaultsLocked}</div>
+    <leo-alert type="info">$i18n{koShieldsDefaultsLocked}</leo-alert>
   </div>
   <settings-toggle-button
       hidden="[[isShowBraveShieldsInPageInfoEnabled_]]"
