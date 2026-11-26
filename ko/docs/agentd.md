@@ -46,8 +46,8 @@ are loose. Core dumps are off.
   `127.0.0.1:<port>` or `localhost:<port>`. An absolute-form target must name
   the same host. Anything else gets 403.
 - **Origin / CORS.** Only `chrome://ko-workspace` and `chrome://ko-machines` are
-  allowed. They get `Access-Control-Allow-Origin` (no credentials), and
-  preflight answers 204. Any other `Origin` (including `null`) gets 403 with no
+  allowed. They get `Access-Control-Allow-Origin` (no credentials) and
+  `Access-Control-Expose-Headers: X-Ko-Mime-Type`, and preflight answers 204. Any other `Origin` (including `null`) gets 403 with no
   CORS headers. A request without `Origin` but with `Sec-Fetch-Site` other
   than `none` or `same-origin` also gets 403. This blocks `<img>`-style probes.
 - **Response headers.** Every response carries `nosniff`, `no-store`,

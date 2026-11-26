@@ -157,6 +157,11 @@ fn apply_headers(resp: &mut Response, cors_origin: Option<&HeaderValue>) {
     h.insert(header::VARY, HeaderValue::from_static("Origin"));
     if let Some(o) = cors_origin {
         h.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, o.clone());
+        // Not CORS-safelisted; WebUI pages read it on raw artifact downloads.
+        h.insert(
+            header::ACCESS_CONTROL_EXPOSE_HEADERS,
+            HeaderValue::from_static("x-ko-mime-type"),
+        );
     }
 }
 

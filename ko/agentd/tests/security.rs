@@ -128,6 +128,7 @@ async fn cors_only_for_ko_webui_origins() {
             head.contains(&format!("access-control-allow-origin: {origin}")),
             "{head}"
         );
+        assert!(head.contains("access-control-expose-headers: x-ko-mime-type"));
         let pre = format!(
             "OPTIONS /v1/workspaces HTTP/1.1\r\nHost: 127.0.0.1:{p}\r\nOrigin: {origin}\r\n\
              Access-Control-Request-Method: POST\r\nAccess-Control-Request-Headers: authorization, content-type\r\nConnection: close\r\n\r\n"
