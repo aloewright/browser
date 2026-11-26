@@ -254,7 +254,8 @@ reachable elsewhere, for example `x11vnc -listen 100.64.0.20 -rfbport 5901` or
   public, loopback and mixed answers, resolution failures, empty allowlist.
 - `KOMachineBridgeTest`: unknown machines and public destinations never reach
   `CreateTCPConnectedSocket`; only allowlisted addresses are dialed; an
-  unexpected peer is rejected; connection limit; sockets close with the page.
+  unexpected peer is rejected; a dropped connect reply fails closed; connection
+  limit; sockets close with the page.
 - `KOMachinesHandlerTest`, `KOCredentialStoreTest`: validation, encryption at
   rest, forgetting credentials on host change, seeding and import.
 - `KOMachineTest`, `KOMachinesConfigTest`, `KOMachinesPrefsTest`.
