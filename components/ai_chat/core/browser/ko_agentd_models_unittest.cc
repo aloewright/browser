@@ -216,9 +216,8 @@ TEST(KOAgentdModelsTest, BuildModelsWithoutAgentdKeepsDefault) {
   std::vector<mojom::ModelPtr> models = BuildAgentdModels({}, std::string());
   ASSERT_EQ(models.size(), 1u);
   EXPECT_EQ(models[0]->key, kChatAutomaticModelKey);
-  EXPECT_EQ(
-      models[0]->options->get_custom_model_options()->model_request_name,
-      kAgentdFallbackModelName);
+  EXPECT_EQ(models[0]->options->get_custom_model_options()->model_request_name,
+            kAgentdFallbackModelName);
   EXPECT_TRUE(models[0]->options->get_custom_model_options()->api_key.empty());
 }
 
@@ -246,7 +245,8 @@ class KOAgentdModelsFetcherTest : public testing::Test {
   }
 
   void WriteToken() {
-    const base::FilePath path = temp_dir_.GetPath().Append(kAgentdTokenFileName);
+    const base::FilePath path =
+        temp_dir_.GetPath().Append(kAgentdTokenFileName);
     ASSERT_TRUE(base::WriteFile(path, kToken));
 #if BUILDFLAG(IS_POSIX)
     ASSERT_TRUE(base::SetPosixFilePermissions(path, 0600));

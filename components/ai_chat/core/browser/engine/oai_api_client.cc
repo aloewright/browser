@@ -383,10 +383,9 @@ void OAIAPIClient::PerformRequest(
     auto on_complete = base::BindOnce(&OAIAPIClient::OnQueryCompleted,
                                       weak_ptr_factory_.GetWeakPtr(),
                                       std::move(completed_callback));
-    api_request_helper_->Request(net::HttpRequestHeaders::kPostMethod,
-                                 opts.endpoint, request_body,
-                                 "application/json", std::move(on_complete),
-                                 headers, request_options);
+    api_request_helper_->Request(
+        net::HttpRequestHeaders::kPostMethod, opts.endpoint, request_body,
+        "application/json", std::move(on_complete), headers, request_options);
   }
 }
 

@@ -1397,9 +1397,11 @@ void ModelService::OnAgentdModelsFetched(ko::AgentdFetchResult result) {
 
   std::vector<mojom::ModelPtr> models =
       ko::BuildAgentdModels(infos, agentd_token_);
-  if (std::ranges::equal(models, agentd_models_,
-                         [](const mojom::ModelPtr& a,
-                            const mojom::ModelPtr& b) { return a.Equals(b); })) {
+  if (std::ranges::equal(
+          models, agentd_models_,
+          [](const mojom::ModelPtr& a, const mojom::ModelPtr& b) {
+            return a.Equals(b);
+          })) {
     return;
   }
 

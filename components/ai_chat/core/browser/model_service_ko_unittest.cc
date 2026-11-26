@@ -175,13 +175,12 @@ TEST_F(ModelServiceKOTest, LoadsAgentdModelsWithToken) {
 }
 
 TEST_F(ModelServiceKOTest, CachedModelsResolveBeforeAgentdAnswers) {
-  pref_service_.SetList(
-      ko::kAgentdModelsCachePref,
-      ko::AgentdModelsToCache({[] {
-        ko::AgentdModelInfo info;
-        info.id = "codex/gpt-5";
-        return info;
-      }()}));
+  pref_service_.SetList(ko::kAgentdModelsCachePref,
+                        ko::AgentdModelsToCache({[] {
+                          ko::AgentdModelInfo info;
+                          info.id = "codex/gpt-5";
+                          return info;
+                        }()}));
   ModelService* service = CreateService();
   const mojom::Model* model = service->GetModel("ko-agentd:codex/gpt-5");
   ASSERT_TRUE(model);
