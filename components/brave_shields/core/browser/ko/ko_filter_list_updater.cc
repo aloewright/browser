@@ -39,6 +39,12 @@ constexpr base::TimeDelta kCheckInterval = base::Hours(6);
 constexpr base::TimeDelta kRetryInterval = base::Hours(1);
 constexpr base::TimeDelta kRequestTimeout = base::Minutes(5);
 
+// Fetch() uses DownloadToString, which DCHECKs its limit against this.
+static_assert(kKoMaxManifestBytes <=
+              network::SimpleURLLoader::kMaxBoundedStringDownloadSize);
+static_assert(kKoMaxListBytes <=
+              network::SimpleURLLoader::kMaxBoundedStringDownloadSize);
+
 constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
     net::DefineNetworkTrafficAnnotation("ko_filter_lists_update", R"(
       semantics {
