@@ -26,6 +26,7 @@
 #include "brave/components/ai_chat/core/browser/utils.h"
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/api_request_helper/api_request_helper.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "net/base/url_util.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
@@ -150,6 +151,10 @@ void AssociatedContentDriver::SignalPageTextFetchComplete() {
 
 void AssociatedContentDriver::GetStagedEntriesFromContent(
     GetStagedEntriesCallback callback) {
+#if BUILDFLAG(IS_KO)
+  // Staged entries come from Brave Search's servers.
+  std::move(callback).Run(std::nullopt);
+#else
   // At the moment we only know about staged entries from:
   // - Brave Search results page
   if (!IsBraveSearchSERP(url())) {
@@ -159,6 +164,7 @@ void AssociatedContentDriver::GetStagedEntriesFromContent(
   GetSearchSummarizerKey(base::BindOnce(
       &AssociatedContentDriver::OnSearchSummarizerKeyFetched,
       weak_ptr_factory_.GetWeakPtr(), std::move(callback), content_id()));
+#endif
 }
 
 void AssociatedContentDriver::OnSearchSummarizerKeyFetched(

@@ -28,11 +28,16 @@
 #include "brave/components/ai_chat/core/common/features.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/constants/brave_services_key.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_strings.h"
 #include "net/http/http_request_headers.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "ui/base/l10n/l10n_util.h"
+
+#if BUILDFLAG(IS_KO)
+#include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
+#endif
 
 namespace ai_chat {
 
@@ -337,6 +342,18 @@ void OAIAPIClient::PerformRequest(
     return;
   }
 
+  api_request_helper::APIRequestOptions request_options;
+#if BUILDFLAG(IS_KO)
+  // Fail closed: without its token, agentd must not even see the prompt.
+  if (opts.api_key.empty() && ko::IsAgentdEndpoint(opts.endpoint)) {
+    std::move(completed_callback)
+        .Run(base::unexpected(mojom::APIError::InvalidAPIKey));
+    return;
+  }
+  // Keys must never follow a redirect to another host.
+  request_options.allow_redirects = false;
+#endif
+
   const bool is_sse_enabled =
       ai_chat::features::kAIChatSSE.Get() && !data_received_callback.is_null();
   std::string request_body;
@@ -358,17 +375,18 @@ void OAIAPIClient::PerformRequest(
                                       weak_ptr_factory_.GetWeakPtr(),
                                       std::move(completed_callback));
 
-    api_request_helper_->RequestSSE(net::HttpRequestHeaders::kPostMethod,
-                                    opts.endpoint, request_body,
-                                    "application/json", std::move(on_received),
-                                    std::move(on_complete), headers, {});
+    api_request_helper_->RequestSSE(
+        net::HttpRequestHeaders::kPostMethod, opts.endpoint, request_body,
+        "application/json", std::move(on_received), std::move(on_complete),
+        headers, request_options);
   } else {
     auto on_complete = base::BindOnce(&OAIAPIClient::OnQueryCompleted,
                                       weak_ptr_factory_.GetWeakPtr(),
                                       std::move(completed_callback));
-    api_request_helper_->Request(
-        net::HttpRequestHeaders::kPostMethod, opts.endpoint, request_body,
-        "application/json", std::move(on_complete), headers, {});
+    api_request_helper_->Request(net::HttpRequestHeaders::kPostMethod,
+                                 opts.endpoint, request_body,
+                                 "application/json", std::move(on_complete),
+                                 headers, request_options);
   }
 }
 

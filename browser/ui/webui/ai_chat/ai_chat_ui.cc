@@ -105,8 +105,7 @@ AIChatUI::AIChatUI(content::WebUI* web_ui)
                      ai_chat::features::IsAIChatAgentProfileEnabled());
   source->AddBoolean("isAIChatAgentProfile", profile_->IsAIChatAgent());
   source->AddBoolean("isConversationShareEnabled",
-                     base::FeatureList::IsEnabled(
-                         ai_chat::features::kAIChatConversationShare));
+                     ai_chat::features::IsConversationShareEnabled());
   source->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));

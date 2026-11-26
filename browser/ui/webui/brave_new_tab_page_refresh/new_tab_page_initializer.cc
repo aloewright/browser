@@ -264,8 +264,7 @@ void NewTabPageInitializer::AddLoadTimeValues() {
                       ai_chat::features::IsAIChatAgentProfileEnabled());
   source_->AddBoolean("isAIChatAgentProfile", profile->IsAIChatAgent());
   source_->AddBoolean("isConversationShareEnabled",
-                      base::FeatureList::IsEnabled(
-                          ai_chat::features::kAIChatConversationShare));
+                      ai_chat::features::IsConversationShareEnabled());
   source_->AddBoolean(
       "isAIChatExportJSONEnabled",
       base::FeatureList::IsEnabled(ai_chat::features::kAIChatExportJSON));

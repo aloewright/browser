@@ -21,12 +21,12 @@
 #include "brave/browser/brave_tab_helpers.h"
 #include "brave/browser/misc_metrics/profile_misc_metrics_service.h"
 #include "brave/browser/misc_metrics/profile_misc_metrics_service_factory.h"
-#include "brave/browser/skus/skus_service_factory.h"
 #include "brave/components/ai_chat/content/browser/workspace_associated_content.h"
 #include "brave/components/ai_chat/core/browser/ai_chat_credential_manager.h"
 #include "brave/components/ai_chat/core/browser/ai_chat_service.h"
 #include "brave/components/ai_chat/core/common/buildflags/buildflags.h"
 #include "brave/components/ai_chat/core/common/features.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/common/channel_info.h"
@@ -38,6 +38,12 @@
 #if BUILDFLAG(ENABLE_BRAVE_AI_CHAT_AGENT_PROFILE)
 #include "brave/browser/ai_chat/content_agent_tool_provider_factory.h"
 #include "chrome/browser/actor/actor_keyed_service_factory.h"
+#endif
+
+#if BUILDFLAG(IS_KO)
+#include "mojo/public/cpp/bindings/pending_remote.h"
+#else
+#include "brave/browser/skus/skus_service_factory.h"
 #endif
 
 namespace ai_chat {
@@ -53,10 +59,14 @@ AIChatService* AIChatServiceFactory::GetForBrowserContext(
     content::BrowserContext* context) {
   CHECK(context);
   if (!IsAllowedForContext(context) ||
-      !ModelServiceFactory::GetForBrowserContext(context) ||
-      !skus::SkusServiceFactory::GetForContext(context)) {
+      !ModelServiceFactory::GetForBrowserContext(context)) {
     return nullptr;
   }
+#if !BUILDFLAG(IS_KO)
+  if (!skus::SkusServiceFactory::GetForContext(context)) {
+    return nullptr;
+  }
+#endif
   return static_cast<AIChatService*>(
       GetInstance()->GetServiceForBrowserContext(context, true));
 }
@@ -70,7 +80,9 @@ AIChatServiceFactory::AIChatServiceFactory()
 #if BUILDFLAG(ENABLE_BRAVE_AI_CHAT_AGENT_PROFILE)
   DependsOn(actor::ActorKeyedServiceFactory::GetInstance());
 #endif
+#if !BUILDFLAG(IS_KO)
   DependsOn(skus::SkusServiceFactory::GetInstance());
+#endif
   DependsOn(ModelServiceFactory::GetInstance());
   DependsOn(TabTrackerServiceFactory::GetInstance());
   DependsOn(misc_metrics::ProfileMiscMetricsServiceFactory::GetInstance());
@@ -81,11 +93,17 @@ AIChatServiceFactory::~AIChatServiceFactory() = default;
 std::unique_ptr<KeyedService>
 AIChatServiceFactory::BuildServiceInstanceForBrowserContext(
     content::BrowserContext* context) const {
+#if BUILDFLAG(IS_KO)
+  // No Brave premium: never bind the SKUs service.
+  auto skus_service_getter = base::BindRepeating(
+      [] { return mojo::PendingRemote<skus::mojom::SkusService>(); });
+#else
   auto skus_service_getter = base::BindRepeating(
       [](content::BrowserContext* context) {
         return skus::SkusServiceFactory::GetForContext(context);
       },
       context);
+#endif
   std::unique_ptr<AIChatCredentialManager> credential_manager =
       std::make_unique<AIChatCredentialManager>(
           std::move(skus_service_getter), g_browser_process->local_state());

@@ -53,6 +53,7 @@
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/ai_chat/core/common/prefs.h"
 #include "brave/components/api_request_helper/api_request_helper.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_strings.h"
 #include "components/prefs/pref_service.h"
 #include "mojo/public/cpp/bindings/clone_traits.h"
@@ -624,10 +625,7 @@ void ConversationHandler::OnConversationThreadHistoryReceived(
 }
 
 void ConversationHandler::GetState(GetStateCallback callback) {
-  const auto& models = model_service_->GetModels();
-  std::vector<mojom::ModelPtr> models_copy(models.size());
-  std::transform(models.cbegin(), models.cend(), models_copy.begin(),
-                 [](auto& model) { return model.Clone(); });
+  std::vector<mojom::ModelPtr> models_copy = model_service_->GetModelsForUI();
   auto model_key = GetCurrentModel().key;
   auto default_model_key = model_service_->GetDefaultModelKey();
 
@@ -654,6 +652,10 @@ void ConversationHandler::GetState(GetStateCallback callback) {
 void ConversationHandler::RateMessage(bool is_liked,
                                       const std::string& turn_uuid,
                                       RateMessageCallback callback) {
+#if BUILDFLAG(IS_KO)
+  // K-O has no rating service.
+  std::move(callback).Run(std::nullopt);
+#else
   DVLOG(2) << __func__ << ": " << is_liked << ", " << turn_uuid;
 
   const std::vector<mojom::ConversationTurnPtr>& history = chat_history_;
@@ -700,6 +702,7 @@ void ConversationHandler::RateMessage(bool is_liked,
             std::move(callback).Run(std::nullopt);
           },
           std::move(callback)));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void ConversationHandler::SendFeedback(const std::string& category,
@@ -707,6 +710,10 @@ void ConversationHandler::SendFeedback(const std::string& category,
                                        const std::string& rating_id,
                                        bool send_hostname,
                                        SendFeedbackCallback callback) {
+#if BUILDFLAG(IS_KO)
+  // K-O has no feedback service.
+  std::move(callback).Run(false);
+#else
   DVLOG(2) << __func__ << ": " << rating_id << ", " << send_hostname << ", "
            << category << ", " << feedback;
   auto on_complete = base::BindOnce(
@@ -736,6 +743,7 @@ void ConversationHandler::SendFeedback(const std::string& category,
       urls.empty() ? std::nullopt
                    : std::make_optional(base::JoinString(urls, ",")),
       std::move(on_complete));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void ConversationHandler::GetConversationUuid(
@@ -744,11 +752,8 @@ void ConversationHandler::GetConversationUuid(
 }
 
 void ConversationHandler::GetModels(GetModelsCallback callback) {
-  const auto& models = model_service_->GetModels();
-  std::vector<mojom::ModelPtr> models_copy(models.size());
-  std::transform(models.cbegin(), models.cend(), models_copy.begin(),
-                 [](auto& model) { return model.Clone(); });
-  std::move(callback).Run(std::move(models_copy), GetCurrentModel().key);
+  std::move(callback).Run(model_service_->GetModelsForUI(),
+                          GetCurrentModel().key);
 }
 
 void ConversationHandler::ChangeModel(const std::string& model_key) {
@@ -2550,16 +2555,12 @@ void ConversationHandler::OnTaskStateChanged(ToolProvider* tool_provider) {
 }
 
 void ConversationHandler::OnModelDataChanged() {
-  const std::vector<mojom::ModelPtr>& models = model_service_->GetModels();
   auto default_model_key = model_service_->GetDefaultModelKey();
 
   for (const mojo::Remote<mojom::ConversationUI>& client :
        conversation_ui_handlers_) {
-    std::vector<mojom::ModelPtr> models_copy(models.size());
-    std::transform(models.cbegin(), models.cend(), models_copy.begin(),
-                   [](auto& model) { return model.Clone(); });
     client->OnModelDataChanged(model_key_, default_model_key,
-                               std::move(models_copy));
+                               model_service_->GetModelsForUI());
   }
   OnStateForConversationEntriesChanged();
 }
@@ -2684,10 +2685,7 @@ ConversationHandler::GetStateForConversationEntries() {
   auto& model = GetCurrentModel();
   bool is_leo_model = model.options->is_leo_model_options();
 
-  const auto& models = model_service_->GetModels();
-  std::vector<mojom::ModelPtr> models_copy(models.size());
-  std::transform(models.cbegin(), models.cend(), models_copy.begin(),
-                 [](auto& model) { return model.Clone(); });
+  std::vector<mojom::ModelPtr> models_copy = model_service_->GetModelsForUI();
 
   mojom::ConversationEntriesStatePtr entries_state =
       mojom::ConversationEntriesState::New();

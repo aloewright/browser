@@ -172,6 +172,8 @@ COMPONENT_EXPORT(AI_CHAT_COMMON) BASE_DECLARE_FEATURE(kRichSearchWidgets);
 // we have env setup properly for the origins.
 COMPONENT_EXPORT(AI_CHAT_COMMON)
 extern const base::FeatureParam<std::string> kRichSearchWidgetsOrigin;
+// Always false in K-O builds: the widgets are served by Brave.
+COMPONENT_EXPORT(AI_CHAT_COMMON) bool IsRichSearchWidgetsEnabled();
 
 COMPONENT_EXPORT(AI_CHAT_COMMON)
 BASE_DECLARE_FEATURE(kCodeExecutionTool);
@@ -220,6 +222,8 @@ extern const base::FeatureParam<std::string> kAIChatConversationShareBaseUrl;
 // share management UI doesn't list shares which no longer exist.
 COMPONENT_EXPORT(AI_CHAT_COMMON)
 extern const base::FeatureParam<int> kAIChatConversationShareExpiryDays;
+// Always false in K-O builds: shares are hosted by Brave.
+COMPONENT_EXPORT(AI_CHAT_COMMON) bool IsConversationShareEnabled();
 
 // Enables copying serialized conversation data as JSON to the clipboard when
 // using the alt+meta modifier keys and the "Copy entire conversation" menu
