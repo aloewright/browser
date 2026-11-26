@@ -932,7 +932,7 @@
     Automatically send crash reports
   </message>
   <message name="IDS_SETTINGS_KO_CRASH_REPORTS_DESC" desc="K-O: description under the crash reports toggle">
-    Sends crash reports to your own crash server, never to Brave. Reports include the browser version and channel, but no page addresses.
+    Sends crash reports to your own crash server, never to Brave. Reports leave out the page address, but can hold fragments of memory from the crash.
   </message>
   <message name="IDS_SETTINGS_KO_ANALYTICS_TITLE" desc="K-O: title of the toggle that sends anonymous usage events to the user's own analytics server">
     Send anonymous usage statistics
