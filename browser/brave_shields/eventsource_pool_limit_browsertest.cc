@@ -334,6 +334,8 @@ IN_PROC_BROWSER_TEST_F(EventSourcePoolLimitBrowserTest,
                                    kEventSourcesPoolLimit);
 }
 
+// Strict K-O builds don't drop Shields per site, so the pool stays limited.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(EventSourcePoolLimitBrowserTest,
                        PoolIsNotLimitedWithDisabledShields) {
   const GURL url(https_server_.GetURL("a.com", "/ephemeral_storage.html"));
@@ -360,6 +362,7 @@ IN_PROC_BROWSER_TEST_F(EventSourcePoolLimitBrowserTest,
   OpenEventSources(a_com_rfh, kEventSourcesOpenInSwScript,
                    kEventSourcesPoolLimit + 5);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(EventSourcePoolLimitBrowserTest,
                        PoolIsNotLimitedWithWebcompatException) {
