@@ -17,12 +17,9 @@ async fn models_lists_configured_providers() {
     let mut env = TestEnv::start("http://127.0.0.1:9", "").await;
     let (s, v) = env.get("/v1/models").await;
     assert_eq!(s, 200);
-    let ids: Vec<&str> = v["data"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|m| m["id"].as_str().unwrap())
-        .collect();
+    assert_eq!(v["object"], "list");
+    let data = v["data"].as_array().unwrap();
+    let ids: Vec<&str> = data.iter().map(|m| m["id"].as_str().unwrap()).collect();
     assert_eq!(
         ids,
         [
@@ -33,6 +30,62 @@ async fn models_lists_configured_providers() {
             "nanogpt/chatgpt-4o-latest"
         ]
     );
+    // Every entry carries what the browser reads (ko_agentd_models.cc).
+    for m in data {
+        let name = m["display_name"].as_str().unwrap();
+        assert!(!name.is_empty() && name.len() <= 100, "{m}");
+        assert!(m["capabilities"]["vision"].is_boolean(), "{m}");
+        assert!(m["capabilities"]["tools"].is_boolean(), "{m}");
+        let ctx = m["context_length"].as_u64().unwrap();
+        assert!((700..=2_000_000).contains(&ctx), "{m}");
+        assert_eq!(m["object"], "model");
+    }
+    assert_eq!(
+        data[0],
+        json!({
+            "id": "claude-code/sonnet", "object": "model", "created": 0,
+            "owned_by": "claude-code", "display_name": "sonnet (Claude Code)",
+            "capabilities": {"vision": false, "tools": false}, "context_length": 128000
+        })
+    );
+    // CLI models never return tool calls; HTTP models default to tools on.
+    for (i, tools) in [(0, false), (1, false), (2, false), (3, true), (4, true)] {
+        assert_eq!(data[i]["capabilities"]["tools"], tools, "{}", data[i]);
+        assert_eq!(data[i]["capabilities"]["vision"], false, "{}", data[i]);
+    }
+    env.stop().await;
+}
+
+#[tokio::test]
+async fn models_apply_configured_model_info() {
+    let extra = r#"
+[providers.nanogpt.model_info."chatgpt-4o-latest"]
+display_name = "GPT-4o via NanoGPT"
+vision = true
+tools = false
+context_length = 64000
+
+[providers.claude-code.model_info.opus]
+context_length = 200000
+"#;
+    let mut env = TestEnv::start("http://127.0.0.1:9", extra).await;
+    let (s, v) = env.get("/v1/models").await;
+    assert_eq!(s, 200);
+    let data = v["data"].as_array().unwrap();
+    let nano = data
+        .iter()
+        .find(|m| m["id"] == "nanogpt/chatgpt-4o-latest")
+        .unwrap();
+    assert_eq!(nano["display_name"], "GPT-4o via NanoGPT");
+    assert_eq!(
+        nano["capabilities"],
+        json!({"vision": true, "tools": false})
+    );
+    assert_eq!(nano["context_length"], 64000);
+    let opus = data.iter().find(|m| m["id"] == "claude-code/opus").unwrap();
+    assert_eq!(opus["display_name"], "opus (Claude Code)");
+    assert_eq!(opus["context_length"], 200000);
+    assert_eq!(opus["capabilities"]["tools"], false);
     env.stop().await;
 }
 

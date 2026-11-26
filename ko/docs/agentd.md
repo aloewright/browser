@@ -128,6 +128,41 @@ ko-agentd doctor
 | `cf-gateway/<provider>/<model>` | `POST https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/compat/chat/completions` with model `<provider>/<model>` |
 | `nanogpt/<model>` | `POST https://nano-gpt.com/api/v1/chat/completions` |
 
+Models are listed by provider (Claude Code, Codex, AI Gateway, NanoGPT),
+each in its `models` order. The assistant uses the first one as its
+default. Each entry looks like this:
+
+```json
+{"id": "nanogpt/chatgpt-4o-latest", "object": "model", "created": 0, "owned_by": "nanogpt",
+ "display_name": "chatgpt-4o-latest (NanoGPT)",
+ "capabilities": {"vision": false, "tools": true}, "context_length": 128000}
+```
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| `display_name` | `<model> (<provider>)`, e.g. `sonnet (Claude Code)` | 1-100 bytes, no control characters |
+| `capabilities.tools` | `true` for HTTP providers | Always `false` for `claude-code/*` and `codex/*`: the CLIs run their own tools and never return `tool_calls` |
+| `capabilities.vision` | `false` | Always `false` for CLI providers (text only; image parts get 400) |
+| `context_length` | `128000` | 700 to 2000000 |
+
+To change them, add a `model_info` table to the provider, keyed by an entry
+of its `models` list. Every field is optional:
+
+```toml
+[providers.nanogpt]
+models = ["chatgpt-4o-latest"]
+
+[providers.nanogpt.model_info."chatgpt-4o-latest"]
+display_name = "GPT-4o (NanoGPT)"
+vision = true
+tools = true
+context_length = 128000
+```
+
+The daemon refuses to start on a `model_info` key that is not in `models`,
+an unknown field, a value out of range, or `tools`/`vision = true` on
+`claude-code` or `codex`.
+
 `POST /v1/chat/completions` follows the OpenAI API. With `stream: true` it
 answers with SSE `data:` chunks and a final `data: [DONE]`.
 
