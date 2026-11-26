@@ -25,7 +25,7 @@ constexpr char kChromeUIDisplayScheme[] = "ko";
 #else
 constexpr char kChromeUIDisplayScheme[] = "brave";
 #endif
-}
+}  // namespace
 
 std::u16string GetFailedUrlString(GURL failed_url) {
   if (failed_url.scheme() == kChromeUIScheme) {

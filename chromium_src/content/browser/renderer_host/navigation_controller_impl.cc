@@ -11,8 +11,7 @@ namespace {
 // We want to rewrite brave -> chrome, but without setting the virtual url to
 // brave
 void MaybeRewriteVirtualURL(GURL* virtual_url) {
-  if (virtual_url &&
-      content::IsBraveUIAliasScheme(virtual_url->scheme())) {
+  if (virtual_url && content::IsBraveUIAliasScheme(virtual_url->scheme())) {
     GURL::Replacements replacements;
     replacements.SetSchemeStr(content::kChromeUIScheme);
     *virtual_url = virtual_url->ReplaceComponents(replacements);

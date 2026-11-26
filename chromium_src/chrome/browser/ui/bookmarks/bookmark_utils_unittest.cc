@@ -22,10 +22,10 @@ TEST(BraveBookmarkUtilsTest, ChromeUISchemeIsDisplayedAsBrave) {
             FormatBookmarkURLForDisplay(GURL("chrome://settings/")));
 
   // Only the scheme changes; path and query are preserved.
-  EXPECT_EQ(std::u16string(kDisplayPrefix) +
-                u"settings/clearBrowserData?foo=bar",
-            FormatBookmarkURLForDisplay(
-                GURL("chrome://settings/clearBrowserData?foo=bar")));
+  EXPECT_EQ(
+      std::u16string(kDisplayPrefix) + u"settings/clearBrowserData?foo=bar",
+      FormatBookmarkURLForDisplay(
+          GURL("chrome://settings/clearBrowserData?foo=bar")));
 }
 
 TEST(BraveBookmarkUtilsTest, BraveUISchemeIsDisplayedUnchanged) {
