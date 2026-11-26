@@ -210,6 +210,16 @@ pub async fn guard(State(g): State<Guard>, req: Request, next: Next) -> Response
                 header::ACCESS_CONTROL_MAX_AGE,
                 HeaderValue::from_static("600"),
             );
+            // Chrome Private/Local Network Access preflight (allowed origins only).
+            if headers
+                .get("access-control-request-private-network")
+                .is_some_and(|v| v == "true")
+            {
+                h.insert(
+                    "access-control-allow-private-network",
+                    HeaderValue::from_static("true"),
+                );
+            }
             apply_headers(&mut r, cors_origin.as_ref());
             return r;
         }

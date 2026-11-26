@@ -138,6 +138,18 @@ async fn cors_only_for_ko_webui_origins() {
         assert!(h.contains("access-control-allow-methods:"));
         assert!(h.contains("access-control-allow-headers: authorization, content-type"));
         assert!(!h.contains("access-control-allow-credentials"));
+        assert!(!h.contains("access-control-allow-private-network"));
+        let pna = format!(
+            "OPTIONS /v1/models HTTP/1.1\r\nHost: 127.0.0.1:{p}\r\nOrigin: {origin}\r\n\
+             Access-Control-Request-Method: GET\r\nAccess-Control-Request-Private-Network: true\r\n\
+             Connection: close\r\n\r\n"
+        );
+        let (s, head, _) = raw_tcp(p, &pna).await;
+        assert_eq!(s, 204);
+        assert!(
+            head.to_lowercase()
+                .contains("access-control-allow-private-network: true")
+        );
     }
     for origin in [
         "https://evil.example",
