@@ -42,8 +42,12 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
 - One `ko-agentd:<id>` model per entry of agentd's `GET /v1/models`
   (`claude-code/*`, `codex/*`, `cf-gateway/*`, `nanogpt/*`, ...).
 - All of them use `http://127.0.0.1:<port>/v1/chat/completions`, tool support
-  on, and the `CONTENT_AGENT` capability, so Leo's tools (content agent tools
-  in the agent profile, tab management) run on them.
+  on (unless agentd lists `tools: false`), and the `CONTENT_AGENT`
+  capability, so Leo's tools (content agent tools in the agent profile, tab
+  management) are offered on them. They only run if the model answers with
+  OpenAI `tool_calls`: agentd passes those through for HTTP providers, but
+  its CLI-backed `claude-code/*` and `codex/*` models currently drop the
+  `tools` field, so agentd should list those with `tools: false`.
 
 The list is fetched when the model service starts, retried with backoff
 (15 s to 10 min) while agentd is down, and refreshed every 15 min. The last
