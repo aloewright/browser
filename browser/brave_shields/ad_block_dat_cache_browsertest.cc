@@ -124,8 +124,9 @@ IN_PROC_BROWSER_TEST_P(AdBlockDATCacheBrowserTest, DATCacheLoadedOnRestart) {
 
     ASSERT_TRUE(brave_shields::WaitForAdBlockServiceThreads());
 
-    // K-O refreshes its baseline lists when the test's empty catalog loads,
-    // which rebuilds both engines after the cached DATs.
+    // In K-O, the test helper's empty catalog refreshes K-O's baseline lists
+    // after the cached DATs load, which rebuilds both engines. The DAT-loaded
+    // and rule checks still run.
 #if !BUILDFLAG(IS_KO)
     // Verify no filter set rebuild happened — the cached DATs should have
     // been sufficient.

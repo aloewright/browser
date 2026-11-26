@@ -15,12 +15,14 @@
 #include "brave/components/brave_shields/core/browser/ad_block_custom_resource_provider.h"
 #include "brave/components/brave_shields/core/browser/brave_shields_utils.h"
 #include "brave/components/brave_shields/core/common/features.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/profiles/profile_manager.h"
 #include "chrome/browser/profiles/profile_test_util.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "components/prefs/pref_service.h"
 #include "content/public/browser/web_contents.h"
@@ -418,6 +420,11 @@ IN_PROC_BROWSER_TEST_F(AdblockCustomResourcesTest, MAYBE_TwoProfiles) {
       profile_manager->GenerateNextProfileDirectoryPath();
   Profile& second_profile =
       profiles::testing::CreateProfileSync(profile_manager, profile_path);
+#if BUILDFLAG(IS_KO)
+  // The new profile's init turns HTTPS-Only Mode back on; undo it as
+  // AdBlockServiceTest::SetUpOnMainThread does for the first profile.
+  second_profile.GetPrefs()->ClearPref(prefs::kHttpsOnlyModeEnabled);
+#endif
   BrowserWindowInterface* second_browser = CreateBrowser(&second_profile);
 
   auto* second_web_contents =

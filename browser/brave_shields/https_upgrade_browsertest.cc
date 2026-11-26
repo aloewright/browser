@@ -218,6 +218,24 @@ class HttpsUpgradeBrowserTest : public PlatformBrowserTest {
         chrome_test_utils::GetProfile(this));
   }
 
+  void ExpectPageResult(const TestCase& test_case, PageResult expected_result) {
+    bool interstitial_or_dialog_showing =
+#if !BUILDFLAG(IS_ANDROID)
+        IsAskBeforeHttpDialogShowing(Contents());
+#else
+        chrome_browser_interstitials::IsShowingInterstitial(Contents());
+#endif
+    if (expected_result == PageResult::kInterstitial) {
+      EXPECT_TRUE(interstitial_or_dialog_showing);
+    } else {
+      EXPECT_FALSE(interstitial_or_dialog_showing);
+      GURL final_url = (expected_result == PageResult::kHttp ? http_server()
+                                                             : https_server())
+                           ->GetURL(test_case.domain, test_case.path);
+      EXPECT_EQ(final_url, Contents()->GetLastCommittedURL());
+    }
+  }
+
 #if !BUILDFLAG(IS_ANDROID)
   bool IsAskBeforeHttpDialogShowing(content::WebContents* web_contents) {
     auto* const tab = tabs::TabInterface::MaybeGetFromContents(web_contents);
@@ -261,26 +279,10 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, CheckUpgrades) {
       RunTestCaseNavigation(true, global_setting, test_case,
                             test_case.type_url);
 #if BUILDFLAG(IS_KO)
-      const PageResult expected_result =
-          KoExpectedResult(test_case, global_setting);
+      ExpectPageResult(test_case, KoExpectedResult(test_case, global_setting));
 #else
-      const PageResult expected_result = test_case.expected_result;
+      ExpectPageResult(test_case, test_case.expected_result);
 #endif
-      bool interstitial_or_dialog_showing =
-#if !BUILDFLAG(IS_ANDROID)
-          IsAskBeforeHttpDialogShowing(Contents());
-#else
-          chrome_browser_interstitials::IsShowingInterstitial(Contents());
-#endif
-      if (expected_result == PageResult::kInterstitial) {
-        EXPECT_TRUE(interstitial_or_dialog_showing);
-      } else {
-        EXPECT_FALSE(interstitial_or_dialog_showing);
-        GURL final_url = (expected_result == PageResult::kHttp ? http_server()
-                                                               : https_server())
-                             ->GetURL(test_case.domain, test_case.path);
-        EXPECT_EQ(final_url, Contents()->GetLastCommittedURL());
-      }
     }
   }
 }
@@ -305,6 +307,14 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest, CheckUpgradesWithShieldsDown) {
 IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest_FlagDisabled, CheckUpgrades) {
   for (bool global_setting : {true, false}) {
     for (const TestCase& test_case : kTestCases) {
+#if BUILDFLAG(IS_KO)
+      RunTestCaseNavigation(true, global_setting, test_case,
+                            test_case.type_url);
+      // With the flag off, profile init moves K-O's strict default into
+      // upstream HTTPS-Only Mode, which ignores Brave's settings.
+      ExpectPageResult(test_case,
+                       KoExpectedResult(test_case, /*global_setting=*/true));
+#else
       const GURL initial_url = RunTestCaseNavigation(
           true, global_setting, test_case, test_case.type_url);
       // Disabled flag means no URLs change and no interstitials shown.
@@ -312,6 +322,7 @@ IN_PROC_BROWSER_TEST_F(HttpsUpgradeBrowserTest_FlagDisabled, CheckUpgrades) {
       bool interstitial_showing =
           chrome_browser_interstitials::IsShowingInterstitial(Contents());
       EXPECT_FALSE(interstitial_showing);
+#endif
     }
   }
 }

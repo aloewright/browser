@@ -60,6 +60,7 @@
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/common/chrome_isolated_world_ids.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/chrome_test_utils.h"
 #include "chrome/test/base/platform_browser_test.h"
 #include "components/prefs/pref_change_registrar.h"
@@ -148,7 +149,8 @@ AdBlockServiceTest::AdBlockServiceTest()
     : https_server_(net::EmbeddedTestServer::Type::TYPE_HTTPS) {
 #if BUILDFLAG(IS_KO)
   // K-O's strict HTTPS upgrade default would put the HTTPS-only interstitial
-  // in front of pages the plain HTTP test server serves for test hosts.
+  // in front of pages the plain HTTP test server serves for test hosts. See
+  // also SetUpOnMainThread.
   ko_feature_list_.InitAndDisableFeature(net::features::kBraveHttpsByDefault);
 #endif
 }
@@ -168,6 +170,11 @@ void AdBlockServiceTest::SetUpInProcessBrowserTestFixture() {
 
 void AdBlockServiceTest::SetUpOnMainThread() {
   PlatformBrowserTest::SetUpOnMainThread();
+#if BUILDFLAG(IS_KO)
+  // With HTTPS by default off, profile init moves K-O's strict default into
+  // upstream HTTPS-Only Mode. Undo that so plain HTTP test pages load.
+  profile()->GetPrefs()->ClearPref(prefs::kHttpsOnlyModeEnabled);
+#endif
   mock_cert_verifier_.mock_cert_verifier()->set_default_result(net::OK);
   host_resolver()->AddRule("*", "127.0.0.1");
   InitEmbeddedTestServer();

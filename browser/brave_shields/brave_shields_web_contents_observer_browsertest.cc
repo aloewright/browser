@@ -22,6 +22,7 @@
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
@@ -31,6 +32,7 @@
 #include "components/policy/core/common/mock_configuration_policy_provider.h"
 #include "components/policy/core/common/policy_map.h"
 #include "components/policy/policy_constants.h"
+#include "components/prefs/pref_service.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
@@ -70,7 +72,8 @@ class BraveShieldsWebContentsObserverBrowserTest : public InProcessBrowserTest {
   BraveShieldsWebContentsObserverBrowserTest() {
 #if BUILDFLAG(IS_KO)
     // K-O's strict HTTPS upgrade default would put the HTTPS-only interstitial
-    // in front of pages the plain HTTP test server serves for test hosts.
+    // in front of pages the plain HTTP test server serves for test hosts. See
+    // also SetUpOnMainThread.
     feature_list_.InitAndDisableFeature(net::features::kBraveHttpsByDefault);
 #endif
   }
@@ -81,6 +84,12 @@ class BraveShieldsWebContentsObserverBrowserTest : public InProcessBrowserTest {
 
   void SetUpOnMainThread() override {
     InProcessBrowserTest::SetUpOnMainThread();
+#if BUILDFLAG(IS_KO)
+    // With HTTPS by default off, profile init moves K-O's strict default into
+    // upstream HTTPS-Only Mode. Undo that so plain HTTP test pages load.
+    browser()->GetProfile()->GetPrefs()->ClearPref(
+        ::prefs::kHttpsOnlyModeEnabled);
+#endif
     host_resolver()->AddRule("*", "127.0.0.1");
 
     base::FilePath test_data_dir;
