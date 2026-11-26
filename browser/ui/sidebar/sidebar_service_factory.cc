@@ -9,6 +9,7 @@
 
 #include "base/no_destructor.h"
 #include "brave/browser/ui/sidebar/sidebar_utils.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/sidebar/browser/pref_names.h"
 #include "brave/components/sidebar/browser/sidebar_service.h"
 #include "brave/components/sidebar/common/features.h"
@@ -21,6 +22,14 @@
 #include "components/pref_registry/pref_registry_syncable.h"
 #include "components/prefs/pref_service.h"
 #include "components/version_info/channel.h"
+
+#if BUILDFLAG(IS_KO)
+#include <algorithm>
+
+#include "components/grit/brave_components_strings.h"
+#include "ui/base/l10n/l10n_util.h"
+#include "url/gurl.h"
+#endif
 
 namespace sidebar {
 
@@ -97,8 +106,12 @@ std::unique_ptr<KeyedService>
 SidebarServiceFactory::BuildServiceInstanceForBrowserContext(
     content::BrowserContext* context) const {
   auto* profile = Profile::FromBrowserContext(context);
-  return std::make_unique<SidebarService>(
+  auto service = std::make_unique<SidebarService>(
       profile->GetPrefs(), GetBuiltInItemTypesForProfile(profile));
+#if BUILDFLAG(IS_KO)
+  MaybeAddKoWorkspaceItem(profile, *service);
+#endif
+  return service;
 }
 
 content::BrowserContext* SidebarServiceFactory::GetBrowserContextToUse(
@@ -111,6 +124,9 @@ void SidebarServiceFactory::RegisterProfilePrefs(
     user_prefs::PrefRegistrySyncable* registry) {
   SidebarService::RegisterProfilePrefs(
       registry, GetDefaultShowSidebarOption(chrome::GetChannel()));
+#if BUILDFLAG(IS_KO)
+  registry->RegisterBooleanPref(kKoWorkspaceItemAddedPref, false);
+#endif
 }
 
 }  // namespace sidebar

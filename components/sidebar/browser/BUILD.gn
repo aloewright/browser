@@ -86,6 +86,7 @@ source_set("unit_tests") {
     "//brave/components/brave_news/common/buildflags",
     "//brave/components/brave_talk/buildflags",
     "//brave/components/brave_wallet/common/buildflags",
+    "//brave/components/ko/buildflags",
     "//brave/components/playlist/core/common/buildflags",
   ]
 

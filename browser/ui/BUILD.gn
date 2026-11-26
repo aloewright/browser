@@ -19,6 +19,7 @@ import("//brave/components/brave_wayback_machine/buildflags/buildflags.gni")
 import("//brave/components/commander/common/buildflags/buildflags.gni")
 import("//brave/components/containers/buildflags/buildflags.gni")
 import("//brave/components/email_aliases/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//brave/components/ntp_background_images/buildflags/buildflags.gni")
 import("//brave/components/playlist/core/common/buildflags/buildflags.gni")
@@ -1617,6 +1618,24 @@ source_set("ui") {
 
     public_deps +=
         [ "//brave/components/containers/content/browser:tab_restore" ]
+  }
+
+  # K-O chrome://ko-workspace.
+  if (is_ko && !is_android) {
+    sources += [
+      "webui/ko_workspace/ko_workspace_ui.cc",
+      "webui/ko_workspace/ko_workspace_ui.h",
+    ]
+    deps += [
+      "//brave/components/ko/workspace/browser",
+      "//brave/components/ko/workspace/common:mojom",
+      "//brave/components/ko/workspace/core",
+      "//brave/components/ko/workspace/resources:pack_js_resources",
+      "//brave/components/ko/workspace/resources:pack_static_resources",
+      "//brave/components/resources:strings_grit",
+      "//components/viz/common",
+      "//ui/gfx/codec",
+    ]
   }
 
   if (enable_traffic_control) {

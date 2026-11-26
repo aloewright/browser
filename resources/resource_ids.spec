@@ -265,6 +265,15 @@
     "META": {"sizes": {"includes": [10]}},
     "includes": [54190],
   },
+  # K-O workspace (chrome://ko-workspace). Generated during the build.
+  "<(SHARED_INTERMEDIATE_DIR)/brave/components/ko/workspace/resources/ko_workspace_static_resources.grd": {
+    "META": {"sizes": {"includes": [5]}},
+    "includes": [54500],
+  },
+  "<(SHARED_INTERMEDIATE_DIR)/brave/web-ui-ko_workspace/ko_workspace.grd": {
+    "META": {"sizes": {"includes": [40]}},
+    "includes": [54510],
+  },
   # WARNING: The IDs range is 2^16-1. Check
   # out/<BUILD_TYPE>/gen/brave/resources/brave_resource_ids for how much the
   # ids got expanded for the build.

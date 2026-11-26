@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grit-part>
+  <message name="IDS_KO_WORKSPACE_TITLE" desc="K-O workspace: Page title" formatter_data="webui=KoWorkspace">
+    Workspaces
+  </message>
+  <message name="IDS_KO_WORKSPACE_AGENTD_OFFLINE" desc="K-O workspace: ko-agentd is not reachable" formatter_data="webui=KoWorkspace">
+    ko-agentd isn't running. Start it, then reload this page.
+  </message>
+  <message name="IDS_KO_WORKSPACE_TOKEN_MISSING" desc="K-O workspace: The agentd token file is missing" formatter_data="webui=KoWorkspace">
+    No agentd token found. Run ko-agentd once to create it, then reload.
+  </message>
+  <message name="IDS_KO_WORKSPACE_TOKEN_INSECURE" desc="K-O workspace: The agentd token file has loose permissions" formatter_data="webui=KoWorkspace">
+    The agentd token file can be read by other users. Run chmod 600 on it, then reload.
+  </message>
+  <message name="IDS_KO_WORKSPACE_TOKEN_INVALID" desc="K-O workspace: The agentd token file is malformed" formatter_data="webui=KoWorkspace">
+    The agentd token file is malformed. Run ko-agentd token rotate, then reload.
+  </message>
+  <message name="IDS_KO_WORKSPACE_RELOAD" desc="K-O workspace: Button that reloads the page" formatter_data="webui=KoWorkspace">
+    Reload
+  </message>
+  <message name="IDS_KO_WORKSPACE_SHOW_IN_SIDE_PANEL" desc="K-O workspace: Button that opens the workspace page in the side panel" formatter_data="webui=KoWorkspace">
+    Open in side panel
+  </message>
+  <message name="IDS_KO_WORKSPACE_SHOW_IN_TAB" desc="K-O workspace: Button that opens the workspace page in a tab" formatter_data="webui=KoWorkspace">
+    Open in tab
+  </message>
+  <message name="IDS_KO_WORKSPACE_NEW" desc="K-O workspace: Heading for creating a workspace" formatter_data="webui=KoWorkspace">
+    New workspace
+  </message>
+  <message name="IDS_KO_WORKSPACE_NAME_PLACEHOLDER" desc="K-O workspace: Placeholder for the workspace name" formatter_data="webui=KoWorkspace">
+    Workspace name
+  </message>
+  <message name="IDS_KO_WORKSPACE_CREATE" desc="K-O workspace: Button that creates a workspace" formatter_data="webui=KoWorkspace">
+    Create
+  </message>
+  <message name="IDS_KO_WORKSPACE_EMPTY" desc="K-O workspace: Shown when there are no workspaces" formatter_data="webui=KoWorkspace">
+    No workspaces yet.
+  </message>
+  <message name="IDS_KO_WORKSPACE_BACK" desc="K-O workspace: Button that goes back to the workspace list" formatter_data="webui=KoWorkspace">
+    All workspaces
+  </message>
+  <message name="IDS_KO_WORKSPACE_CONTAINER_LABEL" desc="K-O workspace: Label for the workspace's container" formatter_data="webui=KoWorkspace">
+    Container
+  </message>
+  <message name="IDS_KO_WORKSPACE_CONTAINER_MISSING" desc="K-O workspace: Shown when a workspace has no container" formatter_data="webui=KoWorkspace">
+    No container
+  </message>
+  <message name="IDS_KO_WORKSPACE_OPEN_TABS" desc="K-O workspace: Button that opens the workspace's tabs in its container" formatter_data="webui=KoWorkspace">
+    Open workspace tabs
+  </message>
+  <message name="IDS_KO_WORKSPACE_URLS_PLACEHOLDER" desc="K-O workspace: Placeholder for a list of URLs" formatter_data="webui=KoWorkspace">
+    One URL per line
+  </message>
+  <message name="IDS_KO_WORKSPACE_ARTIFACTS" desc="K-O workspace: Heading for the artifact list" formatter_data="webui=KoWorkspace">
+    Artifacts
+  </message>
+  <message name="IDS_KO_WORKSPACE_ARTIFACTS_EMPTY" desc="K-O workspace: Shown when there are no artifacts" formatter_data="webui=KoWorkspace">
+    No artifacts yet.
+  </message>
+  <message name="IDS_KO_WORKSPACE_UPLOAD_FILE" desc="K-O workspace: Button that uploads a file as an artifact" formatter_data="webui=KoWorkspace">
+    Upload file
+  </message>
+  <message name="IDS_KO_WORKSPACE_CAPTURE_PAGE" desc="K-O workspace: Button that saves the current tab as an artifact" formatter_data="webui=KoWorkspace">
+    Save current page
+  </message>
+  <message name="IDS_KO_WORKSPACE_CAPTURE_SCREENSHOT" desc="K-O workspace: Button that saves a screenshot of the current tab" formatter_data="webui=KoWorkspace">
+    Screenshot current tab
+  </message>
+  <message name="IDS_KO_WORKSPACE_CAPTURE_UNAVAILABLE" desc="K-O workspace: Shown when there is no web page tab to capture" formatter_data="webui=KoWorkspace">
+    Switch to a web page tab first. The workspace can't capture itself.
+  </message>
+  <message name="IDS_KO_WORKSPACE_VIEW" desc="K-O workspace: Button that shows an artifact" formatter_data="webui=KoWorkspace">
+    View
+  </message>
+  <message name="IDS_KO_WORKSPACE_DELETE" desc="K-O workspace: Button that deletes an artifact" formatter_data="webui=KoWorkspace">
+    Delete
+  </message>
+  <message name="IDS_KO_WORKSPACE_RUNS" desc="K-O workspace: Heading for agent runs" formatter_data="webui=KoWorkspace">
+    Agent runs
+  </message>
+  <message name="IDS_KO_WORKSPACE_MODEL" desc="K-O workspace: Label for the model picker" formatter_data="webui=KoWorkspace">
+    Model
+  </message>
+  <message name="IDS_KO_WORKSPACE_PROMPT_PLACEHOLDER" desc="K-O workspace: Placeholder for the agent prompt" formatter_data="webui=KoWorkspace">
+    What should the agent do?
+  </message>
+  <message name="IDS_KO_WORKSPACE_MCP_SERVERS" desc="K-O workspace: Label for the MCP server picker" formatter_data="webui=KoWorkspace">
+    MCP servers
+  </message>
+  <message name="IDS_KO_WORKSPACE_START_RUN" desc="K-O workspace: Button that starts an agent run" formatter_data="webui=KoWorkspace">
+    Start run
+  </message>
+  <message name="IDS_KO_WORKSPACE_CANCEL_RUN" desc="K-O workspace: Button that cancels an agent run" formatter_data="webui=KoWorkspace">
+    Cancel run
+  </message>
+  <message name="IDS_KO_WORKSPACE_RUN_OUTPUT" desc="K-O workspace: Heading for the run event stream" formatter_data="webui=KoWorkspace">
+    Run output
+  </message>
+  <message name="IDS_KO_WORKSPACE_CLOUDFLARE" desc="K-O workspace: Heading for the per-workspace Cloudflare agent" formatter_data="webui=KoWorkspace">
+    Cloudflare agent
+  </message>
+  <message name="IDS_KO_WORKSPACE_DEPLOY" desc="K-O workspace: Button that deploys the Cloudflare agent" formatter_data="webui=KoWorkspace">
+    Deploy agent
+  </message>
+  <message name="IDS_KO_WORKSPACE_NOT_DEPLOYED" desc="K-O workspace: Shown when no Cloudflare agent is deployed" formatter_data="webui=KoWorkspace">
+    Not deployed.
+  </message>
+  <message name="IDS_KO_WORKSPACE_APPS" desc="K-O workspace: Heading for the user's workspace apps" formatter_data="webui=KoWorkspace">
+    Workspace apps
+  </message>
+  <message name="IDS_KO_WORKSPACE_APPS_EMPTY" desc="K-O workspace: Shown when there are no workspace apps" formatter_data="webui=KoWorkspace">
+    No apps. Add them to workspace_apps.json in the K-O data folder.
+  </message>
+  <message name="IDS_KO_WORKSPACE_APPS_RELOAD" desc="K-O workspace: Button that reloads the apps file" formatter_data="webui=KoWorkspace">
+    Reload from file
+  </message>
+  <message name="IDS_KO_WORKSPACE_APPS_RELOAD_FAILED" desc="K-O workspace: Shown when the apps file can't be read" formatter_data="webui=KoWorkspace">
+    workspace_apps.json is missing, invalid or writable by others.
+  </message>
+  <message name="IDS_KO_WORKSPACE_OPEN_IN_PANEL" desc="K-O workspace: Button that opens an app in the side panel" formatter_data="webui=KoWorkspace">
+    Side panel
+  </message>
+  <message name="IDS_KO_WORKSPACE_OPEN_IN_TAB" desc="K-O workspace: Button that opens an app in a tab" formatter_data="webui=KoWorkspace">
+    Tab
+  </message>
+  <message name="IDS_KO_WORKSPACE_DELETE_WORKSPACE" desc="K-O workspace: Button that deletes a workspace" formatter_data="webui=KoWorkspace">
+    Delete workspace
+  </message>
+  <message name="IDS_KO_WORKSPACE_ERROR" desc="K-O workspace: Prefix for an error message" formatter_data="webui=KoWorkspace">
+    Something went wrong:
+  </message>
+</grit-part>

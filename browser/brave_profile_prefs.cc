@@ -45,6 +45,7 @@
 #include "brave/components/email_aliases/buildflags/buildflags.h"
 #include "brave/components/global_privacy_control/pref_names.h"
 #include "brave/components/ipfs/ipfs_prefs.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/view_counter_service.h"
 #include "brave/components/ntp_background_images/buildflags/buildflags.h"
@@ -164,6 +165,10 @@ using extensions::FeatureSwitch;
 
 #if BUILDFLAG(ENABLE_CUSTOM_BACKGROUND)
 #include "brave/browser/ntp_background/ntp_background_prefs.h"
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/components/ko/workspace/core/workspace_apps.h"
 #endif
 
 #if BUILDFLAG(ENABLE_PSST)
@@ -521,6 +526,10 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
 #if BUILDFLAG(ENABLE_BRAVE_WALLET)
   // Brave Wallet
   brave_wallet::RegisterProfilePrefs(registry);
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  ko_workspace::RegisterWorkspaceProfilePrefs(registry);
 #endif
 
 #if BUILDFLAG(ENABLE_PSST)

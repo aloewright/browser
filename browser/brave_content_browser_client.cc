@@ -255,6 +255,10 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #if BUILDFLAG(IS_KO) && BUILDFLAG(ENABLE_CONTAINERS)
 #include "brave/browser/containers/ko_container_proxy_hooks.h"
 #endif
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_workspace/ko_workspace_ui.h"
+#include "brave/components/ko/workspace/common/ko_workspace.mojom.h"
+#endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
 #include "brave/browser/traffic_control/traffic_control_navigation_throttle.h"
 #include "brave/browser/traffic_control/traffic_control_service_factory.h"
@@ -695,6 +699,11 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
         .Add<containers::mojom::ContainersSettingsHandler>();
   }
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  // Only chrome://ko-workspace may create containers and capture tabs.
+  registry.ForWebUI<KoWorkspaceUI>().Add<ko_workspace::mojom::PageHandler>();
+#endif
 #if BUILDFLAG(ENABLE_TRAFFIC_CONTROL)
   if (base::FeatureList::IsEnabled(
           traffic_control::features::kTrafficControl)) {

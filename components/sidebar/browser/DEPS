@@ -1,6 +1,7 @@
 include_rules = [
   "+brave/components/brave_wallet/common",
   "+brave/components/constants",
+  "+brave/components/ko/buildflags",
   "+components/grit/brave_components_strings.h",
   "+components/keyed_service",
   "+components/prefs",
