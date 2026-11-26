@@ -40,6 +40,7 @@ source_set("ai_chat") {
     "//brave/components/ai_chat/ios/common:mojom",
     "//brave/components/ai_chat/resources",
     "//brave/components/constants",
+    "//brave/components/ko/buildflags",
     "//brave/components/resources:static_resources",
     "//brave/components/resources:strings_grit",
     "//brave/components/version_info",
