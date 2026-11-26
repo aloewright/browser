@@ -102,8 +102,8 @@ snapshot only if:
 
 1. the ed25519 signature over `"ko-filter-lists-manifest-v1\n" + manifest`
    verifies with `ko_filter_lists_pubkey`;
-2. the manifest parses strictly (ids, file names derived from ids, sizes,
-   hex digests, engines);
+2. the manifest parses strictly (ids, file names derived from ids, sizes of
+   at most 5 MiB per file, hex digests, engines);
 3. its `version` is newer than the embedded snapshot and than any version
    accepted before (anti-rollback; a lost local copy of the last accepted
    version may be restored);

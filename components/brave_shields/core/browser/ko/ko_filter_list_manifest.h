@@ -23,7 +23,9 @@ inline constexpr char kKoFilterListChannel[] = "ko-filter-lists";
 inline constexpr char kKoManifestSignaturePrefix[] =
     "ko-filter-lists-manifest-v1\n";
 inline constexpr size_t kKoMaxManifestBytes = 512 * 1024;
-inline constexpr size_t kKoMaxListBytes = 32 * 1024 * 1024;
+// The update channel downloads each file into memory, which SimpleURLLoader
+// caps at 5 MiB.
+inline constexpr size_t kKoMaxListBytes = 5 * 1024 * 1024;
 inline constexpr size_t kKoMaxTotalBytes = 128 * 1024 * 1024;
 inline constexpr size_t kKoMaxLists = 256;
 

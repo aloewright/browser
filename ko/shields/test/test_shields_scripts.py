@@ -97,6 +97,12 @@ class SnapshotTest(unittest.TestCase):
       update_lists.validate_entries(
           [e for e in entries if e.get('replaces') != 'default'])
 
+  def test_rejects_oversized_list(self):
+    entries = update_lists.load_manifest()['lists']
+    entries[0] = dict(entries[0], size=update_lists.MAX_LIST_BYTES + 1)
+    with self.assertRaises(update_lists.UpdateError):
+      update_lists.validate_entries(entries)
+
   def test_manifest_fields(self):
     manifest = update_lists.load_manifest()
     for e in manifest['lists']:

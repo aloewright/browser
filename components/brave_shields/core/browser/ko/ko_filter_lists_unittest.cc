@@ -198,6 +198,10 @@ TEST(KoFilterListManifestTest, RejectsMalformedManifests) {
   EXPECT_FALSE(with([](auto& l) { l[0].kind = "script"; }));
   EXPECT_FALSE(with([](auto& l) { l[0].replaces = "bad uuid"; }));
   EXPECT_FALSE(with([](auto& l) { l[0].content.clear(); }));
+  // Over what the update channel can download.
+  EXPECT_FALSE(
+      with([](auto& l) { l[0].content.assign(kKoMaxListBytes + 1, 'a'); }));
+  EXPECT_TRUE(with([](auto& l) { l[0].content.assign(kKoMaxListBytes, 'a'); }));
 
   EXPECT_FALSE(KoFilterListManifest::Parse("").has_value());
   EXPECT_FALSE(KoFilterListManifest::Parse("[]").has_value());

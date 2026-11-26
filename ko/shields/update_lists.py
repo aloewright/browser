@@ -82,7 +82,9 @@ LOCAL_LISTS = [
     },
 ]
 
-MAX_LIST_BYTES = 32 * 1024 * 1024
+MAX_FETCH_BYTES = 32 * 1024 * 1024
+# Per shipped file; mirrors kKoMaxListBytes, which the browser enforces.
+MAX_LIST_BYTES = 5 * 1024 * 1024
 MAX_TOTAL_BYTES = 128 * 1024 * 1024
 DEFAULT_MIN_RULES = 1
 ID_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,63}$')
@@ -134,7 +136,7 @@ def list_id_for_url(url, taken):
   return candidate
 
 
-def fetch(url, max_bytes=MAX_LIST_BYTES):
+def fetch(url, max_bytes=MAX_FETCH_BYTES):
   """HTTPS GET with certificate verification and a size cap."""
   if urllib.parse.urlparse(url).scheme != 'https':
     raise UpdateError('refusing non-https source: %s' % url)
@@ -437,6 +439,8 @@ def validate_entries(entries):
     if not ID_RE.match(e['id']) or e['id'] in ids:
       raise UpdateError('bad or duplicate id: %s' % e['id'])
     ids.add(e['id'])
+    if e['size'] > MAX_LIST_BYTES:
+      raise UpdateError('%s is %d bytes, over the limit' % (e['id'], e['size']))
     total += e['size']
   if total > MAX_TOTAL_BYTES:
     raise UpdateError('snapshot is %d bytes, over the limit' % total)
