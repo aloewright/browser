@@ -1645,6 +1645,8 @@ IN_PROC_BROWSER_TEST_F(FirstPartyStorageCleanupSiteDataBrowserTest,
       FROM_HERE, GetValuesFromFrame(new_site_b_a_tab->GetPrimaryMainFrame()));
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(FirstPartyStorageCleanupSiteDataBrowserTest,
                        DoNotCleanupStorageIfShieldsDisabledOnAnySubdomain) {
   const auto a_site_ephemeral_storage_url =
@@ -1703,3 +1705,4 @@ IN_PROC_BROWSER_TEST_F(FirstPartyStorageCleanupSiteDataBrowserTest,
   EXPECT_NE(TabStripModel::kNoTab,
             browser()->tab_strip_model()->GetIndexOfWebContents(site_a_a_tab));
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)

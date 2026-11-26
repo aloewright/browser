@@ -393,6 +393,8 @@ IN_PROC_BROWSER_TEST_F(EphemeralStorageForgetByDefaultBrowserTest,
   EXPECT_EQ(1u, GetAllCookies().size());
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(EphemeralStorageForgetByDefaultBrowserTest,
                        DisabledShieldsDontForgetFirstParty) {
   brave_shields_settings_->SetForgetFirstPartyStorageEnabled(
@@ -501,6 +503,7 @@ IN_PROC_BROWSER_TEST_F(EphemeralStorageForgetByDefaultBrowserTest,
   EXPECT_EQ("name=bcom_simple", site_a_tab_values.iframe_1.cookies);
   EXPECT_EQ("name=bcom_simple", site_a_tab_values.iframe_2.cookies);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 class EphemeralStorageForgetByDefaultIsDefaultBrowserTest
     : public EphemeralStorageForgetByDefaultBrowserTest {
