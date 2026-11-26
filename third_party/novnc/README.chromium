@@ -1,0 +1,29 @@
+Name: noVNC
+URL: https://github.com/novnc/noVNC
+Version: 1.7.0
+Revision: 63107bd06d9e1f6136ff21aeda8cd62cbf0d433e
+Update Mechanism: Manual
+License: MPL-2.0, MIT, BSD-3-Clause
+License File: /brave/third_party/novnc/LICENSE.txt
+Security Critical: yes
+Shipped: yes
+CPEPrefix: unknown
+
+Description:
+The noVNC core RFB library (core/) and its zlib dependency (vendor/pako/),
+used by chrome://ko-machines to show remote desktops in a tab. The page hands
+RFB a WebSocket-like channel backed by the KOMachineBridge Mojo data pipes, so
+no websockify server is involved.
+
+Apple Remote Desktop authentication (security type 30, used by macOS Screen
+Sharing) is supported in this version (core/rfb.js, _negotiateARDAuth).
+
+Local Modifications:
+- Only core/, vendor/pako/, AUTHORS, LICENSE.txt and the referenced license
+  texts in docs/ are vendored; app/, tests/ and utils/ are not.
+- Added core/rfb.d.ts: TypeScript declarations for the parts of the RFB API
+  K-O uses. The JavaScript is unmodified.
+
+To update: copy core/ and vendor/pako/ from the new tag, review the diff of
+core/websock.js (raw channel contract) and core/rfb.js (security types), and
+update Version and Revision.

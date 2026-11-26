@@ -85,6 +85,7 @@
 #include "brave/components/global_privacy_control/global_privacy_control_utils.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_throttle.h"
 #include "brave/components/google_sign_in_permission/google_sign_in_permission_util.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/local_ai/buildflags/buildflags.h"
 #include "brave/components/ntp_background_images/browser/mojom/ntp_background_images.mojom.h"
 #include "brave/components/password_strength_meter/password_strength_meter.mojom.h"
@@ -354,6 +355,11 @@ using extensions::ChromeContentBrowserClientExtensionsPart;
 #if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
 #include "brave/browser/ui/webui/brave_origin_startup/brave_origin_startup_ui.h"
 #include "brave/components/brave_origin/mojom/brave_origin_startup.mojom.h"
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+#include "brave/browser/ui/webui/ko_machines/ko_machines_ui.h"
+#include "brave/components/ko/machines/common/ko_machines.mojom.h"
 #endif
 
 #if BUILDFLAG(IS_WIN)
@@ -730,6 +736,13 @@ void BraveContentBrowserClient::RegisterTrustedWebUIInterfaceBrokers(
 #if BUILDFLAG(IS_BRAVE_ORIGIN_BRANDED)
   registry.ForWebUI<BraveOriginStartupUI>()
       .Add<brave_origin::mojom::BraveOriginStartupHandler>();
+#endif
+
+#if BUILDFLAG(IS_KO) && !BUILDFLAG(IS_ANDROID)
+  // Only chrome://ko-machines may open machine sockets.
+  registry.ForWebUI<KOMachinesUI>()
+      .Add<ko_machines::mojom::MachinesHandler>()
+      .Add<ko_machines::mojom::KOMachineBridge>();
 #endif
 
 #if BUILDFLAG(ENABLE_AI_CHAT)
