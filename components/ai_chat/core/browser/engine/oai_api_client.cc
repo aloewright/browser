@@ -36,12 +36,84 @@
 #include "ui/base/l10n/l10n_util.h"
 
 #if BUILDFLAG(IS_KO)
+#include <algorithm>
+
+#include "base/memory/ref_counted.h"
 #include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
+#include "net/http/http_status_code.h"
 #endif
 
 namespace ai_chat {
 
 namespace {
+
+#if BUILDFLAG(IS_KO)
+// Shown as the error code when a streamed error names no usable type.
+constexpr char kStreamErrorType[] = "stream_error";
+constexpr size_t kMaxStreamErrorTypeLength = 64;
+
+bool IsErrorTypeChar(char c) {
+  return base::IsAsciiAlphaNumeric(c) || c == '_' || c == '-' || c == '.';
+}
+
+// Once a stream has started, agentd (and the OpenAI-style providers it
+// relays) report a failure as a {"error": {"message", "type"}} chunk on a 200
+// response. Returns the error code to show, or nullopt for other chunks.
+std::optional<std::string> GetStreamErrorType(const base::Value& chunk) {
+  const base::DictValue* dict = chunk.GetIfDict();
+  const base::Value* error = dict ? dict->Find("error") : nullptr;
+  if (!error) {
+    return std::nullopt;
+  }
+  if (const base::DictValue* error_dict = error->GetIfDict()) {
+    const std::string* type = error_dict->FindString("type");
+    if (type && !type->empty() && type->size() <= kMaxStreamErrorTypeLength &&
+        std::ranges::all_of(*type, IsErrorTypeChar)) {
+      return *type;
+    }
+    return kStreamErrorType;
+  }
+  if (error->is_string() && !error->GetString().empty()) {
+    return kStreamErrorType;
+  }
+  return std::nullopt;
+}
+
+// Set by the first error chunk of one streamed request.
+using StreamError = base::RefCountedData<std::optional<std::string>>;
+
+void DropAfterStreamError(
+    const scoped_refptr<StreamError>& stream_error,
+    const api_request_helper::APIRequestHelper::DataReceivedCallback& on_data,
+    api_request_helper::ValueOrError result) {
+  if (stream_error->data) {
+    return;
+  }
+  if (result.has_value()) {
+    if (std::optional<std::string> type = GetStreamErrorType(*result)) {
+      stream_error->data = std::move(type);
+      return;
+    }
+  }
+  on_data.Run(std::move(result));
+}
+
+// The stream still ends with [DONE] and a 200, which would otherwise complete
+// as an empty success.
+void FailOnStreamError(scoped_refptr<StreamError> stream_error,
+                       EngineConsumer::GenerationCompletedCallback callback,
+                       EngineConsumer::GenerationResult result) {
+  if (stream_error->data && result.has_value()) {
+    auto details = mojom::APIErrorDetails::New(
+        net::HTTP_OK, *stream_error->data,
+        /*inner_status_code=*/0, /*rate_limit_expires_at=*/std::nullopt);
+    std::move(callback).Run(base::unexpected(EngineConsumer::Error(
+        mojom::APIError::ConnectionIssue, std::move(details))));
+    return;
+  }
+  std::move(callback).Run(std::move(result));
+}
+#endif  // BUILDFLAG(IS_KO)
 
 net::NetworkTrafficAnnotationTag GetNetworkTrafficAnnotationTag() {
   return net::DefineNetworkTrafficAnnotation("ai_chat", R"(
@@ -371,6 +443,15 @@ void OAIAPIClient::PerformRequest(
     auto on_received = base::BindRepeating(
         &OAIAPIClient::OnQueryDataReceived, std::move(data_received_callback),
         /*model_key=*/std::nullopt, /*is_near_verified=*/std::nullopt);
+#if BUILDFLAG(IS_KO)
+    // An error chunk ends the answer: later chunks are dropped and the
+    // request completes with an error instead of an empty success.
+    auto stream_error = base::MakeRefCounted<StreamError>();
+    on_received = base::BindRepeating(&DropAfterStreamError, stream_error,
+                                      std::move(on_received));
+    completed_callback = base::BindOnce(&FailOnStreamError, stream_error,
+                                        std::move(completed_callback));
+#endif
     auto on_complete = base::BindOnce(&OAIAPIClient::OnQueryCompleted,
                                       weak_ptr_factory_.GetWeakPtr(),
                                       std::move(completed_callback));

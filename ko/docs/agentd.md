@@ -17,7 +17,7 @@ falling back to `~/.local/share/k-o`. To use another dir, pass
 | Path | Mode | Contents |
 | --- | --- | --- |
 | `agentd.toml` | 0600 (no group/world write) | Config. Holds no secrets. |
-| `agentd.token` | 0600 | Bearer token. Created on first run. |
+| `agentd.token` | 0600 | Bearer token: 32 random bytes as unpadded base64url (43 characters `[A-Za-z0-9_-]`) and a newline. Created on first run. |
 | `agentd.sock` | 0600 | Unix socket. Removed on shutdown. |
 | `agentd.port` | 0600 | Bound TCP port, written at start. |
 | `agentd.lock` | 0600 | `flock` held while serving; a second `serve` on the same dir exits. |
@@ -281,11 +281,27 @@ drains connections (10 s) and removes the socket and port file.
 
 ## Browser integration
 
+The browser reads `agentd.token` and `agentd.port` with one shared reader
+(`ko::ReadAgentdConfig()`, `components/ko/common/agentd_config.h`). Both must
+be regular files owned by the user with no group or other access. The token
+must be 32 to 512 base64url characters (`[A-Za-z0-9_-]`), optionally
+surrounded by ASCII whitespace, so agentd's own 43-character token always
+passes. Without a valid port file the browser uses 47821.
+
+The Assistant lists models with `GET /v1/models` and skips any id outside
+`[A-Za-z0-9._:/@+\[\]-]{1,200}`, which covers every `<provider>/<model>` id
+agentd lists, Claude Code aliases such as `claude-code/sonnet[1m]` included.
+
 WebUI pages get the base URL (`http://127.0.0.1:<port>`) and the token from
-C++ through `loadTimeData`. C++ reads `agentd.token` when the page loads. It
-can read `agentd.port` to find a non-default port. Use `fetch` with
-`Authorization`, including for SSE (`EventSource` cannot set headers). Never
-put the token in a URL.
+C++ through `loadTimeData`, read when the page loads. The Assistant reads
+both on every model fetch and sends `/v1/models` and chat requests to that
+port. Use `fetch` with `Authorization`, including for SSE (`EventSource`
+cannot set headers). Never put the token in a URL.
+
+The Assistant treats a streamed chunk with a top-level `error` object as the
+end of the answer and shows an error, so keep sending
+`{"error": {"message", "type"}}` then `[DONE]` for failures after the
+stream starts.
 
 ## macOS service
 

@@ -4,7 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # Unconditional so targets that guard K-O code with BUILDFLAG(IS_KO) can depend
-# on it in every build.
+# on them in every build.
 static_library("paths") {
   sources = [
     "ko_paths.cc",
@@ -12,4 +12,28 @@ static_library("paths") {
   ]
 
   public_deps = [ "//base" ]
+}
+
+# Reads ko-agentd's token and port files, for the Assistant and
+# chrome://ko-workspace.
+static_library("agentd_config") {
+  sources = [
+    "agentd_config.cc",
+    "agentd_config.h",
+  ]
+
+  public_deps = [ "//base" ]
+}
+
+source_set("unit_tests") {
+  testonly = true
+
+  sources = [ "agentd_config_unittest.cc" ]
+
+  deps = [
+    ":agentd_config",
+    "//base",
+    "//base/test:test_support",
+    "//testing/gtest",
+  ]
 }

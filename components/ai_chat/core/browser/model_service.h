@@ -159,7 +159,7 @@ class ModelService : public KeyedService {
 #endif
 
 #if BUILDFLAG(IS_KO)
-  // Re-reads the agentd token and model list.
+  // Re-reads agentd's token, port and model list.
   void RefreshAgentdModels();
 #endif
 

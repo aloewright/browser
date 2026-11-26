@@ -583,7 +583,7 @@ ModelService::ModelService(
   agentd_models_ = ko::BuildAgentdModels(
       ko::AgentdModelsFromCache(
           pref_service_->GetList(ko::kAgentdModelsCachePref)),
-      std::string());
+      std::string(), ko::GetAgentdPort());
   agentd_retry_delay_ = kAgentdInitialRetryDelay;
   if (url_loader_factory) {
     agentd_fetcher_ = std::make_unique<ko::AgentdModelsFetcher>(
@@ -1403,7 +1403,7 @@ void ModelService::OnAgentdModelsFetched(ko::AgentdFetchResult result) {
   }
 
   std::vector<mojom::ModelPtr> models =
-      ko::BuildAgentdModels(infos, agentd_token_);
+      ko::BuildAgentdModels(infos, agentd_token_, result.port);
   if (std::ranges::equal(
           models, agentd_models_,
           [](const mojom::ModelPtr& a, const mojom::ModelPtr& b) {

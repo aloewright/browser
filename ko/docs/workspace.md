@@ -28,8 +28,14 @@ Code: `components/ko/workspace/` (core, mojom, handler, frontend) and
   stored in prefs or on disk by the browser, and never put in a URL.
 - Both files are refused unless they are regular files (not symlinks) owned
   by the user with no group/other permissions. A loose `agentd.port` could
-  send the page, and its token, to another local listener. The page tells
-  you what to fix (missing, insecure or malformed token).
+  send the page, and its token, to another local listener. The token must be
+  32 to 512 base64url characters (agentd writes 43), optionally followed by
+  a newline. The page tells you what to fix (missing, insecure or malformed
+  token).
+- The K-O Assistant uses the same reader (`ko::ReadAgentdConfig()` in
+  `components/ko/common/agentd_config.h`), so both accept the same tokens
+  and follow the same port file. Only the Assistant honors the developer
+  switch `--ko-agentd-port`.
 - The data dir is `~/Library/Application Support/K-O` on macOS, or
   `$XDG_DATA_HOME/k-o` (fallback `~/.local/share/k-o`) on Linux.
 - CSP: `connect-src chrome://resources 'self' http://127.0.0.1:<port>`.
@@ -134,9 +140,10 @@ trust.
 
 ## Tests
 
-- `components/ko/workspace/core/agentd_config_unittest.cc`: token and port
-  parsing, permission and symlink refusal, `agentd.js` content (no token
-  unless it is usable).
+- `components/ko/common/agentd_config_unittest.cc`: token and port parsing,
+  permission and symlink refusal.
+- `components/ko/workspace/core/agentd_config_unittest.cc`: `agentd.js`
+  content (no token unless it is usable).
 - `components/ko/workspace/core/workspace_apps_unittest.cc`: validation and
   both file shapes.
 - `components/ko/workspace/browser/ko_workspace_handler_unittest.cc`:

@@ -13,6 +13,7 @@
 #include "base/functional/callback.h"
 #include "base/strings/string_util.h"
 #include "base/task/thread_pool.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "brave/components/ko/workspace/core/agentd_config.h"
 #include "components/prefs/pref_service.h"
 #include "url/url_constants.h"
@@ -34,9 +35,9 @@ std::optional<std::vector<WorkspaceApp>> ReadAppsFile(
     return std::nullopt;
   }
   // Not secret, but must not be writable by others.
-  auto contents = ReadUserFile(data_dir.AppendASCII(kWorkspaceAppsFileName),
-                               kMaxWorkspaceAppsFileSize,
-                               /*allow_group_or_world_read=*/true, nullptr);
+  auto contents = ko::ReadUserFile(data_dir.AppendASCII(kWorkspaceAppsFileName),
+                                   kMaxWorkspaceAppsFileSize,
+                                   /*allow_group_or_world_read=*/true, nullptr);
   if (!contents) {
     return std::nullopt;
   }

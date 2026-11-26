@@ -6,14 +6,12 @@
 #include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
 
 #include <algorithm>
+#include <atomic>
 #include <utility>
 
 #include "base/check.h"
 #include "base/command_line.h"
 #include "base/containers/flat_set.h"
-#include "base/containers/span.h"
-#include "base/files/file.h"
-#include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
@@ -24,17 +22,11 @@
 #include "brave/components/ai_chat/core/browser/model_validator.h"
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/api_request_helper/api_request_helper.h"
+#include "brave/components/ko/common/agentd_config.h"
 #include "brave/components/ko/common/ko_paths.h"
-#include "build/build_config.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "url/url_constants.h"
-
-#if BUILDFLAG(IS_POSIX)
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#endif
 
 namespace ai_chat::ko {
 
@@ -42,8 +34,6 @@ namespace {
 
 constexpr char kAgentdHost[] = "127.0.0.1";
 constexpr char kAgentdDefaultModelDisplayName[] = "K-O agentd";
-constexpr size_t kMinTokenLength = 16;
-constexpr size_t kMaxTokenLength = 512;
 constexpr size_t kMaxModelIdLength = 200;
 constexpr size_t kMaxDisplayNameLength = 100;
 constexpr size_t kMaxModelsResponseBytes = 1024 * 1024;
@@ -70,14 +60,30 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
         setting: "Stop ko-agentd or disable the assistant."
       })");
 
-bool IsTokenChar(char c) {
-  return base::IsAsciiAlphaNumeric(c) || c == '-' || c == '_' || c == '.' ||
-         c == '~' || c == '+' || c == '/' || c == '=';
+// The port the last fetch read; 0 until then. Written on the fetchers'
+// sequence, read wherever agentd URLs are built or checked.
+std::atomic<uint16_t> g_agentd_port{0};
+
+std::optional<uint16_t> GetAgentdPortOverride() {
+  const base::CommandLine* command_line =
+      base::CommandLine::ForCurrentProcess();
+  if (!command_line->HasSwitch(kAgentdPortSwitch)) {
+    return std::nullopt;
+  }
+  unsigned port = 0;
+  if (!base::StringToUint(command_line->GetSwitchValueASCII(kAgentdPortSwitch),
+                          &port) ||
+      port == 0 || port > 65535) {
+    return std::nullopt;
+  }
+  return static_cast<uint16_t>(port);
 }
 
+// agentd's model-name charset plus '+'. '[' and ']' are in Claude Code
+// aliases such as "claude-code/sonnet[1m]".
 bool IsModelIdChar(char c) {
   return base::IsAsciiAlphaNumeric(c) || c == '-' || c == '_' || c == '.' ||
-         c == '/' || c == ':' || c == '@' || c == '+';
+         c == '/' || c == ':' || c == '@' || c == '+' || c == '[' || c == ']';
 }
 
 bool IsValidModelId(std::string_view id) {
@@ -122,11 +128,12 @@ mojom::ModelPtr CreateModel(std::string key,
                             std::string display_name,
                             const AgentdModelInfo& info,
                             const std::string& token,
+                            uint16_t port,
                             bool is_suggested) {
   auto options = mojom::CustomModelOptions::New();
   options->model_request_name = info.id;
   options->context_size = info.context_size;
-  options->endpoint = GetAgentdUrl(kAgentdChatCompletionsPath);
+  options->endpoint = GetAgentdUrl(kAgentdChatCompletionsPath, port);
   options->api_key = token;
 
   auto model = mojom::Model::New();
@@ -134,7 +141,8 @@ mojom::ModelPtr CreateModel(std::string key,
   model->display_name = std::move(display_name);
   model->vision_support = info.vision;
   model->supports_tools = info.tools;
-  // Lets Leo's tools, including the content agent's, run on agentd models.
+  // Lets Leo's tools, including the content agent's, run on agentd models
+  // that can hand tool calls back.
   if (info.tools) {
     model->supported_capabilities = {
         mojom::ConversationCapability::CONTENT_AGENT};
@@ -167,29 +175,31 @@ base::FilePath GetDataDir() {
 }
 
 uint16_t GetAgentdPort() {
-  const base::CommandLine* command_line =
-      base::CommandLine::ForCurrentProcess();
-  if (command_line->HasSwitch(kAgentdPortSwitch)) {
-    unsigned port = 0;
-    if (base::StringToUint(command_line->GetSwitchValueASCII(kAgentdPortSwitch),
-                           &port) &&
-        port > 0 && port <= 65535) {
-      return static_cast<uint16_t>(port);
-    }
+  if (std::optional<uint16_t> port = GetAgentdPortOverride()) {
+    return *port;
   }
-  return kAgentdDefaultPort;
+  const uint16_t port = g_agentd_port.load(std::memory_order_relaxed);
+  return port ? port : ::ko::kAgentdDefaultPort;
+}
+
+GURL GetAgentdUrl(std::string_view path, uint16_t port) {
+  CHECK(path.starts_with("/"));
+  return GURL(
+      base::StrCat({url::kHttpScheme, url::kStandardSchemeSeparator,
+                    kAgentdHost, ":", base::NumberToString(port), path}));
 }
 
 GURL GetAgentdUrl(std::string_view path) {
-  CHECK(path.starts_with("/"));
-  return GURL(base::StrCat({url::kHttpScheme, url::kStandardSchemeSeparator,
-                            kAgentdHost, ":",
-                            base::NumberToString(GetAgentdPort()), path}));
+  return GetAgentdUrl(path, GetAgentdPort());
 }
 
 bool IsAgentdEndpoint(const GURL& url) {
-  return url.is_valid() && url.SchemeIs(url::kHttpScheme) &&
-         url.host() == kAgentdHost && url.EffectiveIntPort() == GetAgentdPort();
+  if (!url.is_valid() || !url.SchemeIs(url::kHttpScheme) ||
+      url.host() != kAgentdHost) {
+    return false;
+  }
+  const int port = url.EffectiveIntPort();
+  return port == GetAgentdPort() || port == ::ko::kAgentdDefaultPort;
 }
 
 bool IsAgentdModelKey(std::string_view key) {
@@ -197,46 +207,8 @@ bool IsAgentdModelKey(std::string_view key) {
          key.starts_with(kAgentdModelKeyPrefix);
 }
 
-bool IsValidAgentdToken(std::string_view token) {
-  return token.size() >= kMinTokenLength && token.size() <= kMaxTokenLength &&
-         std::ranges::all_of(token, IsTokenChar);
-}
-
-std::optional<std::string> ReadAgentdToken(const base::FilePath& data_dir) {
-#if BUILDFLAG(IS_POSIX)
-  if (data_dir.empty()) {
-    return std::nullopt;
-  }
-  const base::FilePath path = data_dir.Append(kAgentdTokenFileName);
-  if (base::IsLink(path)) {
-    return std::nullopt;
-  }
-  base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
-  if (!file.IsValid()) {
-    return std::nullopt;
-  }
-  // Check the opened file itself so a swap after the check can't matter.
-  struct stat st;
-  if (fstat(file.GetPlatformFile(), &st) != 0 || !S_ISREG(st.st_mode) ||
-      st.st_uid != geteuid() || (st.st_mode & (S_IRWXG | S_IRWXO)) != 0 ||
-      st.st_size > static_cast<off_t>(kMaxTokenLength + 2)) {
-    return std::nullopt;
-  }
-  std::string contents(kMaxTokenLength + 2, '\0');
-  std::optional<size_t> read =
-      file.ReadAtCurrentPos(base::as_writable_byte_span(contents));
-  if (!read) {
-    return std::nullopt;
-  }
-  contents.resize(*read);
-  std::string token(base::TrimWhitespaceASCII(contents, base::TRIM_ALL));
-  if (!IsValidAgentdToken(token)) {
-    return std::nullopt;
-  }
-  return token;
-#else
-  return std::nullopt;
-#endif
+bool AgentdModelSupportsToolsByDefault(std::string_view id) {
+  return !id.starts_with("claude-code/") && !id.starts_with("codex/");
 }
 
 std::optional<std::vector<AgentdModelInfo>> ParseAgentdModels(
@@ -273,7 +245,9 @@ std::optional<std::vector<AgentdModelInfo>> ParseAgentdModels(
       info.display_name = SanitizeDisplayName(entry->FindString("name"));
     }
     info.vision = FindCapability(*entry, "vision").value_or(false);
-    info.tools = FindCapability(*entry, "tools").value_or(true);
+    // agentd's own answer wins; the id only fills in a missing one.
+    info.tools = FindCapability(*entry, "tools")
+                     .value_or(AgentdModelSupportsToolsByDefault(*id));
     std::optional<int> context = entry->FindInt("context_length");
     if (!context) {
       context = entry->FindInt("context_window");
@@ -320,7 +294,8 @@ std::vector<AgentdModelInfo> AgentdModelsFromCache(
     info.id = *id;
     info.display_name = SanitizeDisplayName(entry->FindString(kCacheNameKey));
     info.vision = entry->FindBool(kCacheVisionKey).value_or(false);
-    info.tools = entry->FindBool(kCacheToolsKey).value_or(true);
+    info.tools = entry->FindBool(kCacheToolsKey)
+                     .value_or(AgentdModelSupportsToolsByDefault(*id));
     info.context_size = ClampContextSize(entry->FindInt(kCacheContextKey));
     models.push_back(std::move(info));
   }
@@ -329,7 +304,8 @@ std::vector<AgentdModelInfo> AgentdModelsFromCache(
 
 std::vector<mojom::ModelPtr> BuildAgentdModels(
     const std::vector<AgentdModelInfo>& models,
-    const std::string& token) {
+    const std::string& token,
+    uint16_t port) {
   std::vector<mojom::ModelPtr> result;
   result.reserve(models.size() + 1);
 
@@ -339,16 +315,17 @@ std::vector<mojom::ModelPtr> BuildAgentdModels(
     default_info = models.front();
   } else {
     default_info.id = kAgentdFallbackModelName;
+    default_info.tools = AgentdModelSupportsToolsByDefault(default_info.id);
   }
   result.push_back(CreateModel(kChatAutomaticModelKey,
                                kAgentdDefaultModelDisplayName, default_info,
-                               token, /*is_suggested=*/true));
+                               token, port, /*is_suggested=*/true));
 
   for (const auto& info : models) {
-    result.push_back(CreateModel(
-        base::StrCat({kAgentdModelKeyPrefix, info.id}),
-        info.display_name.empty() ? info.id : info.display_name, info, token,
-        /*is_suggested=*/false));
+    result.push_back(
+        CreateModel(base::StrCat({kAgentdModelKeyPrefix, info.id}),
+                    info.display_name.empty() ? info.id : info.display_name,
+                    info, token, port, /*is_suggested=*/false));
   }
   return result;
 }
@@ -367,20 +344,25 @@ AgentdModelsFetcher::~AgentdModelsFetcher() = default;
 void AgentdModelsFetcher::Fetch(FetchCallback callback) {
   weak_ptr_factory_.InvalidateWeakPtrs();
   api_request_helper_->CancelAll();
+  // The token and the port it belongs to are read together.
   base::ThreadPool::PostTaskAndReplyWithResult(
       FROM_HERE,
       {base::MayBlock(), base::TaskPriority::USER_VISIBLE,
        base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
-      base::BindOnce(&ReadAgentdToken, data_dir_),
-      base::BindOnce(&AgentdModelsFetcher::OnTokenRead,
+      base::BindOnce(&::ko::ReadAgentdConfig, data_dir_),
+      base::BindOnce(&AgentdModelsFetcher::OnConfigRead,
                      weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
 
-void AgentdModelsFetcher::OnTokenRead(FetchCallback callback,
-                                      std::optional<std::string> token) {
-  if (!token) {
+void AgentdModelsFetcher::OnConfigRead(FetchCallback callback,
+                                       ::ko::AgentdConfig config) {
+  const uint16_t port = GetAgentdPortOverride().value_or(config.port);
+  if (config.token_status != ::ko::AgentdTokenStatus::kOk) {
     // No token, no request: agentd rejects unauthenticated calls anyway.
-    std::move(callback).Run(Result());
+    Result out;
+    out.port = port;
+    g_agentd_port.store(port, std::memory_order_relaxed);
+    std::move(callback).Run(std::move(out));
     return;
   }
 
@@ -388,24 +370,34 @@ void AgentdModelsFetcher::OnTokenRead(FetchCallback callback,
   options.max_body_size = kMaxModelsResponseBytes;
   options.timeout = kModelsRequestTimeout;
   options.allow_redirects = false;
+  const std::string authorization = base::StrCat({"Bearer ", config.token});
   api_request_helper_->Request(
-      "GET", GetAgentdUrl(kAgentdModelsPath), "", "application/json",
+      "GET", GetAgentdUrl(kAgentdModelsPath, port), "", "application/json",
       base::BindOnce(&AgentdModelsFetcher::OnModelsResponse,
                      weak_ptr_factory_.GetWeakPtr(), std::move(callback),
-                     *token),
-      {{"Authorization", base::StrCat({"Bearer ", *token})}}, options);
+                     std::move(config.token), port),
+      {{"Authorization", authorization}}, options);
 }
 
 void AgentdModelsFetcher::OnModelsResponse(
     FetchCallback callback,
     std::string token,
+    uint16_t port,
     api_request_helper::APIRequestResult result) {
   Result out;
   out.token = std::move(token);
+  out.port = port;
   if (result.Is2XXResponseCode()) {
     out.models = ParseAgentdModels(result.value_body());
   }
+  // Published with the models built from |out|, so IsAgentdEndpoint() matches
+  // their endpoint.
+  g_agentd_port.store(port, std::memory_order_relaxed);
   std::move(callback).Run(std::move(out));
+}
+
+void ResetAgentdPortForTesting() {
+  g_agentd_port.store(0, std::memory_order_relaxed);
 }
 
 }  // namespace ai_chat::ko
