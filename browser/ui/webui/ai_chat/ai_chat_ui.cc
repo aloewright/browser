@@ -51,6 +51,11 @@
 #include "ui/webui/mojo_web_ui_controller.h"
 #include "ui/webui/webui_util.h"
 
+#if BUILDFLAG(IS_KO)
+#include "brave/browser/ko/telemetry/ko_telemetry.h"
+#include "brave/components/ko/telemetry/ko_analytics_event.h"
+#endif
+
 #if !BUILDFLAG(IS_ANDROID)
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/tabs/tab_model.h"
@@ -85,6 +90,9 @@ AIChatUI::AIChatUI(content::WebUI* web_ui)
     : ui::MojoWebUIController(web_ui), profile_(Profile::FromWebUI(web_ui)) {
   CHECK(profile_);
   DCHECK(profile_->IsRegularProfile());
+#if BUILDFLAG(IS_KO)
+  ko::RecordFeatureUsed(ko::analytics::Feature::kAssistant);
+#endif
 
   // Create a URLDataSource and add resources.
   content::WebUIDataSource* source = content::WebUIDataSource::CreateAndAdd(

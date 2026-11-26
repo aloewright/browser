@@ -8,12 +8,14 @@
 #include <utility>
 
 #include "base/functional/bind.h"
+#include "brave/browser/ko/telemetry/ko_telemetry.h"
 #include "brave/components/ko/machines/browser/machine_bridge.h"
 #include "brave/components/ko/machines/browser/machines_handler.h"
 #include "brave/components/ko/machines/core/machines_config.h"
 #include "brave/components/ko/machines/resources/grit/ko_machines_generated_map.h"
 #include "brave/components/ko/machines/resources/grit/ko_machines_static_resources.h"
 #include "brave/components/ko/machines/resources/grit/ko_machines_static_resources_map.h"
+#include "brave/components/ko/telemetry/ko_analytics_event.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/profiles/profile.h"
 #include "components/grit/brave_components_webui_strings.h"
@@ -67,6 +69,7 @@ bool KOMachinesUIConfig::IsWebUIEnabled(
 KOMachinesUI::KOMachinesUI(content::WebUI* web_ui)
     : ui::MojoWebUIController(web_ui) {
   CreateAndAddDataSource(Profile::FromWebUI(web_ui));
+  ko::RecordFeatureUsed(ko::analytics::Feature::kMachines);
 }
 
 KOMachinesUI::~KOMachinesUI() = default;

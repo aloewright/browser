@@ -23,10 +23,12 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/thread_pool.h"
 #include "base/time/time.h"
+#include "brave/browser/ko/telemetry/ko_telemetry.h"
 #include "brave/browser/ui/sidebar/sidebar_controller.h"
 #include "brave/browser/ui/sidebar/sidebar_utils.h"
 #include "brave/browser/ui/sidebar/sidebar_web_panel_controller.h"
 #include "brave/components/containers/buildflags/buildflags.h"
+#include "brave/components/ko/telemetry/ko_analytics_event.h"
 #include "brave/components/ko/workspace/browser/ko_workspace_handler.h"
 #include "brave/components/ko/workspace/core/agentd_config.h"
 #include "brave/components/ko/workspace/resources/grit/ko_workspace_generated_map.h"
@@ -405,6 +407,7 @@ bool KoWorkspaceUIConfig::IsWebUIEnabled(
 KoWorkspaceUI::KoWorkspaceUI(content::WebUI* web_ui)
     : ui::MojoWebUIController(web_ui) {
   CreateAndAddDataSource(Profile::FromWebUI(web_ui));
+  ko::RecordFeatureUsed(ko::analytics::Feature::kWorkspace);
 }
 
 KoWorkspaceUI::~KoWorkspaceUI() = default;

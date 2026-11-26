@@ -1632,6 +1632,7 @@ source_set("ui") {
       "webui/ko_workspace/ko_workspace_ui.h",
     ]
     deps += [
+      "//brave/components/ko/telemetry:analytics",
       "//brave/components/ko/workspace/browser",
       "//brave/components/ko/workspace/common:mojom",
       "//brave/components/ko/workspace/core",

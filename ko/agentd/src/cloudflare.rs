@@ -23,7 +23,7 @@ use crate::server::Core;
 pub const AGENT_CLASS: &str = "KoAgent";
 pub const MIGRATION_TAG: &str = "v1";
 const MAX_BUNDLE: u64 = 10 * 1024 * 1024;
-const BUILD_TIMEOUT: Duration = Duration::from_secs(300);
+pub(crate) const BUILD_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Worker bundle embedded at build time from assets/ (see build.rs).
 pub fn embedded_bundle() -> Option<&'static str> {

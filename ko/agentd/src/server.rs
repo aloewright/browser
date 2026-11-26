@@ -132,8 +132,13 @@ pub fn build_router(state: AppState, guard: Guard) -> Router {
             get(api::mcp::list).post(api::mcp::create),
         )
         .route("/v1/mcp/servers/{name}", delete(api::mcp::remove))
-        .route("/v1/cloudflare/agents", post(api::cloudflare_deploy))
         .layer(from_fn_with_state(timeout, timeout_layer));
+    // A deploy may build the worker bundle first, so it outlives the standard
+    // request timeout.
+    let deploy_timeout = timeout.max(crate::cloudflare::BUILD_TIMEOUT + Duration::from_secs(60));
+    let deploy = Router::new()
+        .route("/v1/cloudflare/agents", post(api::cloudflare_deploy))
+        .layer(from_fn_with_state(deploy_timeout, timeout_layer));
     let streaming = Router::new()
         .route(
             "/v1/chat/completions",
@@ -143,6 +148,7 @@ pub fn build_router(state: AppState, guard: Guard) -> Router {
     let telemetry = state.core.telemetry.clone();
     Router::new()
         .merge(standard)
+        .merge(deploy)
         .merge(streaming)
         .fallback(not_found)
         .layer(DefaultBodyLimit::max(s.max_body_bytes))

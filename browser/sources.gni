@@ -230,6 +230,7 @@ brave_chrome_browser_deps = [
   "//brave/components/ipfs",
   "//brave/components/ipfs/buildflags",
   "//brave/components/ko/buildflags",
+  "//brave/components/ko/shields/buildflags",
   "//brave/components/l10n/common",
   "//brave/components/local_ai/buildflags",
   "//brave/components/ntp_background_images/browser",
@@ -505,6 +506,9 @@ if (is_brave_origin_branded) {
 }
 
 if (is_ko && !is_android) {
+  # ko_machines_ui.cc records feature_used through //chrome/browser.
+  brave_chrome_browser_allow_circular_includes_from +=
+      [ "//brave/browser/ui/webui/ko_machines" ]
   brave_chrome_browser_deps += [
     "//brave/browser/ui/webui/ko_machines",
     "//brave/components/ko/machines/common:mojom",

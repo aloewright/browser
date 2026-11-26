@@ -254,8 +254,10 @@ Both channels are off unless configured.
 
 - **GlitchTip.** Set `[telemetry.glitchtip]` and store the DSN in the
   Keychain (`glitchtip-dsn`). The daemon sends Sentry envelopes for 5xx API
-  errors and failed runs. The message is scrubbed, and there is no server
-  name, prompt or output.
+  errors and failed runs. Messages have secrets, emails, IP addresses, long
+  hex ids and home paths removed. They can still hold provider error text
+  and the end of a CLI's stderr, which may name hosts. Reports carry no
+  machine name, prompt or model output.
 - **PostHog.** Set `[telemetry.posthog]` with `host` and `project_key` (a
   write-only key). The daemon sends `agentd_started`, `chat_completion`
   `{provider, stream}`, `run_finished` `{provider, status, mcp_servers,
@@ -296,7 +298,9 @@ put the token in a URL.
 - runs `doctor`
 - bootstraps it into `gui/<uid>`
 
-For log rotation, use `newsyslog-ko-agentd.conf`.
+For log rotation, use `newsyslog-ko-agentd.conf`. launchd holds the log open,
+so restart the agent after a rotation (`launchctl kickstart -k
+gui/$(id -u)/dev.k-o.agentd`) or lines written after it are lost.
 
 ## Build and test
 

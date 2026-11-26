@@ -168,5 +168,8 @@ ko::RecordFeatureUsed(ko::analytics::Feature::kWorkspace);
 ```
 
 It does nothing if analytics is not configured or the user turned it off.
+
+Opening chrome://ko-workspace, chrome://ko-machines or the assistant records
+`workspace`, `machines` and `assistant`. Nothing records `container` yet.
 To add an event or value, extend the allowlist in `ko_analytics_event.cc` and
 its tests, and update this page.

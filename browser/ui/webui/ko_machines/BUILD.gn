@@ -27,6 +27,7 @@ source_set("ko_machines") {
     "//brave/components/ko/machines/core",
     "//brave/components/ko/machines/resources:pack_js_resources",
     "//brave/components/ko/machines/resources:pack_static_resources",
+    "//brave/components/ko/telemetry:analytics",
     "//brave/components/resources:strings_grit",
     "//chrome/browser:browser_process",
     "//chrome/browser/profiles:profile",

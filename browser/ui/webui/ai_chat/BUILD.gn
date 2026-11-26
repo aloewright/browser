@@ -45,6 +45,7 @@ source_set("ai_chat") {
     "//brave/components/ai_chat/resources/custom_site_distiller_scripts:generated_resources",
     "//brave/components/constants",
     "//brave/components/ko/buildflags",
+    "//brave/components/ko/telemetry:analytics",
     "//brave/components/local_ai/buildflags",
     "//brave/components/resources:static_resources_grit",
     "//brave/components/resources:strings_grit",
