@@ -43,14 +43,17 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
   (`claude-code/*`, `codex/*`, `cf-gateway/*`, `nanogpt/*`, ...).
 - All of them use `http://127.0.0.1:<port>/v1/chat/completions` (see
   [Port](#port)).
-- Tool support follows agentd's `tools` capability. When agentd leaves it
-  out, `claude-code/*` and `codex/*` get tools off (their CLIs run their own
-  tools and never hand `tool_calls` back) and every other id gets tools on.
-  Models with tools on also get the `CONTENT_AGENT` capability, so Leo's
-  tools (content agent tools in the agent profile, tab management) are
-  offered on them. Models with tools off get neither, so they are not
-  offered in the agent profile. `chat-automatic` follows the first listed
-  model; before agentd answers it is `claude-code/default`, tools off.
+- Tool support follows agentd's `tools` capability. Its CLI-backed
+  `claude-code/*` and `codex/*` models run their own tools and never hand
+  `tool_calls` back, so agentd lists them with `tools: false` (and
+  `vision: false`); HTTP providers pass `tool_calls` through. If `tools` is
+  missing (an older agentd or cache), `claude-code/*` and `codex/*` get
+  tools off and every other id gets tools on. Models with tools on also get
+  the `CONTENT_AGENT` capability, so Leo's tools (content agent tools in the
+  agent profile, tab management) are offered on them. Models with tools off
+  get neither, so they are not offered in the agent profile.
+  `chat-automatic` follows the first listed model; before agentd answers it
+  is `claude-code/default`, tools off.
 
 The list is fetched when the model service starts, retried with backoff
 (15 s to 10 min) while agentd is down, and refreshed every 15 min. The last
@@ -60,16 +63,23 @@ saved conversations keep their model across restarts.
 Fields read from each `/v1/models` entry (all but `id` optional):
 
 ```json
-{"data": [{"id": "codex/gpt-5", "display_name": "Codex GPT-5",
+{"data": [{"id": "claude-code/sonnet[1m]",
+           "display_name": "sonnet[1m] (Claude Code)",
+           "capabilities": {"vision": false, "tools": false},
+           "context_length": 128000},
+          {"id": "nanogpt/chatgpt-4o-latest",
+           "display_name": "chatgpt-4o-latest (NanoGPT)",
            "capabilities": {"vision": false, "tools": true},
-           "context_length": 200000}]}
+           "context_length": 128000}]}
 ```
 
 `name` is accepted for `display_name`, `context_window` for
 `context_length`, and `vision`/`tools` may sit at the top level. Missing
 fields default to: `display_name` the id, `vision` false, `tools` as above,
-`context_length` 128000. Ids must match `[A-Za-z0-9._:/@+-]{1,200}`; at most
-200 models are used.
+`context_length` 128000. Ids must match `[A-Za-z0-9._:/@+\[\]-]{1,200}`
+(agentd's model-name charset plus `+`; the brackets are for Claude Code
+aliases such as `claude-code/sonnet[1m]`). Other ids are skipped, and at
+most 200 models are used.
 
 ### Errors while streaming
 
@@ -91,9 +101,10 @@ An HTTP error status wins over a streamed error.
   reader, `ko::ReadAgentdConfig()` in `components/ko/common/agentd_config.h`.
 - Rejected (fail closed) unless it is a regular file, not a symlink, owned by
   the current user, with no group or other permission bits, at most 1024
-  bytes, holding exactly agentd's format: 43 base64url characters
-  (`[A-Za-z0-9_-]`, 32 bytes unpadded), with optional surrounding
-  whitespace.
+  bytes, holding 32 to 512 base64url characters (`[A-Za-z0-9_-]`) with
+  optional surrounding ASCII whitespace. agentd writes 43 (32 random bytes,
+  unpadded) and a newline. The wider range means a hand-written or longer
+  token that agentd accepts still works here.
 - Held in memory only, as the API key of the agentd models. It is never
   written to prefs, and the browser strips every API key from models sent to
   WebUI pages (chat, conversation frame, settings).
@@ -122,14 +133,16 @@ models built before the first read point. When agentd moves, the next fetch
   `127.0.0.1:<port>`.
 - Redirects are never followed (requests fail instead), so the token never
   leaves 127.0.0.1.
-- Please accept `claude-code/default` as an alias for the default Claude Code
-  model; it is only used before the first `/v1/models` answer.
+- agentd resolves `claude-code/default` to its first configured Claude Code
+  model; it is only used before the first `/v1/models` answer. Without
+  Claude Code configured it answers 404 `model_not_found`.
 - Another local user could bind 47821 while agentd is down (its port file
   is removed on shutdown) and receive the token and prompts. On a
   single-user Mac that user can't read the token file anyway; if that
   matters, keep agentd running (launchd).
-- Please list `capabilities.tools` (and `vision`, `context_length`) for
-  every model; the browser's defaults above are only a fallback.
+- agentd lists `display_name`, `capabilities.vision`, `capabilities.tools`
+  and `context_length` for every model. The browser's defaults above only
+  matter for an older agentd or a cached list.
 
 ## Custom models and presets
 

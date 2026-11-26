@@ -29,8 +29,8 @@ Code: `components/ko/workspace/` (core, mojom, handler, frontend) and
 - Both files are refused unless they are regular files (not symlinks) owned
   by the user with no group/other permissions. A loose `agentd.port` could
   send the page, and its token, to another local listener. The token must be
-  agentd's format: 43 base64url characters, optionally followed by a
-  newline. The page tells you what to fix (missing, insecure or malformed
+  32 to 512 base64url characters (agentd writes 43), optionally followed by
+  a newline. The page tells you what to fix (missing, insecure or malformed
   token).
 - The K-O Assistant uses the same reader (`ko::ReadAgentdConfig()` in
   `components/ko/common/agentd_config.h`), so both agree on the port and
