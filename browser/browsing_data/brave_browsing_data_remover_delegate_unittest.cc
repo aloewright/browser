@@ -328,6 +328,16 @@ TEST_F(DataTypeContentSettings_Clearing, CheckAll) {
       EXPECT_EQ(value, map()->GetContentSetting(url, GURL::EmptyGURL(), type));
     }
 
+#if defined(KO_SHIELDS_STRICT_BUILD)
+    if (content_settings::IsKoLockedShieldsDefault(type)) {
+      // The value above equals the locked default, so check that a per-site
+      // rule was stored; otherwise the clearing check below proves nothing.
+      content_settings::SettingInfo stored_info;
+      map()->GetWebsiteSetting(url, GURL::EmptyGURL(), type, &stored_info);
+      EXPECT_FALSE(stored_info.primary_pattern.MatchesAllHosts());
+    }
+#endif
+
     auto filter_builder = content::BrowsingDataFilterBuilder::Create(
         content::BrowsingDataFilterBuilder::Mode::kPreserve);
     base::test::TestFuture<uint64_t> complete_future;
