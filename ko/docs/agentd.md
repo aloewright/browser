@@ -128,6 +128,10 @@ ko-agentd doctor
 | `cf-gateway/<provider>/<model>` | `POST https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/compat/chat/completions` with model `<provider>/<model>` |
 | `nanogpt/<model>` | `POST https://nano-gpt.com/api/v1/chat/completions` |
 
+Each entry of a provider's `models` is 1-128 bytes of
+`[A-Za-z0-9._:/@\[\]-]` and does not start with `-`. The brackets allow
+Claude Code's 1M-context aliases such as `sonnet[1m]`.
+
 Models are listed by provider (Claude Code, Codex, AI Gateway, NanoGPT),
 each in its `models` order. The assistant uses the first one as its
 default. Each entry looks like this:

@@ -161,8 +161,10 @@ a `kind: "resources"` entry (id `brave-resources`, file
 ## K-O's own hosts
 
 * `chrome://` pages, including `chrome://ko-workspace` and `chrome://ko-machines`,
-  are never filtered: Shields only applies to http(s) pages, so their requests
-  to `ko-agentd` on `127.0.0.1:47821` are untouched.
+  are never filtered: Shields only applies to http(s) pages. Of these, only
+  `chrome://ko-workspace` calls `ko-agentd` (`127.0.0.1`, port 47821 by
+  default), and those requests are untouched. `chrome://ko-machines` never
+  calls agentd, and agentd rejects its `Origin`.
 * No filter exception for agentd was added, so websites gain no extra access
   to loopback; agentd's own token, Origin and Host checks still apply.
 * Strict HTTPS upgrades exempt `localhost`/loopback. Plain-HTTP private

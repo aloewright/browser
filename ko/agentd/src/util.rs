@@ -78,6 +78,7 @@ pub fn valid_ident(s: &str, max: usize) -> bool {
 }
 
 /// Model names passed to CLIs and upstream APIs: never start with '-'.
+/// '[' and ']' are for Claude Code aliases such as "sonnet[1m]".
 pub fn valid_model_name(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 128
@@ -102,6 +103,9 @@ mod tests {
         assert!(!valid_secret_name("Bad Name"));
         assert!(!valid_secret_name("-x"));
         assert!(valid_model_name("claude-sonnet-4-5"));
+        // Claude Code's 1M-context aliases.
+        assert!(valid_model_name("sonnet[1m]"));
+        assert!(valid_model_name("opus[1m]"));
         assert!(!valid_model_name("--dangerously-skip-permissions"));
         assert_eq!(truncate("héllo", 2), "h");
     }
