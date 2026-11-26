@@ -155,6 +155,10 @@ a `kind: "resources"` entry (id `brave-resources`, file
   and webcompat exceptions are not affected.
 * **UI.** `brave://settings/shields` disables the default selectors and shows
   a notice; the filter list page disables core lists.
+* **iOS.** iOS uses the upstream `PrefProvider`, not `BravePrefProvider`, so
+  only the registry defaults and the `DefaultProvider` startup cleanup apply.
+  Global and per-site changes made during a session take effect, and strict
+  mode only makes `BraveShieldsSettingsService` report Shields as managed.
 * **Not covered.** User-written custom filters (an explicit action), changing
   features in `brave://flags`, and anyone who can edit the app bundle.
 
