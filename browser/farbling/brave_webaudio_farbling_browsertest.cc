@@ -26,8 +26,11 @@
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
-#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -43,12 +46,7 @@ class BraveWebAudioFarblingBrowserTest : public InProcessBrowserTest {
         /*enabled_features=*/
         {webcompat::features::kBraveWebcompatExceptionsService,
          brave_shields::features::kBraveShowStrictFingerprintingMode},
-        /*disabled_features=*/{
-#if BUILDFLAG(IS_KO)
-            // K-O's strict HTTPS default shows interstitials for HTTP pages.
-            net::features::kBraveHttpsByDefault,
-#endif
-        });
+        /*disabled_features=*/{});
   }
 
   void SetUpOnMainThread() override {
@@ -63,6 +61,13 @@ class BraveWebAudioFarblingBrowserTest : public InProcessBrowserTest {
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
 
     top_level_page_url_ = embedded_test_server()->GetURL("a.com", "/");
     farbling_url_ = embedded_test_server()->GetURL("a.com", "/farbling.html");

@@ -24,12 +24,15 @@
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
 #include "extensions/test/test_extension_dir.h"
-#include "net/base/features.h"
 #include "net/dns/mock_host_resolver.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "third_party/blink/public/common/features.h"
 #include "ui/views/widget/widget.h"
 #include "ui/views/widget/widget_observer.h"
+
+#if BUILDFLAG(IS_KO)
+#include "chrome/browser/ssl/https_upgrades_util.h"
+#endif
 
 using brave_shields::ControlType;
 
@@ -103,6 +106,13 @@ class BraveScreenFarblingBrowserTest : public InProcessBrowserTest {
     embedded_test_server()->ServeFilesFromDirectory(test_data_dir);
 
     ASSERT_TRUE(embedded_test_server()->Start());
+
+#if BUILDFLAG(IS_KO)
+    // K-O's strict HTTPS default would upgrade these HTTP pages (strict mode
+    // does not exempt non-default ports) and show the HTTP interstitial.
+    AllowHttpForHostnamesForTesting({"a.com"},
+                                    browser()->GetProfile()->GetPrefs());
+#endif
 
     parent_url_ = embedded_test_server()->GetURL("a.com", "/iframe.html");
   }
@@ -361,14 +371,8 @@ class BraveScreenFarblingBrowserTest_EnableFlag
     : public BraveScreenFarblingBrowserTest {
  public:
   BraveScreenFarblingBrowserTest_EnableFlag() {
-    feature_list_.InitWithFeatures(
-        {blink::features::kBraveBlockScreenFingerprinting},
-        {
-#if BUILDFLAG(IS_KO)
-            // K-O's strict HTTPS default shows interstitials for HTTP pages.
-            net::features::kBraveHttpsByDefault,
-#endif
-        });
+    feature_list_.InitAndEnableFeature(
+        blink::features::kBraveBlockScreenFingerprinting);
   }
 
   bool IsFlagDisabled() const override { return false; }
@@ -378,15 +382,8 @@ class BraveScreenFarblingBrowserTest_DisableFlag
     : public BraveScreenFarblingBrowserTest {
  public:
   BraveScreenFarblingBrowserTest_DisableFlag() {
-    feature_list_.InitWithFeatures(
-        {}, {
-                blink::features::kBraveBlockScreenFingerprinting,
-#if BUILDFLAG(IS_KO)
-                // K-O's strict HTTPS default shows interstitials for HTTP
-                // pages.
-                net::features::kBraveHttpsByDefault,
-#endif
-            });
+    feature_list_.InitAndDisableFeature(
+        blink::features::kBraveBlockScreenFingerprinting);
   }
 
   bool IsFlagDisabled() const override { return true; }
