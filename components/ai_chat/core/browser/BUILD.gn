@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/ai_chat/core/common/buildflags/buildflags.gni")
+import("//brave/components/ko/buildflags/buildflags.gni")
 import("//brave/components/text_recognition/common/buildflags/buildflags.gni")
 import("//build/config/features.gni")
 import("//tools/json_schema_compiler/json_schema_api.gni")
@@ -46,14 +47,8 @@ static_library("browser") {
     "conversation_tools.h",
     "customization_settings_handler.cc",
     "customization_settings_handler.h",
-    "engine/conversation_api_client.cc",
-    "engine/conversation_api_client.h",
-    "engine/deep_research_parsing.cc",
-    "engine/deep_research_parsing.h",
     "engine/engine_consumer.cc",
     "engine/engine_consumer.h",
-    "engine/engine_consumer_conversation_api.cc",
-    "engine/engine_consumer_conversation_api.h",
     "engine/engine_consumer_oai.cc",
     "engine/engine_consumer_oai.h",
     "engine/oai_api_client.cc",
@@ -64,24 +59,12 @@ static_library("browser") {
     "engine/oai_parsing.h",
     "engine/oai_serialization_utils.cc",
     "engine/oai_serialization_utils.h",
-    "engine/oblivious_http_api_client.cc",
-    "engine/oblivious_http_api_client.h",
-    "engine/oblivious_http_config_manager.cc",
-    "engine/oblivious_http_config_manager.h",
     "history_ui_handler.cc",
     "history_ui_handler.h",
     "model_service.cc",
     "model_service.h",
     "model_validator.cc",
     "model_validator.h",
-    "remote_models_disk_cache.cc",
-    "remote_models_disk_cache.h",
-    "remote_models_fetcher.cc",
-    "remote_models_fetcher.h",
-    "remote_models_provider.cc",
-    "remote_models_provider.h",
-    "remote_models_serialization.cc",
-    "remote_models_serialization.h",
     "skills_metrics.cc",
     "skills_metrics.h",
     "sync/ai_chat_sync_backend.cc",
@@ -116,6 +99,36 @@ static_library("browser") {
     "utils.h",
   ]
 
+  if (is_ko) {
+    # K-O talks only to ko-agentd and user-added endpoints.
+    sources += [
+      "ko_agentd_models.cc",
+      "ko_agentd_models.h",
+    ]
+  } else {
+    # Brave's AI servers (Leo models, private inference, remote config).
+    sources += [
+      "engine/conversation_api_client.cc",
+      "engine/conversation_api_client.h",
+      "engine/deep_research_parsing.cc",
+      "engine/deep_research_parsing.h",
+      "engine/engine_consumer_conversation_api.cc",
+      "engine/engine_consumer_conversation_api.h",
+      "engine/oblivious_http_api_client.cc",
+      "engine/oblivious_http_api_client.h",
+      "engine/oblivious_http_config_manager.cc",
+      "engine/oblivious_http_config_manager.h",
+      "remote_models_disk_cache.cc",
+      "remote_models_disk_cache.h",
+      "remote_models_fetcher.cc",
+      "remote_models_fetcher.h",
+      "remote_models_provider.cc",
+      "remote_models_provider.h",
+      "remote_models_serialization.cc",
+      "remote_models_serialization.h",
+    ]
+  }
+
   if (is_android) {
     sources += [
       "android/ai_chat_iap_subscription_android.cc",
@@ -125,6 +138,7 @@ static_library("browser") {
 
   public_deps = [
     "//base",
+    "//brave/components/ko/buildflags",
     "//components/os_crypt/async/common",
     "//components/sync/model",
   ]
@@ -181,38 +195,25 @@ static_library("browser") {
 source_set("unit_tests") {
   testonly = true
   sources = [
-    "ai_chat_credential_manager_unittest.cc",
-    "ai_chat_metrics_unittest.cc",
-    "ai_chat_service_unittest.cc",
     "ai_chat_tab_focus_metrics_unittest.cc",
     "associated_content_delegate_unittest.cc",
     "associated_content_driver_unittest.cc",
     "associated_content_manager_unittest.cc",
     "bookmarks_page_handler_unittest.cc",
-    "conversation_handler_unittest.cc",
     "conversation_share_manager_unittest.cc",
     "conversation_share_store_unittest.cc",
     "conversation_tools_unittest.cc",
     "customization_settings_handler_unittest.cc",
-    "engine/conversation_api_client_unittest.cc",
-    "engine/deep_research_parsing_unittest.cc",
-    "engine/engine_consumer_conversation_api_unittest.cc",
     "engine/engine_consumer_oai_unittest.cc",
     "engine/engine_consumer_unittest.cc",
     "engine/oai_api_client_unittest.cc",
     "engine/oai_message_utils_unittest.cc",
     "engine/oai_parsing_unittest.cc",
     "engine/oai_serialization_utils_unittest.cc",
-    "engine/oblivious_http_api_client_unittest.cc",
-    "engine/oblivious_http_config_manager_unittest.cc",
     "engine/test_utils.cc",
     "engine/test_utils.h",
     "history_ui_handler_unittest.cc",
-    "model_service_unittest.cc",
     "model_validator_unittest.cc",
-    "remote_models_disk_cache_unittest.cc",
-    "remote_models_fetcher_unittest.cc",
-    "remote_models_provider_unittest.cc",
     "skills_metrics_unittest.cc",
     "tab_tracker_service_unittest.cc",
     "tools/chart_code_plugin_unittest.cc",
@@ -221,6 +222,31 @@ source_set("unit_tests") {
     "tools/tool_unittest.cc",
     "utils_unittest.cc",
   ]
+
+  if (is_ko) {
+    sources += [ "ko_agentd_models_unittest.cc" ]
+    if (is_mac || is_linux) {
+      sources += [ "model_service_ko_unittest.cc" ]
+    }
+  } else {
+    # These assume Leo models, premium or Brave's AI servers, none of which
+    # exist in K-O builds.
+    sources += [
+      "ai_chat_credential_manager_unittest.cc",
+      "ai_chat_metrics_unittest.cc",
+      "ai_chat_service_unittest.cc",
+      "conversation_handler_unittest.cc",
+      "engine/conversation_api_client_unittest.cc",
+      "engine/deep_research_parsing_unittest.cc",
+      "engine/engine_consumer_conversation_api_unittest.cc",
+      "engine/oblivious_http_api_client_unittest.cc",
+      "engine/oblivious_http_config_manager_unittest.cc",
+      "model_service_unittest.cc",
+      "remote_models_disk_cache_unittest.cc",
+      "remote_models_fetcher_unittest.cc",
+      "remote_models_provider_unittest.cc",
+    ]
+  }
 
   data = [ "//brave/components/test/data/ai_chat" ]
 
@@ -235,6 +261,7 @@ source_set("unit_tests") {
     "//brave/components/api_request_helper",
     "//brave/components/api_request_helper:test_support",
     "//brave/components/constants",
+    "//brave/components/ko/buildflags",
     "//brave/components/l10n/common:test_support",
     "//brave/components/resources:strings_grit",
     "//brave/components/skus/browser",
@@ -269,7 +296,7 @@ source_set("unit_tests") {
     ]
   }
 
-  if (use_blink) {
+  if (use_blink && !is_ko) {
     # The ShareConversation tests verify the clipboard copy with
     # ui::TestClipboard, which the clipboard test support target only builds
     # when use_blink is true. Kept in a separate file so gn check never scans

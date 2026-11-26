@@ -121,9 +121,16 @@
     Photo by <ph name="AUTHOR">$1</ph>
   </message>
 
+  <if expr="not is_ko">
   <message name="IDS_NEW_TAB_QUERY_TOGGLE_CHAT_LABEL" desc="Label for the Search querybox toggle option" formatter_data="webui=BraveNewTabPage">
     Leo AI
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_NEW_TAB_QUERY_TOGGLE_CHAT_LABEL" desc="Label for the Search querybox toggle option" formatter_data="webui=BraveNewTabPage">
+    K-O Assistant
+  </message>
+  </if>
 
   <message name="IDS_NEW_TAB_QUERY_TOGGLE_SEARCH_LABEL" desc="Label for the Search querybox toggle option" formatter_data="webui=BraveNewTabPage">
     Search
@@ -233,9 +240,16 @@
     Show background images
   </message>
 
+  <if expr="not is_ko">
   <message name="IDS_NEW_TAB_SHOW_CHAT_INPUT_LABEL" desc="Label for enabling the Leo AI chat input on the NTP" formatter_data="webui=BraveNewTabPage">
     Show Leo AI widget in new tabs
   </message>
+  </if>
+  <if expr="is_ko">
+  <message name="IDS_NEW_TAB_SHOW_CHAT_INPUT_LABEL" desc="Label for enabling the Leo AI chat input on the NTP" formatter_data="webui=BraveNewTabPage">
+    Show K-O Assistant widget in new tabs
+  </message>
+  </if>
 
   <message name="IDS_NEW_TAB_SHOW_CLOCK_LABEL" desc="Label for enabling the clock on the NTP" formatter_data="webui=BraveNewTabPage">
     Show clock

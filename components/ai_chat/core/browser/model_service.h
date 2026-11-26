@@ -25,11 +25,17 @@
 #include "brave/components/ai_chat/core/browser/ai_chat_credential_manager.h"
 #include "brave/components/ai_chat/core/common/mojom/ai_chat.mojom-forward.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom-forward.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "components/os_crypt/async/common/encryptor.h"
 #include "components/prefs/pref_registry_simple.h"
 #include "services/network/public/cpp/network_context_getter.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
+
+#if BUILDFLAG(IS_KO)
+#include "base/time/time.h"
+#include "base/timer/timer.h"
+#endif
 
 class PrefRegistrySimple;
 class PrefService;
@@ -42,6 +48,13 @@ namespace ai_chat {
 class EngineConsumer;
 class AIChatCredentialManager;
 class RemoteModelsProvider;
+
+#if BUILDFLAG(IS_KO)
+namespace ko {
+class AgentdModelsFetcher;
+struct AgentdFetchResult;
+}  // namespace ko
+#endif
 
 // Owns the AI chat model catalog: built-in Leo models (optionally replaced
 // via a remote config fetch, see `OnRemoteModelsReady()`) and user-defined
@@ -57,6 +70,10 @@ class RemoteModelsProvider;
 // custom model in this pre-encryptor window goes out with an empty API key and
 // the server will reject it (typically HTTP 401 / 403). Once engine refreshes,
 // subsequent requests would have valid API keys.
+//
+// K-O builds have no Leo models: the catalog is ko-agentd's models (see
+// ko_agentd_models.h), led by a kChatAutomaticModelKey default, plus custom
+// models.
 class ModelService : public KeyedService {
  public:
   class Observer : public base::CheckedObserver {
@@ -97,6 +114,8 @@ class ModelService : public KeyedService {
   const std::vector<ai_chat::mojom::ModelPtr>& GetModels();
   std::vector<ai_chat::mojom::ModelWithSubtitlePtr> GetModelsWithSubtitles();
   const ai_chat::mojom::Model* GetModel(std::string_view key);
+  // GetModels() copies for WebUI. K-O builds strip API keys from them.
+  std::vector<ai_chat::mojom::ModelPtr> GetModelsForUI();
 
   std::optional<std::string> GetLeoModelKeyByName(std::string_view name);
   std::optional<std::string> GetLeoModelNameByKey(std::string_view key);
@@ -130,12 +149,19 @@ class ModelService : public KeyedService {
   static const mojom::Model* GetModelForTesting(std::string_view key);
   void SetDefaultModelKeyWithoutValidationForTesting(
       const std::string& model_key);
+#if !BUILDFLAG(IS_KO)
   RemoteModelsProvider* GetRemoteModelsProviderForTesting() {
     return remote_models_provider_.get();
   }
   void OnRemoteModelsReadyForTesting(std::vector<mojom::ModelPtr> models) {
     OnRemoteModelsReady(std::move(models));
   }
+#endif
+
+#if BUILDFLAG(IS_KO)
+  // Re-reads the agentd token and model list.
+  void RefreshAgentdModels();
+#endif
 
  private:
   void OnEncryptorReady(scoped_refptr<os_crypt_async::Encryptor> encryptor);
@@ -157,6 +183,10 @@ class ModelService : public KeyedService {
   // custom model in the `kCustomModelsList` pref.
   base::DictValue CustomModelToPrefDict(mojom::ModelPtr model) const;
 
+#if BUILDFLAG(IS_KO)
+  void OnAgentdModelsFetched(ko::AgentdFetchResult result);
+#endif
+
   base::ObserverList<Observer> observers_;
   // The full catalog returned by `GetModels()`: `leo_models_` plus custom
   // models, rebuilt from both on every `InitModels()` call.
@@ -168,7 +198,17 @@ class ModelService : public KeyedService {
   raw_ptr<PrefService> pref_service_;
   network::NetworkContextGetter network_context_getter_;
   scoped_refptr<os_crypt_async::Encryptor> encryptor_;
+#if BUILDFLAG(IS_KO)
+  // agentd's models, led by the kChatAutomaticModelKey default. Their API key
+  // is the agentd token, held only in memory.
+  std::vector<ai_chat::mojom::ModelPtr> agentd_models_;
+  std::string agentd_token_;
+  std::unique_ptr<ko::AgentdModelsFetcher> agentd_fetcher_;
+  base::OneShotTimer agentd_refresh_timer_;
+  base::TimeDelta agentd_retry_delay_;
+#else
   std::unique_ptr<RemoteModelsProvider> remote_models_provider_;
+#endif
 
   base::WeakPtrFactory<ModelService> weak_ptr_factory_{this};
 };

@@ -33,11 +33,8 @@
 #include "base/values.h"
 #include "brave/components/ai_chat/core/browser/constants.h"
 #include "brave/components/ai_chat/core/browser/engine/engine_consumer.h"
-#include "brave/components/ai_chat/core/browser/engine/engine_consumer_conversation_api.h"
 #include "brave/components/ai_chat/core/browser/engine/engine_consumer_oai.h"
-#include "brave/components/ai_chat/core/browser/engine/oblivious_http_config_manager.h"
 #include "brave/components/ai_chat/core/browser/model_validator.h"
-#include "brave/components/ai_chat/core/browser/remote_models_provider.h"
 #include "brave/components/ai_chat/core/browser/utils.h"
 #include "brave/components/ai_chat/core/common/constants.h"
 #include "brave/components/ai_chat/core/common/features.h"
@@ -55,6 +52,15 @@
 #include "ui/base/l10n/l10n_util.h"
 #include "url/gurl.h"
 
+#if BUILDFLAG(IS_KO)
+#include "brave/components/ai_chat/core/browser/ko_agentd_models.h"
+#include "url/origin.h"
+#else
+#include "brave/components/ai_chat/core/browser/engine/engine_consumer_conversation_api.h"
+#include "brave/components/ai_chat/core/browser/engine/oblivious_http_config_manager.h"
+#include "brave/components/ai_chat/core/browser/remote_models_provider.h"
+#endif
+
 namespace ai_chat {
 class AIChatCredentialManager;
 
@@ -68,6 +74,12 @@ constexpr char kCustomModelItemApiKey[] = "api_key";
 constexpr char kCustomModelItemKey[] = "key";
 constexpr char kCustomModelVisionSupport[] = "vision_support";
 constexpr char kCustomModelSupportsTools[] = "supports_tools";
+
+#if BUILDFLAG(IS_KO)
+constexpr base::TimeDelta kAgentdInitialRetryDelay = base::Seconds(15);
+constexpr base::TimeDelta kAgentdMaxRetryDelay = base::Minutes(10);
+constexpr base::TimeDelta kAgentdRefreshInterval = base::Minutes(15);
+#endif
 
 // When adding new models, especially for display, make sure to add the UI
 // strings to ai_chat_ui_strings.grdp and ai_chat/core/constants.cc.
@@ -91,6 +103,8 @@ constexpr char kCustomModelSupportsTools[] = "supports_tools";
 // - Reserverd for page content: 100k / 2 = 50k tokens
 // - Long conversation warning threshold: 100k * 0.80 = 80k tokens
 
+// K-O builds have no Brave-hosted models.
+#if !BUILDFLAG(IS_KO)
 const std::vector<mojom::ModelPtr>& GetLeoModels() {
   // TODO(petemill): When removing kFreemiumAvailable flag, and not having any
   // BASIC and PREMIUM-only models, remove all the `switchToBasicModel`-related
@@ -471,6 +485,7 @@ const std::vector<mojom::ModelPtr>& GetLeoModels() {
 
   return *kModels;
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 }  // namespace
 
@@ -556,15 +571,32 @@ ModelService::ModelService(
     network::NetworkContextGetter network_context_getter,
     scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory,
     base::FilePath profile_path)
-    : leo_models_(mojo::Clone(GetLeoModels())),
+    :
+#if !BUILDFLAG(IS_KO)
+      leo_models_(mojo::Clone(GetLeoModels())),
+#endif
       pref_service_(prefs_service),
       network_context_getter_(std::move(network_context_getter)) {
+#if BUILDFLAG(IS_KO)
+  // Cached ids keep saved conversations on their model until agentd answers;
+  // the token arrives with the first fetch.
+  agentd_models_ = ko::BuildAgentdModels(
+      ko::AgentdModelsFromCache(
+          pref_service_->GetList(ko::kAgentdModelsCachePref)),
+      std::string());
+  agentd_retry_delay_ = kAgentdInitialRetryDelay;
+  if (url_loader_factory) {
+    agentd_fetcher_ = std::make_unique<ko::AgentdModelsFetcher>(
+        std::move(url_loader_factory), ko::GetDataDir());
+  }
+#else
   ObliviousHttpConfigManager::DeleteExpiredKeyConfigs(pref_service_);
 
   if (base::FeatureList::IsEnabled(features::kAIChatRemoteModelsConfig)) {
     remote_models_provider_ = std::make_unique<RemoteModelsProvider>(
         std::move(url_loader_factory), pref_service_, std::move(profile_path));
   }
+#endif
 
   // Load the model list synchronously so callers can resolve a default
   // model immediately after construction. Custom-model API keys decrypt
@@ -576,6 +608,10 @@ ModelService::ModelService(
   CHECK_DEREF(os_crypt_async)
       .GetInstance(base::BindOnce(&ModelService::OnEncryptorReady,
                                   weak_ptr_factory_.GetWeakPtr()));
+
+#if BUILDFLAG(IS_KO)
+  RefreshAgentdModels();
+#endif
 }
 
 ModelService::~ModelService() = default;
@@ -588,7 +624,12 @@ void ModelService::Shutdown() {
   // Tears down the pending fetch/disk-cache work (and its
   // SharedURLLoaderFactory and PrefService use) before other KeyedServices
   // start shutting down, rather than leaving it to the destructor.
+#if BUILDFLAG(IS_KO)
+  agentd_refresh_timer_.Stop();
+  agentd_fetcher_.reset();
+#else
   remote_models_provider_.reset();
+#endif
 }
 
 void ModelService::OnEncryptorReady(
@@ -628,6 +669,9 @@ void ModelService::RegisterProfilePrefs(PrefRegistrySimple* registry) {
   registry->RegisterListPref(kCustomModelsList, {});
   registry->RegisterStringPref(kDefaultModelKey,
                                features::kAIModelsDefaultKey.Get());
+#if BUILDFLAG(IS_KO)
+  registry->RegisterListPref(ko::kAgentdModelsCachePref);
+#endif
 }
 
 // static
@@ -670,6 +714,14 @@ void ModelService::MigrateProfilePrefs(PrefService* profile_prefs) {
     if (auto* default_model_value =
             profile_prefs->GetUserPrefValue(kDefaultModelKey)) {
       const std::string& current_value = default_model_value->GetString();
+#if BUILDFLAG(IS_KO)
+      // A Leo default from a stock profile can never resolve here.
+      if (!ko::IsAgentdModelKey(current_value) &&
+          !current_value.starts_with("custom:")) {
+        profile_prefs->ClearPref(kDefaultModelKey);
+        return;
+      }
+#endif
       for (const char* old_key : kOldModelKeys) {
         if (base::EqualsCaseInsensitiveASCII(current_value, old_key)) {
           profile_prefs->ClearPref(kDefaultModelKey);
@@ -739,6 +791,9 @@ size_t ModelService::CalcuateMaxAssociatedContentLengthForModel(
 
 // static
 const mojom::Model* ModelService::GetModelForTesting(std::string_view key) {
+#if BUILDFLAG(IS_KO)
+  return nullptr;
+#else
   const std::vector<mojom::ModelPtr>& all_models = GetLeoModels();
 
   auto match_iter = std::find_if(
@@ -749,6 +804,7 @@ const mojom::Model* ModelService::GetModelForTesting(std::string_view key) {
   }
 
   return nullptr;
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void ModelService::OnPremiumStatus(mojom::PremiumStatus status) {
@@ -784,6 +840,13 @@ void ModelService::InitModels() {
   // Reserve space in the combined models vector
   all_models_.clear();
   all_models_.reserve(leo_models_.size() + custom_models.size());
+
+#if BUILDFLAG(IS_KO)
+  // agentd's default first: it is the last-resort fallback for GetModels()[0].
+  std::transform(agentd_models_.cbegin(), agentd_models_.cend(),
+                 std::back_inserter(all_models_),
+                 [](const mojom::ModelPtr& model) { return model.Clone(); });
+#endif
 
   // Ensure we return only in intended display order
   std::transform(leo_models_.cbegin(), leo_models_.cend(),
@@ -929,6 +992,10 @@ ModelService::GetModelsWithSubtitles() {
 
     if (model->options->is_custom_model_options()) {
       model_with_subtitle->subtitle = "";
+#if BUILDFLAG(IS_KO)
+      model_with_subtitle->model->options->get_custom_model_options()
+          ->api_key.clear();
+#endif
     }
 
     models.emplace_back(std::move(model_with_subtitle));
@@ -947,6 +1014,22 @@ const mojom::Model* ModelService::GetModel(std::string_view key) {
   }
 
   return nullptr;
+}
+
+std::vector<mojom::ModelPtr> ModelService::GetModelsForUI() {
+  std::vector<mojom::ModelPtr> models;
+  models.reserve(all_models_.size());
+  for (const auto& model : all_models_) {
+    mojom::ModelPtr copy = model.Clone();
+#if BUILDFLAG(IS_KO)
+    // Keys stay in the browser process; no page needs them.
+    if (copy->options->is_custom_model_options()) {
+      copy->options->get_custom_model_options()->api_key.clear();
+    }
+#endif
+    models.push_back(std::move(copy));
+  }
+  return models;
 }
 
 std::optional<std::string> ModelService::GetLeoModelKeyByName(
@@ -1037,7 +1120,23 @@ void ModelService::SaveCustomModel(uint32_t index, mojom::ModelPtr model) {
       << "Model key mismatch. Existing key: " << existing_key
       << ", sent model key: " << model->key << ".";
 
+#if BUILDFLAG(IS_KO)
+  // Settings never receives stored keys, so an empty one means "keep", but
+  // only on the same origin: a hidden key must not follow a new endpoint.
+  const mojom::CustomModelOptions& new_options =
+      *model->options->get_custom_model_options();
+  const std::string* stored_endpoint =
+      model_iter->GetDict().FindString(kCustomModelItemEndpointUrlKey);
+  const bool keep_api_key =
+      new_options.api_key.empty() && stored_endpoint &&
+      url::IsSameOriginWith(GURL(*stored_endpoint), new_options.endpoint);
+#endif
   base::DictValue model_dict = CustomModelToPrefDict(std::move(model));
+#if BUILDFLAG(IS_KO)
+  if (keep_api_key) {
+    model_dict.Remove(kCustomModelItemApiKey);
+  }
+#endif
   model_iter->GetDict().Merge(std::move(model_dict));
 
   pref_service_->SetList(kCustomModelsList, std::move(custom_models_pref));
@@ -1185,6 +1284,13 @@ const std::vector<mojom::ModelPtr> ModelService::GetCustomModels() {
     model->supports_tools =
         model_pref.FindBool(kCustomModelSupportsTools).value_or(false);
     model->supported_capabilities = {};
+#if BUILDFLAG(IS_KO)
+    // Custom models are K-O's only providers, so let them run agent tools.
+    if (model->supports_tools) {
+      model->supported_capabilities = {
+          mojom::ConversationCapability::CONTENT_AGENT};
+    }
+#endif
     model->options = mojom::ModelOptions::NewCustomModelOptions(
         std::move(custom_model_opts));
 
@@ -1234,6 +1340,13 @@ std::unique_ptr<EngineConsumer> ModelService::GetEngineForModel(
   }
   CHECK(model) << "Model list is empty";
 
+#if BUILDFLAG(IS_KO)
+  // Only agentd and the user's own endpoints; never Brave's servers.
+  CHECK(model->options->is_custom_model_options());
+  return std::make_unique<EngineConsumerOAIRemote>(
+      model->options.Clone(), url_loader_factory, network_context_getter_,
+      credential_manager, this, pref_service_);
+#else
   std::unique_ptr<EngineConsumer> engine;
   if (model->supports_private_inference ||
       model->options->is_custom_model_options()) {
@@ -1250,6 +1363,85 @@ std::unique_ptr<EngineConsumer> ModelService::GetEngineForModel(
   }
 
   return engine;
+#endif
 }
+
+#if BUILDFLAG(IS_KO)
+void ModelService::RefreshAgentdModels() {
+  agentd_refresh_timer_.Stop();
+  if (!agentd_fetcher_) {
+    return;
+  }
+  agentd_fetcher_->Fetch(base::BindOnce(&ModelService::OnAgentdModelsFetched,
+                                        weak_ptr_factory_.GetWeakPtr()));
+}
+
+void ModelService::OnAgentdModelsFetched(ko::AgentdFetchResult result) {
+  agentd_token_ = result.token.value_or(std::string());
+
+  // Retry soon while agentd is unreachable; otherwise refresh occasionally to
+  // pick up new models or a rotated token.
+  std::vector<ko::AgentdModelInfo> infos;
+  if (result.models) {
+    infos = std::move(*result.models);
+    pref_service_->SetList(ko::kAgentdModelsCachePref,
+                           ko::AgentdModelsToCache(infos));
+    agentd_retry_delay_ = kAgentdInitialRetryDelay;
+    agentd_refresh_timer_.Start(
+        FROM_HERE, kAgentdRefreshInterval,
+        base::BindOnce(&ModelService::RefreshAgentdModels,
+                       base::Unretained(this)));
+  } else {
+    infos = ko::AgentdModelsFromCache(
+        pref_service_->GetList(ko::kAgentdModelsCachePref));
+    agentd_refresh_timer_.Start(
+        FROM_HERE, agentd_retry_delay_,
+        base::BindOnce(&ModelService::RefreshAgentdModels,
+                       base::Unretained(this)));
+    agentd_retry_delay_ =
+        std::min(agentd_retry_delay_ * 2, kAgentdMaxRetryDelay);
+  }
+
+  std::vector<mojom::ModelPtr> models =
+      ko::BuildAgentdModels(infos, agentd_token_);
+  if (std::ranges::equal(
+          models, agentd_models_,
+          [](const mojom::ModelPtr& a, const mojom::ModelPtr& b) {
+            return a.Equals(b);
+          })) {
+    return;
+  }
+
+  absl::flat_hash_set<std::string> new_keys;
+  for (const auto& model : models) {
+    new_keys.insert(model->key);
+  }
+  std::vector<std::string> removed_keys;
+  for (const auto& model : agentd_models_) {
+    if (!new_keys.contains(model->key)) {
+      removed_keys.push_back(model->key);
+    }
+  }
+  agentd_models_ = std::move(models);
+
+  const std::string current_default_key = GetDefaultModelKey();
+  const bool default_removed =
+      std::ranges::contains(removed_keys, current_default_key);
+  if (default_removed) {
+    pref_service_->ClearPref(kDefaultModelKey);
+  }
+
+  // Notifies observers, so engines pick up the new token.
+  InitModels();
+
+  if (default_removed) {
+    observers_.Notify(&Observer::OnDefaultModelChanged, current_default_key,
+                      GetDefaultModelKey());
+  }
+  for (const auto& removed_key : removed_keys) {
+    observers_.Notify(&Observer::OnModelRemoved, removed_key);
+  }
+}
+#endif  // BUILDFLAG(IS_KO)
 
 }  // namespace ai_chat

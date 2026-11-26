@@ -30,11 +30,15 @@
 #include "brave/components/ai_chat/core/browser/engine/oai_api_client.h"
 #include "brave/components/ai_chat/core/browser/engine/oai_message_utils.h"
 #include "brave/components/ai_chat/core/browser/engine/oai_parsing.h"
-#include "brave/components/ai_chat/core/browser/engine/oblivious_http_api_client.h"
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_strings.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "ui/base/l10n/l10n_util.h"
+
+#if !BUILDFLAG(IS_KO)
+#include "brave/components/ai_chat/core/browser/engine/oblivious_http_api_client.h"
+#endif
 
 namespace ai_chat {
 
@@ -59,6 +63,13 @@ EngineConsumerOAIRemote::EngineConsumerOAIRemote(
     PrefService* prefs)
     : EngineConsumer(model_service, prefs) {
   model_options_ = std::move(model_options);
+#if BUILDFLAG(IS_KO)
+  // No private inference relay: custom endpoints only.
+  CHECK(model_options_->is_custom_model_options());
+  max_associated_content_length_ =
+      model_options_->get_custom_model_options()->max_associated_content_length;
+  api_ = std::make_unique<OAIAPIClient>(url_loader_factory);
+#else
   if (model_options_->is_custom_model_options()) {
     max_associated_content_length_ = model_options_->get_custom_model_options()
                                          ->max_associated_content_length;
@@ -71,6 +82,7 @@ EngineConsumerOAIRemote::EngineConsumerOAIRemote(
         url_loader_factory, std::move(network_context_getter),
         credential_manager, prefs);
   }
+#endif
 }
 
 EngineConsumerOAIRemote::~EngineConsumerOAIRemote() = default;

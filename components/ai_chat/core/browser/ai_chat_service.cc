@@ -47,6 +47,7 @@
 #include "brave/components/ai_chat/core/common/mojom/common.mojom.h"
 #include "brave/components/ai_chat/core/common/pref_names.h"
 #include "brave/components/ai_chat/core/common/prefs.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "build/build_config.h"
 #include "components/os_crypt/async/browser/os_crypt_async.h"
 #include "components/prefs/pref_service.h"
@@ -140,11 +141,14 @@ AIChatService::AIChatService(
       ai_chat_metrics_(ai_chat_metrics),
       os_crypt_async_(os_crypt_async),
       url_loader_factory_(url_loader_factory),
+#if !BUILDFLAG(IS_KO)
+      // K-O never sends ratings, feedback or shared conversations to Brave.
       feedback_api_(
           std::make_unique<AIChatFeedbackAPI>(url_loader_factory_,
                                               std::string(channel_string))),
       conversation_share_manager_(
           std::make_unique<ConversationShareManager>(url_loader_factory_)),
+#endif
       conversation_share_store_(
           std::make_unique<ConversationShareStore>(profile_prefs,
                                                    os_crypt_async)),
@@ -890,6 +894,9 @@ void AIChatService::ShareConversation(const std::string& encrypted_contents,
                                       const std::string& conversation_title,
                                       bool copy_to_clipboard,
                                       ShareConversationCallback callback) {
+#if BUILDFLAG(IS_KO)
+  std::move(callback).Run(std::nullopt);
+#else
   // Only the ciphertext is handed to the share manager (which talks to the
   // server). The decryption key fragment stays here and is combined with the
   // returned viewer URL in OnShareConversationComplete, so it never reaches the
@@ -900,6 +907,7 @@ void AIChatService::ShareConversation(const std::string& encrypted_contents,
                      weak_ptr_factory_.GetWeakPtr(), key_fragment,
                      conversation_uuid, conversation_title, copy_to_clipboard,
                      std::move(callback)));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void AIChatService::OnShareConversationComplete(
@@ -963,10 +971,15 @@ void AIChatService::OnShareDeletionIdRetrieved(
     std::move(callback).Run(true);
     return;
   }
+#if BUILDFLAG(IS_KO)
+  // Deleting a share needs Brave's server, which K-O never contacts.
+  std::move(callback).Run(false);
+#else
   conversation_share_manager_->DeleteShare(
       *deletion_id, base::BindOnce(&AIChatService::OnConversationShareDeleted,
                                    weak_ptr_factory_.GetWeakPtr(), share_id,
                                    std::move(callback)));
+#endif
 }
 
 void AIChatService::CopyConversationShareLink(const std::string& share_id) {
@@ -1117,7 +1130,9 @@ mojom::ServiceStatePtr AIChatService::BuildState() {
 
   // Premium prompt is only shown conditionally (e.g. the user hasn't dismissed
   // it and it's been some time since the user started using the feature).
+  // K-O has no premium to offer.
   bool can_show_premium_prompt =
+      !BUILDFLAG(IS_KO) &&
       !profile_prefs_->GetBoolean(prefs::kUserDismissedPremiumPrompt) &&
       !last_accepted_disclaimer.is_null() &&
       last_accepted_disclaimer < base::Time::Now() - base::Days(1);
@@ -1691,6 +1706,18 @@ void AIChatService::AddToolProvidersToConversation(
 
 void AIChatService::CreateTabOrganizationEngineIfNeeded() {
   if (tab_organization_engine_) {
+#if BUILDFLAG(IS_KO)
+    // Nothing else updates this engine, and agentd's token can arrive or
+    // rotate after it was made.
+    const mojom::Model* model = model_service_->GetModel(
+        profile_prefs_->GetString(prefs::kBraveAIChatTabOrganizationModelKey));
+    if (!model) {
+      model = model_service_->GetModel(kChatAutomaticModelKey);
+    }
+    if (model) {
+      tab_organization_engine_->UpdateModelOptions(*model->options);
+    }
+#endif
     return;
   }
 

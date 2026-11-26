@@ -66,6 +66,8 @@ export default function useProvideAIChatContext(props: AIChatContextProps) {
     isConversationShareEnabled: loadTimeData.getBoolean(
       'isConversationShareEnabled',
     ),
+    // False in K-O builds, which have no Brave premium.
+    isPremiumAvailable: loadTimeData.getBoolean('isPremiumAvailable'),
     isAIChatExportJSONEnabled: loadTimeData.getBoolean(
       'isAIChatExportJSONEnabled',
     ),

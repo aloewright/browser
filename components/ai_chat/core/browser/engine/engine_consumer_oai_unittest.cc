@@ -37,6 +37,7 @@
 #include "brave/components/ai_chat/core/common/pref_names.h"
 #include "brave/components/ai_chat/core/common/prefs.h"
 #include "brave/components/ai_chat/core/common/test_utils.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/grit/brave_components_strings.h"
 #include "components/prefs/testing_pref_service.h"
 #include "services/network/public/cpp/network_context_getter.h"
@@ -513,6 +514,8 @@ TEST_F(EngineConsumerOAIUnitTest,
   testing::Mock::VerifyAndClearExpectations(client);
 }
 
+// K-O builds have no Leo models or private inference.
+#if !BUILDFLAG(IS_KO)
 TEST_F(EngineConsumerOAIUnitTest,
        GenerateAssistantResponseWithLeoModelOptionsUsesE2EEPrompt) {
   auto options = mojom::LeoModelOptions::New();
@@ -580,6 +583,7 @@ TEST_F(EngineConsumerOAIUnitTest,
   run_loop->Run();
   testing::Mock::VerifyAndClearExpectations(client);
 }
+#endif  // !BUILDFLAG(IS_KO)
 
 TEST_F(EngineConsumerOAIUnitTest,
        GenerateAssistantResponseWithCustomSystemPrompt) {

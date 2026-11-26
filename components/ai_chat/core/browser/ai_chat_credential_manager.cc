@@ -22,6 +22,7 @@
 #include "base/values.h"
 #include "brave/brave_domains/service_domains.h"
 #include "brave/components/ai_chat/core/common/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "components/prefs/pref_service.h"
 #include "components/prefs/scoped_user_pref_update.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
@@ -54,6 +55,10 @@ AIChatCredentialManager::~AIChatCredentialManager() = default;
 
 void AIChatCredentialManager::GetPremiumStatus(
     mojom::Service::GetPremiumStatusCallback callback) {
+#if BUILDFLAG(IS_KO)
+  // K-O has no Brave premium, so never ask the SKUs service.
+  std::move(callback).Run(mojom::PremiumStatus::Inactive, nullptr);
+#else
   // |pref_service_| can be null in tests.
   if (!prefs_service_) {
     std::move(callback).Run(mojom::PremiumStatus::Inactive, nullptr);
@@ -103,6 +108,7 @@ void AIChatCredentialManager::GetPremiumStatus(
       base::BindOnce(&AIChatCredentialManager::OnCredentialSummary,
                      weak_ptr_factory_.GetWeakPtr(), leo_sku_domain,
                      credential_in_cache));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void AIChatCredentialManager::OnCredentialSummary(
@@ -193,6 +199,9 @@ void AIChatCredentialManager::CompleteGetPremiumStatus(
 
 void AIChatCredentialManager::FetchPremiumCredential(
     FetchPremiumCredentialCallback callback) {
+#if BUILDFLAG(IS_KO)
+  std::move(callback).Run(std::nullopt);
+#else
   pending_fetch_credential_callbacks_.push_back(std::move(callback));
   // A fetch is already in progress; this request will be processed once it and
   // any requests queued ahead of it complete.
@@ -200,6 +209,7 @@ void AIChatCredentialManager::FetchPremiumCredential(
     return;
   }
   ProcessNextFetchPremiumCredential();
+#endif  // BUILDFLAG(IS_KO)
 }
 
 void AIChatCredentialManager::OnGetPremiumStatus(mojom::PremiumStatus status,
@@ -342,10 +352,14 @@ void AIChatCredentialManager::CompleteFetchPremiumCredential(
 
 void AIChatCredentialManager::PutCredentialInCache(
     CredentialCacheEntry credential) {
+#if BUILDFLAG(IS_KO)
+  // Nothing to cache without premium.
+#else
   ScopedDictPrefUpdate update(prefs_service_,
                               prefs::kBraveChatPremiumCredentialCache);
   base::DictValue& dict = update.Get();
   dict.Set(credential.credential, base::TimeToValue(credential.expires_at));
+#endif  // BUILDFLAG(IS_KO)
 }
 
 #if BUILDFLAG(IS_ANDROID)

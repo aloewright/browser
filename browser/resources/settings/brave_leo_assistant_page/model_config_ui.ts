@@ -8,6 +8,7 @@ import 'chrome://resources/cr_elements/icons.html.js'
 
 import { sendWithPromise } from 'chrome://resources/js/cr.js'
 import { I18nMixin } from 'chrome://resources/cr_elements/i18n_mixin.js'
+import { loadTimeData } from 'chrome://resources/js/load_time_data.js'
 import { PolymerElement } from 'chrome://resources/polymer/v3_0/polymer/polymer_bundled.min.js'
 import * as mojom from './brave_leo_assistant_browser_proxy.js'
 import { BaseMixin } from '../base_mixin.js'
@@ -16,6 +17,20 @@ import { getTemplate } from './model_config_ui.html.js'
 // Leo control events forward their detail object as the event payload directly.
 type LeoInputEvent = { value: string; valueAsNumber?: number }
 type LeoToggleEvent = { checked: boolean }
+
+// K-O provider presets: they only fill in the form. Requests go straight to
+// the provider and the key is stored like any custom model's (encrypted).
+type ProviderPreset = 'custom' | 'cloudflare' | 'nanogpt'
+const NANOGPT_ENDPOINT = 'https://nano-gpt.com/api/v1/chat/completions'
+const CLOUDFLARE_ACCOUNT_ID = /^[0-9a-f]{32}$/i
+const CLOUDFLARE_GATEWAY_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+function getCloudflareEndpoint(accountId: string, gatewayId: string) {
+  return `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}`
+    + '/compat/chat/completions'
+}
+
+const isKOBuild = loadTimeData.getBoolean('isKOBuild')
 
 const ModelConfigUIBase = I18nMixin(BaseMixin(PolymerElement))
 
@@ -96,7 +111,36 @@ export class ModelConfigUI extends ModelConfigUIBase {
       },
       supportsTools: {
         type: Boolean
-      }
+      },
+      isKOBuild_: {
+        type: Boolean,
+        value: isKOBuild,
+      },
+      showProviderPresets_: {
+        type: Boolean,
+        computed: 'computeShowProviderPresets_(isEditing_)'
+      },
+      providerPreset_: {
+        type: String,
+        value: 'custom',
+      },
+      cloudflareAccountId_: {
+        type: String,
+        value: '',
+      },
+      cloudflareGatewayId_: {
+        type: String,
+        value: '',
+      },
+      isCloudflareIdsInvalid_: {
+        type: Boolean,
+        value: false,
+      },
+      apiKeyInputType_: {
+        type: String,
+        // K-O never shows keys, even the one being typed.
+        value: isKOBuild ? 'password' : 'text',
+      },
     }
   }
 
@@ -118,6 +162,13 @@ export class ModelConfigUI extends ModelConfigUIBase {
   declare invalidUrlErrorMessage: string
   declare hasVisionSupport: boolean
   declare supportsTools: boolean
+  declare isKOBuild_: boolean
+  declare showProviderPresets_: boolean
+  declare providerPreset_: ProviderPreset
+  declare cloudflareAccountId_: string
+  declare cloudflareGatewayId_: string
+  declare isCloudflareIdsInvalid_: boolean
+  declare apiKeyInputType_: string
 
   override ready() {
     super.ready()
@@ -231,6 +282,56 @@ export class ModelConfigUI extends ModelConfigUIBase {
 
   onSupportsToolsChanged_(e: LeoToggleEvent) {
     this.supportsTools = e.checked
+  }
+
+  onProviderPresetChange_(e: LeoInputEvent) {
+    this.providerPreset_ = e.value as ProviderPreset
+    if (this.providerPreset_ === 'nanogpt') {
+      this.label = this.label || this.i18n('koAssistantProviderPresetNanoGpt')
+      this.endpointUrl = NANOGPT_ENDPOINT
+      this.supportsTools = true
+      this.checkEndpointValidity_()
+    } else if (this.providerPreset_ === 'cloudflare') {
+      this.label =
+        this.label || this.i18n('koAssistantProviderPresetCloudflare')
+      this.supportsTools = true
+      this.updateCloudflareEndpoint_()
+    }
+  }
+
+  onCloudflareAccountIdChange_(e: LeoInputEvent) {
+    this.cloudflareAccountId_ = e.value.trim()
+    this.updateCloudflareEndpoint_()
+  }
+
+  onCloudflareGatewayIdChange_(e: LeoInputEvent) {
+    this.cloudflareGatewayId_ = e.value.trim()
+    this.updateCloudflareEndpoint_()
+  }
+
+  private updateCloudflareEndpoint_() {
+    const accountId = this.cloudflareAccountId_
+    const gatewayId = this.cloudflareGatewayId_
+    const isValid = CLOUDFLARE_ACCOUNT_ID.test(accountId)
+      && CLOUDFLARE_GATEWAY_ID.test(gatewayId)
+    this.isCloudflareIdsInvalid_ =
+      !isValid && (accountId !== '' || gatewayId !== '')
+    // An empty endpoint keeps Save disabled until both IDs are valid.
+    this.endpointUrl = isValid ? getCloudflareEndpoint(accountId, gatewayId) : ''
+    this.checkEndpointValidity_()
+  }
+
+  // Template-only helpers are protected so noUnusedLocals doesn't flag them.
+  protected computeShowProviderPresets_(isEditing: boolean) {
+    return this.isKOBuild_ && !isEditing
+  }
+
+  protected isPreset_(preset: ProviderPreset, value: ProviderPreset) {
+    return preset === value
+  }
+
+  protected computeShowApiKeyKeepNote_(isEditing: boolean) {
+    return this.isKOBuild_ && isEditing
   }
 
   private saveEnabled_() {

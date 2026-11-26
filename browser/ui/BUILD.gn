@@ -205,6 +205,7 @@ source_set("ui") {
 
   # Public so tests of //brave/browser/ui code can gate on it.
   public_deps = [ "//brave/components/brave_debloat/buildflags" ]
+  public_deps += [ "//brave/components/ko/buildflags" ]
 
   if (toolkit_views) {
     public_deps += [

@@ -22,9 +22,11 @@
 #include "base/timer/elapsed_timer.h"
 #include "base/trace_event/trace_event.h"
 #include "brave/components/api_request_helper/utils.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "net/base/load_flags.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
+#include "services/network/public/mojom/fetch_api.mojom-shared.h"
 #include "services/network/public/mojom/url_response_head.mojom.h"
 #include "url/gurl_debug.h"
 
@@ -238,9 +240,13 @@ APIRequestHelper::CreateURLLoaderHandler(
     bool auto_retry_on_network_change,
     bool enable_cache,
     bool allow_http_error_result,
-    const base::flat_map<std::string, std::string>& headers) {
+    const base::flat_map<std::string, std::string>& headers,
+    bool allow_redirects) {
   auto request = std::make_unique<network::ResourceRequest>();
   request->url = url;
+  if (!allow_redirects) {
+    request->redirect_mode = network::mojom::RedirectMode::kError;
+  }
   request->load_flags = net::LOAD_DO_NOT_SAVE_COOKIES;
   if (!enable_cache) {
     request->load_flags =
@@ -256,7 +262,16 @@ APIRequestHelper::CreateURLLoaderHandler(
 
   if (!headers.empty()) {
     for (auto entry : headers) {
+#if BUILDFLAG(IS_KO)
+      // Provider keys and the agentd token never reach logs.
+      DVLOG(4) << "> " << entry.first << ": "
+               << (base::EqualsCaseInsensitiveASCII(entry.first,
+                                                    "Authorization")
+                       ? std::string_view("<redacted>")
+                       : std::string_view(entry.second));
+#else
       DVLOG(4) << "> " << entry.first << ": " << entry.second;
+#endif
       request->headers.SetHeader(entry.first, entry.second);
     }
   }
@@ -301,7 +316,8 @@ APIRequestHelper::CreateRequestURLLoaderHandler(
   auto ticket_and_handler = CreateURLLoaderHandler(
       method, url, payload, payload_content_type,
       request_options.auto_retry_on_network_change,
-      request_options.enable_cache, true /* allow_http_error_result*/, headers);
+      request_options.enable_cache, true /* allow_http_error_result*/, headers,
+      request_options.allow_redirects);
   auto* handler = ticket_and_handler.second;
 
   handler->result_callback_ = base::BindOnce(

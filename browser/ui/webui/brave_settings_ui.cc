@@ -350,6 +350,7 @@ void BraveSettingsUI::AddResources(content::WebUIDataSource* html_source,
                           BUILDFLAG(KO_CRASH_REPORTING_CONFIGURED));
   html_source->AddBoolean("koAnalyticsAvailable",
                           BUILDFLAG(KO_ANALYTICS_CONFIGURED));
+  html_source->AddBoolean("isKOBuild", BUILDFLAG(IS_KO));
   html_source->AddBoolean("isBraveOriginPurchased",
                           brave_origin::IsBraveOriginPurchased());
   html_source->AddBoolean("isBraveOriginFeatureEnabled",
