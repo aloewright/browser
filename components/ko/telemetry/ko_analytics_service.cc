@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "base/check.h"
-#include "base/containers/contains.h"
 #include "base/functional/bind.h"
 #include "base/json/json_writer.h"
 #include "base/logging.h"
@@ -397,7 +396,7 @@ void KOAnalyticsService::RemoveFromQueue(
   update->EraseIf([&uuids](const base::Value& value) {
     const base::DictValue* dict = value.GetIfDict();
     const std::string* uuid = dict ? dict->FindString(kQueuedUuidKey) : nullptr;
-    return !uuid || base::Contains(uuids, *uuid);
+    return !uuid || std::ranges::contains(uuids, *uuid);
   });
 }
 

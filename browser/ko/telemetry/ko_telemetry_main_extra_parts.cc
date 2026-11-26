@@ -5,12 +5,12 @@
 
 #include "brave/browser/ko/telemetry/ko_telemetry_main_extra_parts.h"
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "base/containers/contains.h"
 #include "base/logging.h"
 #include "base/strings/strcat.h"
 #include "brave/browser/ko/telemetry/ko_telemetry.h"
@@ -37,7 +37,7 @@ std::string GetChannel() {
   static constexpr auto kKnown = std::to_array<std::string_view>(
       {"release", "beta", "dev", "nightly", "developer"});
   std::string channel = brave::GetChannelName();
-  return base::Contains(kKnown, channel) ? channel : "unknown";
+  return std::ranges::contains(kKnown, channel) ? channel : "unknown";
 }
 #endif
 
