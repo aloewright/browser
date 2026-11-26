@@ -138,6 +138,8 @@ TEST_F(KoWorkspaceHandlerTest, OpenTabsOnlyInKnownContainersAndWebUrls) {
   EXPECT_EQ(OpenTabs("c-1", many), kMaxTabsPerOpen);
 }
 
+// ReadUserFile only reads where it can check POSIX permissions.
+#if BUILDFLAG(IS_POSIX)
 TEST_F(KoWorkspaceHandlerTest, SeedsAppsFromFileOnce) {
   EXPECT_TRUE(GetApps().empty());
   EXPECT_FALSE(prefs_.GetBoolean(kWorkspaceAppsSeededPref));
@@ -159,14 +161,24 @@ TEST_F(KoWorkspaceHandlerTest, SeedsAppsFromFileOnce) {
   EXPECT_EQ(reload.Get<1>()[0]->name, "Board");
 }
 
-#if BUILDFLAG(IS_POSIX)
 TEST_F(KoWorkspaceHandlerTest, IgnoresWritableAppsFile) {
   WriteAppsFile(R"([{"name": "Notes", "url": "https://notes.example.com/"}])");
   ASSERT_TRUE(base::SetPosixFilePermissions(
       temp_dir_.GetPath().AppendASCII(kWorkspaceAppsFileName), 0666));
   EXPECT_TRUE(GetApps().empty());
 }
-#endif
+#else
+TEST_F(KoWorkspaceHandlerTest, NeverReadsAppsFileWithoutPosixPermissions) {
+  WriteAppsFile(R"([{"name": "Notes", "url": "https://notes.example.com/"}])");
+  EXPECT_TRUE(GetApps().empty());
+  EXPECT_FALSE(prefs_.GetBoolean(kWorkspaceAppsSeededPref));
+
+  base::test::TestFuture<bool, std::vector<mojom::WorkspaceAppPtr>> reload;
+  handler_->ReloadWorkspaceAppsFromFile(reload.GetCallback());
+  EXPECT_FALSE(reload.Get<0>());
+  EXPECT_TRUE(reload.Get<1>().empty());
+}
+#endif  // BUILDFLAG(IS_POSIX)
 
 TEST_F(KoWorkspaceHandlerTest, OpensOnlyListedApps) {
   SetWorkspaceApps(prefs_, {{"Notes", GURL("https://notes.example.com/")}});
