@@ -9,7 +9,6 @@
 #include <array>
 #include <utility>
 
-#include "base/containers/contains.h"
 #include "base/containers/span.h"
 #include "base/notreached.h"
 #include "base/strings/string_util.h"
@@ -140,7 +139,8 @@ std::optional<base::DictValue> ScrubEventProperties(
   base::DictValue scrubbed;
   if (!rule->property.empty()) {
     const std::string* value = props.FindString(rule->property);
-    if (!value || !base::Contains(AllowedValues(rule->property), *value)) {
+    if (!value ||
+        !std::ranges::contains(AllowedValues(rule->property), *value)) {
       return std::nullopt;
     }
     scrubbed.Set(rule->property, *value);
@@ -156,8 +156,8 @@ bool IsValidCommonProperties(const CommonProperties& common) {
       })) {
     return false;
   }
-  return base::Contains(kAllowedChannels, common.channel) &&
-         base::Contains(kAllowedOs, common.os);
+  return std::ranges::contains(kAllowedChannels, common.channel) &&
+         std::ranges::contains(kAllowedOs, common.os);
 }
 
 bool IsValidInstallId(std::string_view id) {
