@@ -99,6 +99,14 @@ class EphemeralStorage1pDomainBlockBrowserTest
       brave_shields::SetCosmeticFilteringControlType(
           content_settings(), brave_shields::ControlType::BLOCK, url);
     }
+#if defined(KO_BUILD)
+    if (!is_aggressive) {
+      // K-O blocks aggressively by default; ask for standard blocking.
+      brave_shields::SetCosmeticFilteringControlType(
+          content_settings(), brave_shields::ControlType::BLOCK_THIRD_PARTY,
+          url);
+    }
+#endif
 
     chrome::AddTabAt(browser(), GURL("about:blank"), -1, true);
     WebContents* first_party_tab =
@@ -184,6 +192,8 @@ class EphemeralStorage1pDomainBlockBrowserTest
   GURL b_site_simple_url_;
 };
 
+// Strict K-O builds refuse per-site standard blocking.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(EphemeralStorage1pDomainBlockBrowserTest,
                        FirstPartyEphemeralIsAutoEnabledInNormalBlockingMode) {
   NavigateToBlockedDomainAndExpectEphemeralEnabled();
@@ -221,6 +231,7 @@ IN_PROC_BROWSER_TEST_F(
   EXPECT_EQ(GetCookieSetting(a_site_simple_url_),
             ContentSetting::CONTENT_SETTING_ALLOW);
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(
     EphemeralStorage1pDomainBlockBrowserTest,

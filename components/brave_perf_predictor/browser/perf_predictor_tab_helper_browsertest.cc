@@ -16,6 +16,7 @@
 #include "brave/components/constants/pref_names.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/common/pref_names.h"
 #include "chrome/test/base/in_process_browser_test.h"
 #include "chrome/test/base/ui_test_utils.h"
 #include "components/prefs/pref_service.h"
@@ -53,6 +54,12 @@ class PerfPredictorTabHelperTest : public InProcessBrowserTest {
     InProcessBrowserTest::SetUpOnMainThread();
     InitEmbeddedTestServer();
     host_resolver()->AddRule("*", "127.0.0.1");
+#if defined(KO_BUILD)
+    // K-O upgrades http:// navigations strictly (HTTP interstitial on
+    // failure); example.com is served over plain HTTP here.
+    browser()->GetProfile()->GetPrefs()->SetList(
+        prefs::kHttpAllowlist, base::ListValue().Append("example.com"));
+#endif
 
     auto* content_settings =
         HostContentSettingsMapFactory::GetForProfile(browser()->GetProfile());

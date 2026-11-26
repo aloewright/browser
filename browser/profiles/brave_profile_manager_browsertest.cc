@@ -12,6 +12,7 @@
 #include "brave/components/brave_shields/core/common/features.h"
 #include "brave/components/brave_shields/core/common/pref_names.h"
 #include "brave/components/constants/pref_names.h"
+#include "brave/components/ko/buildflags/buildflags.h"
 #include "brave/components/tor/buildflags/buildflags.h"
 #include "brave/components/tor/tor_constants.h"
 #include "brave/components/tor/tor_utils.h"
@@ -200,6 +201,7 @@ class BraveProfileManagerHttpsUpgradesTest
   base::test::ScopedFeatureList scoped_feature_list_;
 };
 
+#if !BUILDFLAG(IS_KO)
 INSTANTIATE_TEST_SUITE_P(
     ,
     BraveProfileManagerHttpsUpgradesTest,
@@ -291,6 +293,35 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_upstream_https_upgrade = HttpsFirstModeSetting::kDisabled,
             .expected_brave_https_upgrade = brave_shields::ControlType::ALLOW,
         }));
+#else
+// K-O locks the global HTTPS upgrade setting to strict: PRE_PRE's write is
+// ignored and the transition always maps BLOCK. The old migration would turn
+// HTTPS-Only Mode back on at every start, so it has no case here.
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    BraveProfileManagerHttpsUpgradesTest,
+    ::testing::Values(
+        HttpsUpgradesCase{
+            .enabled_features =
+                {brave_shields::features::kTransitionToUpstreamHttpsUpgrades},
+            .disabled_features = {net::features::kBraveHttpsByDefault},
+            .brave_https_upgrade = brave_shields::ControlType::ALLOW,
+            .expected_upstream_https_upgrade =
+                HttpsFirstModeSetting::kEnabledFull,
+            .expected_brave_https_upgrade = brave_shields::ControlType::BLOCK,
+        },
+        HttpsUpgradesCase{
+            .enabled_features =
+                {brave_shields::features::kTransitionToUpstreamHttpsUpgrades,
+                 features::kHttpsFirstBalancedMode},
+            .disabled_features = {net::features::kBraveHttpsByDefault},
+            .brave_https_upgrade =
+                brave_shields::ControlType::BLOCK_THIRD_PARTY,
+            .expected_upstream_https_upgrade =
+                HttpsFirstModeSetting::kEnabledFull,
+            .expected_brave_https_upgrade = brave_shields::ControlType::BLOCK,
+        }));
+#endif  // !BUILDFLAG(IS_KO)
 
 IN_PROC_BROWSER_TEST_P(BraveProfileManagerHttpsUpgradesTest,
                        PRE_PRE_Migration) {

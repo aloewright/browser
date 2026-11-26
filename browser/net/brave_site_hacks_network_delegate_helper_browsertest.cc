@@ -299,6 +299,8 @@ IN_PROC_BROWSER_TEST_F(BraveSiteHacksNetworkDelegateBrowserTest,
       landing_url("fbclid=1", simple_landing_url()));
 }
 
+// Strict K-O builds refuse per-site Shields down.
+#if !defined(KO_SHIELDS_STRICT_BUILD)
 IN_PROC_BROWSER_TEST_F(BraveSiteHacksNetworkDelegateBrowserTest,
                        QueryStringFilterShieldsDown) {
   static constexpr std::string_view kInputs[] = {
@@ -312,6 +314,7 @@ IN_PROC_BROWSER_TEST_F(BraveSiteHacksNetworkDelegateBrowserTest,
                                      dest_url);
   }
 }
+#endif  // !defined(KO_SHIELDS_STRICT_BUILD)
 
 IN_PROC_BROWSER_TEST_F(BraveSiteHacksNetworkDelegateBrowserTest,
                        QueryStringFilterSameSite) {
