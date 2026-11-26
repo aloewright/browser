@@ -74,7 +74,7 @@ struct AgentdModelInfo {
   std::string id;
   std::string display_name;
   bool vision = false;
-  bool tools = true;
+  bool tools = false;
   uint32_t context_size = kAgentdDefaultContextSize;
 };
 
@@ -94,6 +94,10 @@ GURL GetAgentdUrl(std::string_view path);
 bool IsAgentdEndpoint(const GURL& url);
 // True for kChatAutomaticModelKey and kAgentdModelKeyPrefix keys.
 bool IsAgentdModelKey(std::string_view key);
+
+// For models agentd lists without capabilities.tools: false for claude-code/
+// and codex/, whose CLIs run their own tools and never hand calls back.
+bool AgentdModelSupportsToolsByDefault(std::string_view id);
 
 // Parses an OpenAI-style {"data": [{"id": ...}]} listing. Invalid entries are
 // skipped; nullopt if the shape is wrong.

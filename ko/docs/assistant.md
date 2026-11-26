@@ -43,13 +43,14 @@ Nothing goes to Brave's AI servers. Compiled out or forced off:
   (`claude-code/*`, `codex/*`, `cf-gateway/*`, `nanogpt/*`, ...).
 - All of them use `http://127.0.0.1:<port>/v1/chat/completions` (see
   [Port](#port)).
-- Tool support is on (unless agentd lists `tools: false`), with the
-  `CONTENT_AGENT` capability, so Leo's tools (content agent tools in the
-  agent profile, tab management) are offered on them. They only run if the
-  model answers with OpenAI `tool_calls`: agentd passes those through for
-  HTTP providers, but its CLI-backed `claude-code/*` and `codex/*` models
-  currently drop the `tools` field, so agentd should list those with
-  `tools: false`.
+- Tool support follows agentd's `tools` capability. When agentd leaves it
+  out, `claude-code/*` and `codex/*` get tools off (their CLIs run their own
+  tools and never hand `tool_calls` back) and every other id gets tools on.
+  Models with tools on also get the `CONTENT_AGENT` capability, so Leo's
+  tools (content agent tools in the agent profile, tab management) are
+  offered on them. Models with tools off get neither, so they are not
+  offered in the agent profile. `chat-automatic` follows the first listed
+  model; before agentd answers it is `claude-code/default`, tools off.
 
 The list is fetched when the model service starts, retried with backoff
 (15 s to 10 min) while agentd is down, and refreshed every 15 min. The last
@@ -65,8 +66,10 @@ Fields read from each `/v1/models` entry (all but `id` optional):
 ```
 
 `name` is accepted for `display_name`, `context_window` for
-`context_length`, and `vision`/`tools` may sit at the top level. Ids must
-match `[A-Za-z0-9._:/@+-]{1,200}`; at most 200 models are used.
+`context_length`, and `vision`/`tools` may sit at the top level. Missing
+fields default to: `display_name` the id, `vision` false, `tools` as above,
+`context_length` 128000. Ids must match `[A-Za-z0-9._:/@+-]{1,200}`; at most
+200 models are used.
 
 ### Token
 
@@ -113,6 +116,8 @@ models built before the first read point. When agentd moves, the next fetch
   is removed on shutdown) and receive the token and prompts. On a
   single-user Mac that user can't read the token file anyway; if that
   matters, keep agentd running (launchd).
+- Please list `capabilities.tools` (and `vision`, `context_length`) for
+  every model; the browser's defaults above are only a fallback.
 
 ## Custom models and presets
 
@@ -167,10 +172,10 @@ debloat/macos/apply-policies.sh --ko
 ## Tests
 
 - New: `components/ko/common/agentd_config_unittest.cc` (token and port
-  file checks, token format), `ko_agentd_models_unittest.cc` (parsing,
-  URLs, port-file discovery, fetcher) and `model_service_ko_unittest.cc`
-  (no Leo models, agentd default, port file, keys kept out of pages and
-  prefs, migration).
+  file checks, token format), `ko_agentd_models_unittest.cc` (parsing, tool
+  defaults, URLs, port-file discovery, fetcher) and
+  `model_service_ko_unittest.cc` (no Leo models, agentd default, port file,
+  keys kept out of pages and prefs, migration).
 - Left out of K-O builds because they test Leo, premium or Brave's servers:
   `model_service_unittest`, `conversation_handler_unittest`,
   `ai_chat_service_unittest`, `ai_chat_credential_manager_unittest`,

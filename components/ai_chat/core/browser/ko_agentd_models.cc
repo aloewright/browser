@@ -139,7 +139,8 @@ mojom::ModelPtr CreateModel(std::string key,
   model->display_name = std::move(display_name);
   model->vision_support = info.vision;
   model->supports_tools = info.tools;
-  // Lets Leo's tools, including the content agent's, run on agentd models.
+  // Lets Leo's tools, including the content agent's, run on agentd models
+  // that can hand tool calls back.
   if (info.tools) {
     model->supported_capabilities = {
         mojom::ConversationCapability::CONTENT_AGENT};
@@ -204,6 +205,10 @@ bool IsAgentdModelKey(std::string_view key) {
          key.starts_with(kAgentdModelKeyPrefix);
 }
 
+bool AgentdModelSupportsToolsByDefault(std::string_view id) {
+  return !id.starts_with("claude-code/") && !id.starts_with("codex/");
+}
+
 std::optional<std::vector<AgentdModelInfo>> ParseAgentdModels(
     const base::Value& body) {
   const base::DictValue* dict = body.GetIfDict();
@@ -238,7 +243,9 @@ std::optional<std::vector<AgentdModelInfo>> ParseAgentdModels(
       info.display_name = SanitizeDisplayName(entry->FindString("name"));
     }
     info.vision = FindCapability(*entry, "vision").value_or(false);
-    info.tools = FindCapability(*entry, "tools").value_or(true);
+    // agentd's own answer wins; the id only fills in a missing one.
+    info.tools = FindCapability(*entry, "tools")
+                     .value_or(AgentdModelSupportsToolsByDefault(*id));
     std::optional<int> context = entry->FindInt("context_length");
     if (!context) {
       context = entry->FindInt("context_window");
@@ -285,7 +292,8 @@ std::vector<AgentdModelInfo> AgentdModelsFromCache(
     info.id = *id;
     info.display_name = SanitizeDisplayName(entry->FindString(kCacheNameKey));
     info.vision = entry->FindBool(kCacheVisionKey).value_or(false);
-    info.tools = entry->FindBool(kCacheToolsKey).value_or(true);
+    info.tools = entry->FindBool(kCacheToolsKey)
+                     .value_or(AgentdModelSupportsToolsByDefault(*id));
     info.context_size = ClampContextSize(entry->FindInt(kCacheContextKey));
     models.push_back(std::move(info));
   }
@@ -305,6 +313,7 @@ std::vector<mojom::ModelPtr> BuildAgentdModels(
     default_info = models.front();
   } else {
     default_info.id = kAgentdFallbackModelName;
+    default_info.tools = AgentdModelSupportsToolsByDefault(default_info.id);
   }
   result.push_back(CreateModel(kChatAutomaticModelKey,
                                kAgentdDefaultModelDisplayName, default_info,

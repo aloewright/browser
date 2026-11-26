@@ -94,6 +94,17 @@ TEST_F(KOAgentdModelsTest, ModelKeys) {
   EXPECT_FALSE(IsAgentdModelKey("chat-claude-sonnet"));
 }
 
+TEST_F(KOAgentdModelsTest, ToolsDefaultByProvider) {
+  EXPECT_FALSE(AgentdModelSupportsToolsByDefault("claude-code/sonnet"));
+  EXPECT_FALSE(AgentdModelSupportsToolsByDefault("codex/gpt-5"));
+  EXPECT_FALSE(AgentdModelSupportsToolsByDefault(kAgentdFallbackModelName));
+  EXPECT_TRUE(AgentdModelSupportsToolsByDefault("cf-gateway/openai/gpt-5"));
+  EXPECT_TRUE(AgentdModelSupportsToolsByDefault("nanogpt/gpt-5-mini"));
+  // Only the provider prefix counts.
+  EXPECT_TRUE(AgentdModelSupportsToolsByDefault("nanogpt/codex/x"));
+  EXPECT_TRUE(AgentdModelSupportsToolsByDefault("claude-code"));
+}
+
 TEST_F(KOAgentdModelsTest, ParsesModelList) {
   std::optional<std::vector<AgentdModelInfo>> models =
       ParseAgentdModels(base::test::ParseJson(R"({
@@ -116,7 +127,8 @@ TEST_F(KOAgentdModelsTest, ParsesModelList) {
   EXPECT_EQ((*models)[0].id, "claude-code/sonnet");
   EXPECT_EQ((*models)[0].display_name, "");
   EXPECT_FALSE((*models)[0].vision);
-  EXPECT_TRUE((*models)[0].tools);
+  // No capabilities listed, and claude-code can't hand tool calls back.
+  EXPECT_FALSE((*models)[0].tools);
   EXPECT_EQ((*models)[0].context_size, kAgentdDefaultContextSize);
 
   EXPECT_EQ((*models)[1].id, "codex/gpt-5");
@@ -130,6 +142,50 @@ TEST_F(KOAgentdModelsTest, ParsesModelList) {
   EXPECT_EQ((*models)[2].display_name, "");
   EXPECT_TRUE((*models)[2].tools);
   EXPECT_EQ((*models)[2].context_size, kAgentdDefaultContextSize);
+}
+
+TEST_F(KOAgentdModelsTest, ExplicitCapabilitiesWinOverIdDefaults) {
+  std::optional<std::vector<AgentdModelInfo>> models =
+      ParseAgentdModels(base::test::ParseJson(R"({
+        "data": [
+          {"id": "claude-code/sonnet", "capabilities": {"tools": true}},
+          {"id": "codex/gpt-5", "tools": true},
+          {"id": "nanogpt/x", "capabilities": {"tools": false}},
+          {"id": "cf-gateway/openai/gpt-5"},
+          {"id": "codex/gpt-5-mini", "capabilities": {"vision": true}}
+        ]
+      })"));
+  ASSERT_TRUE(models);
+  ASSERT_EQ(models->size(), 5u);
+  EXPECT_TRUE((*models)[0].tools);
+  EXPECT_TRUE((*models)[1].tools);
+  EXPECT_FALSE((*models)[2].tools);
+  EXPECT_TRUE((*models)[3].tools);
+  EXPECT_FALSE((*models)[4].tools);
+  EXPECT_TRUE((*models)[4].vision);
+}
+
+TEST_F(KOAgentdModelsTest, CliModelsWithoutCapabilitiesGetNoAgentTools) {
+  std::optional<std::vector<AgentdModelInfo>> infos =
+      ParseAgentdModels(base::test::ParseJson(R"({
+        "data": [{"id": "claude-code/sonnet"}, {"id": "nanogpt/x"}]
+      })"));
+  ASSERT_TRUE(infos);
+  std::vector<mojom::ModelPtr> models =
+      BuildAgentdModels(*infos, kToken, ::ko::kAgentdDefaultPort);
+  ASSERT_EQ(models.size(), 3u);
+  // The automatic default follows claude-code/sonnet.
+  for (size_t i : {0u, 1u}) {
+    SCOPED_TRACE(models[i]->key);
+    EXPECT_FALSE(models[i]->supports_tools);
+    EXPECT_TRUE(models[i]->supported_capabilities.empty());
+  }
+  EXPECT_EQ(models[1]->key, "ko-agentd:claude-code/sonnet");
+  EXPECT_EQ(models[2]->key, "ko-agentd:nanogpt/x");
+  EXPECT_TRUE(models[2]->supports_tools);
+  EXPECT_EQ(models[2]->supported_capabilities,
+            std::vector<mojom::ConversationCapability>{
+                mojom::ConversationCapability::CONTENT_AGENT});
 }
 
 TEST_F(KOAgentdModelsTest, RejectsWrongShape) {
@@ -181,6 +237,21 @@ TEST_F(KOAgentdModelsTest, BuildModelsWithoutAgentdKeepsDefault) {
   EXPECT_EQ(models[0]->options->get_custom_model_options()->model_request_name,
             kAgentdFallbackModelName);
   EXPECT_TRUE(models[0]->options->get_custom_model_options()->api_key.empty());
+  // The fallback is a claude-code model, so no agent tools.
+  EXPECT_FALSE(models[0]->supports_tools);
+  EXPECT_TRUE(models[0]->supported_capabilities.empty());
+}
+
+TEST_F(KOAgentdModelsTest, CacheWithoutToolsUsesIdDefaults) {
+  base::ListValue cache;
+  cache.Append(base::DictValue().Set("id", "claude-code/sonnet"));
+  cache.Append(base::DictValue().Set("id", "nanogpt/x"));
+  cache.Append(base::DictValue().Set("id", "codex/gpt-5").Set("tools", true));
+  std::vector<AgentdModelInfo> models = AgentdModelsFromCache(cache);
+  ASSERT_EQ(models.size(), 3u);
+  EXPECT_FALSE(models[0].tools);
+  EXPECT_TRUE(models[1].tools);
+  EXPECT_TRUE(models[2].tools);
 }
 
 TEST_F(KOAgentdModelsTest, CacheRoundTrip) {

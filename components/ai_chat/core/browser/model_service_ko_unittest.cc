@@ -169,6 +169,12 @@ TEST_F(ModelServiceKOTest, LoadsAgentdModelsWithToken) {
   EXPECT_EQ(opts->model_request_name, "claude-code/sonnet");
   EXPECT_EQ(opts->api_key, kToken);
   EXPECT_EQ(opts->endpoint, ko::GetAgentdUrl(ko::kAgentdChatCompletionsPath));
+  // agentd listed no capabilities; the CLI models can't run Leo's tools.
+  EXPECT_FALSE(automatic->supports_tools);
+  const mojom::Model* codex = service->GetModel("ko-agentd:codex/gpt-5");
+  ASSERT_TRUE(codex);
+  EXPECT_FALSE(codex->supports_tools);
+  EXPECT_TRUE(codex->supported_capabilities.empty());
 
   // Pages never get the token.
   for (const auto& model : service->GetModelsForUI()) {
